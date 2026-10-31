@@ -1,0 +1,39 @@
+[tools]
+# Everything else (TypeScript, tsx, cheerio) comes from package.json via `npm ci`.
+node = "22"
+
+[tasks.install]
+description = "Install npm dependencies"
+run = "npm ci"
+sources = ["package.json", "package-lock.json"]
+outputs = ["node_modules/.package-lock.json"]
+
+[tasks.test]
+description = "Parser and stats tests"
+depends = ["install"]
+run = "npm test"
+
+[tasks.typecheck]
+description = "TypeScript type check"
+depends = ["install"]
+run = "npm run typecheck"
+
+[tasks.scrape]
+description = "Fetch nuLiga pages into data/"
+depends = ["install"]
+run = "npm run scrape"
+
+[tasks.build]
+description = "Render data/ into dist/"
+depends = ["install"]
+run = "npm run build"
+
+[tasks.serve]
+description = "Preview dist/ locally"
+depends = ["build"]
+run = "npm run serve"
+
+[tasks.update]
+description = "Scrape and build, like the hourly CI job"
+depends = ["test"]
+run = ["npm run scrape", "npm run build"]

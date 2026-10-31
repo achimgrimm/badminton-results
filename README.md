@@ -4,6 +4,17 @@ Mobile-friendly view of the Kreisliga Bremen (BrBV, season 2026/27) for **OT Bre
 
 ## Usage
 
+Tools are managed with [mise](https://mise.jdx.dev) (`mise.toml` pins Node 22):
+
+```sh
+mise install       # install Node
+mise run update    # test, scrape, build
+mise run serve     # preview dist/
+mise tasks         # list all tasks
+```
+
+Or with npm directly:
+
 ```sh
 npm install
 npm run scrape   # fetch nuLiga pages -> data/*.json

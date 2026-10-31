@@ -24,10 +24,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      # Node version comes from mise.toml
+      - uses: jdx/mise-action@v2
       - run: npm ci
       - run: npm test
       - run: npm run scrape

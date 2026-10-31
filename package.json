@@ -10,7 +10,7 @@
     "build": "tsx src/build.ts",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "serve": "npx --yes serve dist"
+    "serve": "npx --yes serve dist -c ../serve.json"
   },
   "dependencies": {
     "cheerio": "^1.2.0"

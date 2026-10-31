@@ -54,11 +54,43 @@ export const involvesOwn = (m: Meeting) => isOwn(m.home) || isOwn(m.guest);
 
 export type Outcome = "win" | "draw" | "loss";
 
+/** Result from the given team's point of view; null if it didn't play or no result yet. */
+export function outcomeFor(team: string, m: Meeting): Outcome | null {
+  if (!m.result || (m.home !== team && m.guest !== team)) return null;
+  const [mine, other] = m.home === team ? m.result : [m.result[1], m.result[0]];
+  return mine > other ? "win" : mine < other ? "loss" : "draw";
+}
+
 /** Result from OT's point of view; null if OT didn't play or no result yet. */
 export function ownOutcome(m: Meeting): Outcome | null {
-  if (!m.result || !involvesOwn(m)) return null;
-  const [own, other] = isOwn(m.home) ? m.result : [m.result[1], m.result[0]];
-  return own > other ? "win" : own < other ? "loss" : "draw";
+  return outcomeFor(OWN_TEAM, m);
+}
+
+/** "TV Eiche Horn V" -> "tv-eiche-horn-v" */
+export function slug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function opponentOf(m: Meeting): string {
+  return isOwn(m.home) ? m.guest : m.home;
+}
+
+/** Stable per pairing: each opponent is met once at home and once away. */
+export function previewName(m: Meeting): string {
+  return `${isOwn(m.home) ? "heim" : "auswaerts"}-${slug(opponentOf(m))}`;
+}
+
+/** OT meetings without a Spielbericht yet get a Vorschau page instead. */
+export function hasPreview(m: Meeting): boolean {
+  return involvesOwn(m) && !m.meeting;
+}
+
+export function previewHref(root: string, m: Meeting): string {
+  return `${root}vorschau/${previewName(m)}.html`;
 }
 
 export const OUTCOME_LABEL: Record<Outcome, string> = { win: "Sieg", draw: "Unentschieden", loss: "Niederlage" };

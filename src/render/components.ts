@@ -1,5 +1,6 @@
 import type { Hall, Meeting } from "../types.ts";
-import { esc, formatDate, html, involvesOwn, isOwn, outcomeBadge, ownOutcome } from "./util.ts";
+import { OWN_TEAM } from "../config.ts";
+import { esc, formatDate, hasPreview, html, involvesOwn, isOwn, opponentOf, outcomeBadge, outcomeFor, previewHref } from "./util.ts";
 
 export function reportHref(root: string, meeting: number): string {
   return `${root}bericht/${meeting}.html`;
@@ -9,8 +10,15 @@ export function hallLabel(m: Meeting): string {
   return m.hall ? esc(m.hall.name ?? m.hall.code) : "";
 }
 
+export interface MatchCardOptions {
+  showDate?: boolean;
+  pending?: boolean;
+  /** Team whose point of view the Sieg/Niederlage badge takes; defaults to OT. */
+  perspective?: string;
+}
+
 /** A meeting as a card: teams stacked, score or time on the right. */
-export function matchCard(m: Meeting, root: string, opts: { showDate?: boolean; pending?: boolean } = {}): string {
+export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {}): string {
   const own = involvesOwn(m);
   const played = m.result != null;
   const [h, g] = m.result ?? [0, 0];
@@ -22,7 +30,7 @@ export function matchCard(m: Meeting, root: string, opts: { showDate?: boolean; 
 
   const badges = [
     m.postponed ? `<span class="badge badge--warn" title="${esc(m.note)}">verlegt</span>` : "",
-    played ? outcomeBadge(ownOutcome(m)) : opts.pending ? `<span class="badge badge--warn">Ergebnis offen</span>` : "",
+    played ? outcomeBadge(outcomeFor(opts.perspective ?? OWN_TEAM, m)) : opts.pending ? `<span class="badge badge--warn">Ergebnis offen</span>` : "",
   ].join("");
 
   const team = (name: string) => `<span class="team${isOwn(name) ? " is-own" : ""}">${esc(name)}</span>`;
@@ -35,9 +43,13 @@ export function matchCard(m: Meeting, root: string, opts: { showDate?: boolean; 
 
   const inner = html`<div class="card-meta"><span>${meta.join(" · ")}</span>${badges ? `<span class="badges">${badges}</span>` : ""}</div>${body}`;
   const cls = `card match-card${own ? " is-own" : ""}`;
-  return m.meeting
-    ? `<a class="${cls}" href="${reportHref(root, m.meeting)}" aria-label="Spielbericht ${esc(m.home)} gegen ${esc(m.guest)}">${inner}</a>`
-    : `<div class="${cls}">${inner}</div>`;
+  if (m.meeting) {
+    return `<a class="${cls}" href="${reportHref(root, m.meeting)}" aria-label="Spielbericht ${esc(m.home)} gegen ${esc(m.guest)}">${inner}</a>`;
+  }
+  if (hasPreview(m)) {
+    return `<a class="${cls}" href="${previewHref(root, m)}" aria-label="Vorschau auf das Spiel gegen ${esc(opponentOf(m))}">${inner}</a>`;
+  }
+  return `<div class="${cls}">${inner}</div>`;
 }
 
 export function hallAddress(hall: Hall | undefined): string {

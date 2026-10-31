@@ -2,7 +2,7 @@ import { OWN_TEAM } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import { hallAddress, matchCard } from "./components.ts";
 import { layout } from "./layout.ts";
-import { esc, formatDate, html, involvesOwn, isOwn, todayInBremen } from "./util.ts";
+import { esc, formatDate, html, involvesOwn, isOwn, previewHref, todayInBremen } from "./util.ts";
 
 export function renderIndex(d: Dataset, now: Date): string {
   const today = todayInBremen(now);
@@ -21,6 +21,7 @@ export function renderIndex(d: Dataset, now: Date): string {
         ${next.hall ? `<div>${esc(next.hall.name ?? next.hall.code)}</div>` : ""}
         ${next.hall?.location ? `<div class="small">${hallAddress(d.halls[next.hall.location])}</div>` : ""}
         ${next.postponed ? `<p class="small"><span class="badge">verlegt</span> ${esc(next.note)}</p>` : ""}
+        <a class="btn btn-on-dark" href="${previewHref("", next)}">Zur Vorschau</a>
       </section>`
     : `<section class="next"><h2>Saison</h2><div class="when">Keine weiteren Spiele geplant</div></section>`;
 

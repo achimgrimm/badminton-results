@@ -1,6 +1,5 @@
-import { OWN_TEAM } from "../config.ts";
 import type { Dataset } from "../data.ts";
-import { playerStats, type PlayerGame, type PlayerStats, type Tally } from "../stats.ts";
+import { isDoubles, playerStats, type PlayerGame, type PlayerStats, type Tally } from "../stats.ts";
 import type { Player } from "../types.ts";
 import { reportHref } from "./components.ts";
 import { layout } from "./layout.ts";
@@ -14,7 +13,7 @@ export interface PlayerPage {
 
 /** Every OT player who appears in a Spielbericht, with a unique page name each. */
 export function ownPlayers(d: Dataset): PlayerPage[] {
-  const all = playerStats(Object.values(d.reports), OWN_TEAM);
+  const all = playerStats(Object.values(d.reports), d.own.name);
   const taken = new Set<string>();
   return all.map((stats) => {
     let name = slug(stats.name);
@@ -71,7 +70,7 @@ function gameLog(g: PlayerGame, root: string): string {
 export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
   const body = html`
     <h1>Spieler</h1>
-    <p class="small muted">Alle Einsätze für ${esc(OWN_TEAM)} in dieser Saison, aus den Spielberichten.</p>
+    <p class="small muted">Alle Einsätze für ${esc(d.own.name)} in dieser Saison, aus den Spielberichten.</p>
     ${pages.length
       ? pages.map(
           ({ stats: s, slug }) => html`<a class="card player-card" href="spieler/${slug}.html">
@@ -92,8 +91,8 @@ export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
 
 export function renderSpieler(d: Dataset, { stats: s }: PlayerPage): string {
   const root = "../";
-  const singles = s.disciplines.filter((x) => !/D$/.test(x.discipline));
-  const doubles = s.disciplines.filter((x) => /D$/.test(x.discipline));
+  const singles = s.disciplines.filter((x) => !isDoubles(x.discipline));
+  const doubles = s.disciplines.filter((x) => isDoubles(x.discipline));
 
   const body = html`
     <h1>${esc(displayName(s.name))}</h1>

@@ -1,22 +1,28 @@
 export const BASE_URL = "https://brbv-badminton.liga.nu";
 export const WA = `${BASE_URL}/cgi-bin/WebObjects/nuLigaBADDE.woa/wa`;
 
-export const CHAMPIONSHIP = "KV Bremen 26/27";
-export const GROUP = 41836;
-export const LEAGUE_NAME = "Kreisliga Bremen";
+/** TSV Osterholz-Tenever on nuLiga; its teams are discovered from the club page. */
+export const CLUB = 11473;
+export const CLUB_NAME = "OT Bremen";
+/** Team names in the leagues: "OT Bremen", "OT Bremen II", … */
+export const CLUB_PREFIX = "OT Bremen";
 export const SEASON_LABEL = "2026/27";
 
-export const OWN_TEAM = "OT Bremen III";
-export const OWN_TEAMTABLE = 242926;
+/** A league on nuLiga. */
+export interface Group {
+  championship: string;
+  group: number;
+}
 
-const groupQuery = () =>
-  new URLSearchParams({ championship: CHAMPIONSHIP, group: String(GROUP) }).toString();
+const groupQuery = (g: Group) =>
+  new URLSearchParams({ championship: g.championship, group: String(g.group) }).toString();
 
 export const urls = {
-  table: () => `${WA}/groupPage?displayTyp=gesamt&displayDetail=table&${groupQuery()}`,
-  schedule: () => `${WA}/groupPage?displayTyp=gesamt&displayDetail=meetings&${groupQuery()}`,
-  groupPage: () => `${WA}/groupPage?${groupQuery()}`,
-  team: () => `${WA}/teamPortrait?teamtable=${OWN_TEAMTABLE}&pageState=gesamt&${groupQuery()}`,
-  report: (meeting: number) => `${WA}/groupMeetingReport?meeting=${meeting}&${groupQuery()}`,
+  clubTeams: () => `${WA}/clubTeams?club=${CLUB}`,
+  table: (g: Group) => `${WA}/groupPage?displayTyp=gesamt&displayDetail=table&${groupQuery(g)}`,
+  schedule: (g: Group) => `${WA}/groupPage?displayTyp=gesamt&displayDetail=meetings&${groupQuery(g)}`,
+  groupPage: (g: Group) => `${WA}/groupPage?${groupQuery(g)}`,
+  team: (g: Group, teamtable: number) => `${WA}/teamPortrait?teamtable=${teamtable}&pageState=gesamt&${groupQuery(g)}`,
+  report: (g: Group, meeting: number) => `${WA}/groupMeetingReport?meeting=${meeting}&${groupQuery(g)}`,
   court: (location: number) => `${WA}/courtInfo?federation=BrBV&location=${location}`,
 };

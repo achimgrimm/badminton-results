@@ -11,6 +11,8 @@ const DISCIPLINES: Record<string, string> = {
   HD: "Herrendoppel",
   DD: "Damendoppel",
   GD: "Gemischtes Doppel",
+  D: "Doppel",
+  E: "Einzel",
 };
 
 export type PlayerLink = (p: Player) => string | null;
@@ -29,7 +31,7 @@ function gameCard(g: Game, r: MatchReport, link?: PlayerLink): string {
   const [hw, gw] = g.result ?? [0, 0];
   const ownSide = isOwn(r.home) ? 0 : isOwn(r.guest) ? 1 : null;
   const ownWon = ownSide == null || !g.result ? null : (ownSide === 0 ? hw > gw : gw > hw);
-  const kind = g.discipline.replace(/^\d\./, "");
+  const kind = g.discipline.replace(/^\d\.|\d$/g, "");
   const cols = Math.max(g.sets.length, 2);
   const cell = (side: 0 | 1, s: [number, number]) =>
     `<span class="pt${s[side] > s[1 - side] ? " won" : ""}">${s[side]}</span>`;
@@ -75,7 +77,7 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
 
     ${r.games.length
       ? r.games.map((game) => gameCard(game, r, link))
-      : `<p class="muted">Die Einzelergebnisse sind bei nuLiga gerade nicht abrufbar.</p>`}
+      : `<p class="muted">Für diese Begegnung sind bei nuLiga keine Einzelergebnisse eingetragen.</p>`}
 
     <h2>Infos</h2>
     <div class="card">
@@ -88,7 +90,7 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
       </dl>
     </div>
     <div class="btn-row">
-      <a class="btn btn-secondary" href="${esc(urls.report(r.meeting))}">Original bei nuLiga</a>
+      <a class="btn btn-secondary" href="${esc(urls.report(d.own, r.meeting))}">Original bei nuLiga</a>
       ${r.pdfUrl ? `<a class="btn btn-secondary" href="${esc(r.pdfUrl)}">PDF</a>` : ""}
     </div>
   `;
@@ -98,7 +100,7 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
     root: "../",
     nav: null,
     checkedAt: d.meta.checkedAt,
-    sourceUrl: urls.report(r.meeting),
+    sourceUrl: urls.report(d.own, r.meeting),
     body,
   });
 }

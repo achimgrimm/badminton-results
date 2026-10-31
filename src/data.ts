@@ -1,17 +1,33 @@
-import { mkdirSync, readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Hall, MatchReport, Meeting, Standing, TeamInfo } from "./types.ts";
+import type { ClubTeam, Hall, MatchReport, Meeting, Standing, TeamInfo } from "./types.ts";
 
 export const DATA_DIR = new URL("../data/", import.meta.url).pathname;
-const REPORTS_DIR = join(DATA_DIR, "reports");
+
+/** Paths inside data/, relative to DATA_DIR. */
+export const paths = {
+  club: "club.json",
+  halls: "halls.json",
+  meta: "meta.json",
+  table: (group: number) => `groups/${group}/table.json`,
+  schedule: (group: number) => `groups/${group}/schedule.json`,
+  reports: (group: number) => `groups/${group}/reports`,
+  report: (group: number, meeting: number) => `groups/${group}/reports/${meeting}.json`,
+  team: (slug: string) => `teams/${slug}.json`,
+};
 
 export interface Meta {
   /** ISO timestamp of the last successful scrape */
   checkedAt: string | null;
 }
 
+/** Everything needed to render one team's pages. */
 export interface Dataset {
   meta: Meta;
+  /** The team these pages are for */
+  own: ClubTeam;
+  /** All club teams, for the team chooser */
+  clubTeams: ClubTeam[];
   table: Standing[];
   schedule: Meeting[];
   team: TeamInfo;
@@ -24,7 +40,7 @@ export function readJson<T>(file: string, fallback: T): T {
   return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as T) : fallback;
 }
 
-/** Writes JSON only when content changed, keeping git diffs quiet. */
+/** Writes JSON only when content changed, so the log can report real changes. */
 export function writeJson(file: string, value: unknown): boolean {
   const path = join(DATA_DIR, file);
   mkdirSync(join(path, ".."), { recursive: true });
@@ -34,20 +50,34 @@ export function writeJson(file: string, value: unknown): boolean {
   return true;
 }
 
-export function loadDataset(): Dataset {
+export function loadClubTeams(): ClubTeam[] {
+  return readJson<ClubTeam[]>(paths.club, []);
+}
+
+export function loadHalls(): Record<string, Hall> {
+  return readJson<Record<string, Hall>>(paths.halls, {});
+}
+
+export function loadReports(group: number): Record<string, MatchReport> {
+  const dir = join(DATA_DIR, paths.reports(group));
   const reports: Record<string, MatchReport> = {};
-  if (existsSync(REPORTS_DIR)) {
-    for (const f of readdirSync(REPORTS_DIR).filter((f) => f.endsWith(".json"))) {
-      const r = JSON.parse(readFileSync(join(REPORTS_DIR, f), "utf8")) as MatchReport;
-      reports[r.meeting] = r;
-    }
+  if (!existsSync(dir)) return reports;
+  for (const f of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const r = JSON.parse(readFileSync(join(dir, f), "utf8")) as MatchReport;
+    reports[r.meeting] = r;
   }
+  return reports;
+}
+
+export function loadDataset(own: ClubTeam): Dataset {
   return {
-    meta: readJson<Meta>("meta.json", { checkedAt: null }),
-    table: readJson<Standing[]>("table.json", []),
-    schedule: readJson<Meeting[]>("schedule.json", []),
-    team: readJson<TeamInfo>("team.json", { title: "", icalUrl: null, webcalUrl: null, pdfUrl: null, halls: [] }),
-    halls: readJson<Record<string, Hall>>("halls.json", {}),
-    reports,
+    meta: readJson<Meta>(paths.meta, { checkedAt: null }),
+    own,
+    clubTeams: loadClubTeams(),
+    table: readJson<Standing[]>(paths.table(own.group), []),
+    schedule: readJson<Meeting[]>(paths.schedule(own.group), []),
+    team: readJson<TeamInfo>(paths.team(own.slug), { title: "", icalUrl: null, webcalUrl: null, pdfUrl: null, halls: [] }),
+    halls: loadHalls(),
+    reports: loadReports(own.group),
   };
 }

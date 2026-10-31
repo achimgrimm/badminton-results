@@ -1,4 +1,3 @@
-import { OWN_TEAM } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import { hallAddress, matchCard } from "./components.ts";
 import { layout } from "./layout.ts";

@@ -1,14 +1,15 @@
-import { LEAGUE_NAME, OWN_TEAM } from "../config.ts";
+import { CLUB_NAME } from "../config.ts";
 
 /** Paths are relative to the manifest, so the site works under any base path (e.g. GitHub Pages). */
 export function renderManifest(): string {
   return JSON.stringify(
     {
       id: "./",
-      name: `${OWN_TEAM} – Ergebnisse`,
-      short_name: "OT III",
-      description: `Spielplan, Tabelle und Spielberichte von ${OWN_TEAM} in der ${LEAGUE_NAME}`,
+      name: `${CLUB_NAME} Badminton`,
+      short_name: "OT Badminton",
+      description: `Tabellen, Spielpläne, Spielberichte und Spielerstatistiken aller ${CLUB_NAME}-Mannschaften`,
       lang: "de",
+      // The chooser at the root forwards to the last selected team.
       start_url: "./",
       scope: "./",
       display: "standalone",
@@ -32,7 +33,8 @@ export function renderManifest(): string {
  */
 export function renderServiceWorker(version: string): string {
   return `const CACHE = "ot-results-${version}";
-const PRECACHE = ["./", "index.html", "tabelle.html", "spielplan.html", "spieler.html", "styles.css", "favicon.svg", "manifest.webmanifest", "icons/icon-192.png"];
+// Team pages are cached when visited; the chooser and shared assets up front.
+const PRECACHE = ["./", "index.html", "styles.css", "favicon.svg", "club-logo.png", "manifest.webmanifest", "icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -60,8 +62,16 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
 
   if (req.mode === "navigate") {
-    // Offline and never visited: send to the cached overview at its own URL, so relative links still work.
-    const fallback = () => Response.redirect(new URL("index.html", self.registration.scope).href, 302);
+    // Offline and never visited: redirect to the team's cached overview, so relative links still
+    // work; otherwise to the chooser, which doesn't auto-forward with #auswahl (no redirect loop).
+    const fallback = () => {
+      const scope = self.registration.scope;
+      const team = new URL(req.url).href.slice(scope.length).split("/")[0];
+      const teamIndex = team && !team.includes(".") ? new URL(team + "/index.html", scope).href : null;
+      const chooser = Response.redirect(new URL("index.html#auswahl", scope).href, 302);
+      if (!teamIndex) return chooser;
+      return caches.match(teamIndex).then((hit) => (hit ? Response.redirect(teamIndex, 302) : chooser));
+    };
     event.respondWith(
       fetch(req)
         .then((res) => remember(req, res))

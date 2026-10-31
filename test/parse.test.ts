@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { parseTable } from "../src/parse/table.ts";
 import { parseSchedule } from "../src/parse/schedule.ts";
-import { parseReport, reportAvailable } from "../src/parse/report.ts";
+import { normalizeDiscipline, parseReport, reportAvailable } from "../src/parse/report.ts";
+import { leagueName, parseClubTeams, teamSlug } from "../src/parse/club.ts";
 import { parseCourt, parseTeam } from "../src/parse/team.ts";
 
 const fixture = (name: string) => readFileSync(new URL(`fixtures/${name}`, import.meta.url), "utf8");
@@ -85,4 +86,41 @@ test("schedule: 0:0 placeholder of an unfilled report is no result", () => {
 test("report: empty page while nuLiga edits the report", () => {
   assert.equal(reportAvailable(fixture("report-empty.html")), false);
   assert.equal(reportAvailable(fixture("report-397415.html")), true);
+});
+
+test("club teams", () => {
+  const teams = parseClubTeams(fixture("club-teams.html"));
+  assert.deepEqual(teams.map((t) => t.label), ["Aktive", "Jugend", "Jugend II", "Schüler", "Aktive II", "Aktive III"]);
+  assert.deepEqual(teams.at(-1), { label: "Aktive III", league: "Kreisliga Bremen", championship: "KV Bremen 26/27", group: 41836 });
+  assert.equal(teams[1].group, teams[2].group); // Jugend and Jugend II share a league
+});
+
+test("team names and slugs from club labels", () => {
+  assert.equal(leagueName("Aktive"), "OT Bremen");
+  assert.equal(leagueName("Jugend II"), "OT Bremen II");
+  assert.equal(leagueName("Aktive III"), "OT Bremen III");
+  assert.equal(teamSlug("Aktive III"), "aktive-3");
+  assert.equal(teamSlug("Jugend II"), "jugend-2");
+  assert.equal(teamSlug("Schüler"), "schueler");
+});
+
+test("youth report: numbered pairings, players on both sides", () => {
+  const r = parseReport(fixture("report-youth.html"), 398105);
+  assert.equal(r.home, "OT Bremen II");
+  assert.equal(r.guest, "TV Bremen-Walle 1875");
+  assert.deepEqual(r.games.map((g) => g.discipline), ["D1", "D2", "E1", "E2", "E3", "E4"]);
+  assert.deepEqual(r.games.map((g) => [g.home.length, g.guest.length]), [[2, 2], [2, 2], [1, 1], [1, 1], [1, 1], [1, 1]]);
+  assert.deepEqual(r.games[4].sets, [[21, 18], [19, 21], [21, 18]]);
+  assert.deepEqual(r.totals.games, [4, 2]);
+  assert.equal(normalizeDiscipline("D2-D2"), "D2");
+  assert.equal(normalizeDiscipline("3-3"), "E3");
+  assert.equal(normalizeDiscipline("1.HE"), "1.HE");
+});
+
+test("report with totals only", () => {
+  const r = parseReport(fixture("report-summary.html"), 397501);
+  assert.equal(r.home, "TV Eiche Horn");
+  assert.equal(r.guest, "TV Bremen-Walle 1875");
+  assert.deepEqual(r.games, []);
+  assert.deepEqual(r.totals, { points: [218, 190], sets: [14, 8], games: [4, 2] });
 });

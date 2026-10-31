@@ -102,6 +102,13 @@ main.container { padding-bottom: 32px; }
 .brand:hover { color: var(--ot-on-primary); text-decoration: none; }
 .brand-team { font-weight: 700; font-size: 1.25rem; }
 .brand-league { font-size: .875rem; opacity: .85; }
+.club-logo { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #fff; padding: 2px; box-sizing: border-box; }
+.header-inner .brand { flex: 1; min-width: 0; }
+.brand-btn { font: inherit; background: none; border: 0; padding: 4px 8px; margin: -4px -8px; border-radius: var(--ot-radius); text-align: left; cursor: pointer; }
+.brand-btn:hover { background: rgba(255,255,255,.12); }
+.brand-team { display: inline-flex; align-items: center; gap: 4px; }
+.brand-team .chevron { width: 18px; height: 18px; flex: none; opacity: .9; }
+.brand-league { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tabs { background: var(--ot-bg); box-shadow: 0 1px 0 var(--ot-border); }
 .tabs-inner { display: flex; gap: 4px; }
 .tabs a { flex: 1; text-align: center; color: var(--ot-text-strong); font-weight: 600; padding: 12px 4px 9px; border-bottom: 3px solid transparent; }
@@ -245,6 +252,22 @@ body.only-own .card.match-card:not(.is-own) { display: none; }
 .vs-us { color: var(--ot-primary); font-weight: 600; }
 .game-log .sets { margin-top: 6px; font-variant-numeric: tabular-nums; color: var(--ot-text-muted); }
 .game-log .set.won { font-weight: 700; color: var(--ot-text-strong); }
+
+/* Team chooser */
+.team-card .card-meta { margin: 2px 0 0; }
+.team-dialog { border: 0; border-radius: var(--ot-radius); box-shadow: var(--ot-shadow-hover); background: var(--ot-bg); color: var(--ot-text);
+               padding: 16px 20px 12px; width: min(92vw, 400px); max-height: 85vh; }
+.team-dialog::backdrop { background: rgba(0,0,0,.5); }
+.dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dialog-head h2 { margin: 0; }
+.dialog-close { font: 400 1.75rem/1 var(--ot-font); color: var(--ot-text-muted); background: none; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+.dialog-close:hover { background: var(--ot-bg-alt); color: var(--ot-text-strong); }
+.team-dialog h3 { font-size: .875rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ot-text-muted); margin: 16px 0 4px; }
+.team-list { list-style: none; margin: 0; padding: 0; }
+.team-list a { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 12px; border-radius: var(--ot-radius); color: var(--ot-text-strong); }
+.team-list a:hover { background: var(--ot-bg-alt); text-decoration: none; }
+.team-list a[aria-current="page"] { box-shadow: inset 4px 0 0 var(--ot-primary); background: var(--ot-bg-alt); color: var(--ot-primary); }
+.team-label { font-weight: 600; }
 
 /* Install help (iOS) */
 .install-help { border: 0; border-radius: var(--ot-radius); box-shadow: var(--ot-shadow-hover); background: var(--ot-bg); color: var(--ot-text);

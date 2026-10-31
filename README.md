@@ -1,6 +1,8 @@
-# OT Bremen III – Ergebnisse
+# OT Bremen Badminton – Ergebnisse
 
-Mobile-friendly view of the Kreisliga Bremen (BrBV, season 2026/27) for **OT Bremen III**: next match, league table, full schedule and every Spielbericht. Data is scraped from [nuLiga](https://brbv-badminton.liga.nu/cgi-bin/WebObjects/nuLigaBADDE.woa/wa/groupPage?championship=KV+Bremen+26%2F27&group=41836), which has no public API.
+Mobile-friendly view of every badminton team of **TSV Osterholz-Tenever (OT Bremen)**, season 2026/27: next match, league table, full schedule, every Spielbericht, match previews and player statistics. Data is scraped from [nuLiga](https://brbv-badminton.liga.nu/cgi-bin/WebObjects/nuLigaBADDE.woa/wa/clubTeams?club=11473), which has no public API.
+
+The site root is a team chooser. Each team lives in its own folder (`aktive/`, `aktive-2/`, `aktive-3/`, `jugend/`, `jugend-2/`, `schueler/`). The app remembers the last team and opens it next time; `index.html#auswahl` always shows the chooser.
 
 ## Usage
 
@@ -25,7 +27,8 @@ npm test         # parser tests against test/fixtures
 
 ## How it works
 
-- `src/scrape.ts` fetches the table, schedule and team page on every run (at most 1 request/s). It fetches a Spielbericht only when it is new or not yet approved. Each hall address is fetched once.
+- `src/scrape.ts` reads the club's team list from nuLiga on every run, so new teams or a new season need no code change. For each league it fetches the table and schedule (at most 1 request/s), plus a Spielbericht only when it is new or not yet approved; leagues with two OT teams (Jugend, Jugend II) are fetched once. Each hall address is fetched once. Data lives in `data/groups/<group>/` and `data/teams/<slug>.json`.
+- Youth leagues use numbered pairings (`D1-D1`, `2-2`), stored as `D1`, `E2`.
 - `src/parse/*` hold the cheerio parsers for each nuLiga page type. If nuLiga changes its markup, update the matching parser and refresh the fixture in `test/fixtures/`.
 - `src/render/*` render the plain HTML pages. Styling follows the OT design tokens in `src/styles.css`.
 - `.github/workflows/update.yml` runs hourly and on every push to `main`. It tests, scrapes, builds and deploys `dist/` to GitHub Pages. If a parse fails, the job fails and the last good deploy stays online.
@@ -38,6 +41,8 @@ https://achimgrimm.github.io/badminton-results/
 
 GitHub pauses scheduled workflows in public repos after 60 days without repo activity. If the site stops updating, re-enable "Update results" in the Actions tab.
 
-## New season / other team
+## New season / other club
 
-Edit `src/config.ts`: `CHAMPIONSHIP`, `GROUP`, `OWN_TEAM`, `OWN_TEAMTABLE`, `SEASON_LABEL`. Then delete `data/` and run the scrape again.
+Teams are discovered from the club page, so a new season only needs `SEASON_LABEL` in `src/config.ts`. For another club, change `CLUB` (nuLiga club ID), `CLUB_NAME`, `CLUB_PREFIX` (the team name used in the leagues) and replace `src/icons/club-logo.png`. Then delete `data/` and run the scrape again.
+
+The club logo in the header is TSV Osterholz-Tenever's; it is used with the user's OK and the site stays labelled "Inoffizielle Ansicht".

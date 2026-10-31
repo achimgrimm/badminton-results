@@ -1,4 +1,3 @@
-import { LEAGUE_NAME, OWN_TEAM } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import { headToHead, lineup, playerStats, teamForm, type PlayerStats, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
@@ -37,11 +36,11 @@ export function renderIcs(d: Dataset, m: Meeting, now: Date): string {
     "VERSION:2.0",
     "PRODID:-//ot-bremen-results//DE",
     "BEGIN:VEVENT",
-    `UID:${previewName(m)}@ot-bremen-results`,
+    `UID:${d.own.slug}-${previewName(m)}@ot-bremen-results`,
     `DTSTAMP:${icsStamp(now)}`,
     ...timing,
     `SUMMARY:${icsText(`${m.home} – ${m.guest}`)}`,
-    `DESCRIPTION:${icsText(`${LEAGUE_NAME}\nHeim: ${m.home}\nGast: ${m.guest}`)}`,
+    `DESCRIPTION:${icsText(`${d.own.league}\nHeim: ${m.home}\nGast: ${m.guest}`)}`,
     where ? `LOCATION:${icsText(where)}` : "",
     "END:VEVENT",
     "END:VCALENDAR",
@@ -52,8 +51,8 @@ export function renderIcs(d: Dataset, m: Meeting, now: Date): string {
 }
 
 /** One row per opposing player: appearances, record, sets, disciplines, usual partner. */
-function opponentRow(s: PlayerStats): string {
-  const vsUs = s.log.filter((g) => g.opponentTeam === OWN_TEAM);
+function opponentRow(s: PlayerStats, own: string): string {
+  const vsUs = s.log.filter((g) => g.opponentTeam === own);
   const usTally: Tally = {
     played: vsUs.length,
     won: vsUs.filter((g) => g.outcome === "win").length,
@@ -80,7 +79,7 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
   const hall = m.hall?.location ? d.halls[m.hall.location] : undefined;
   const standing = d.table.find((s) => s.team === opponent);
   const form = teamForm(d.schedule, opponent);
-  const h2h = headToHead(d.schedule, OWN_TEAM, opponent);
+  const h2h = headToHead(d.schedule, d.own.name, opponent);
   const returnMatch = d.schedule.find(
     (x) => x !== m && !x.result && ((x.home === m.guest && x.guest === m.home)),
   );
@@ -139,7 +138,7 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
               <th class="num" scope="col">S–N</th>
               <th class="num" scope="col">Sätze</th>
             </tr></thead>
-            <tbody>${opponentPlayers.map(opponentRow)}</tbody>
+            <tbody>${opponentPlayers.map((s) => opponentRow(s, d.own.name))}</tbody>
           </table>
         </div>`
       : `<p class="muted">Noch keine Spielberichte.</p>`}

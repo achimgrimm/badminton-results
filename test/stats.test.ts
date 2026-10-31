@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { parseReport } from "../src/parse/report.ts";
 import { parseSchedule } from "../src/parse/schedule.ts";
-import { headToHead, lineup, playerStats, teamForm } from "../src/stats.ts";
+import { headToHead, isDoubles, lineup, playerStats, teamForm } from "../src/stats.ts";
 import type { MatchReport } from "../src/types.ts";
 
 const fixture = (name: string) => readFileSync(new URL(`fixtures/${name}`, import.meta.url), "utf8");
@@ -98,4 +98,15 @@ test("playerStats merges a player across reports by person", () => {
   assert.equal(boese.played, 4);
   assert.deepEqual(boese.partners, [{ name: "Koschei, Stefan", played: 2, won: 2, lost: 0 }]);
   assert.equal(boese.log[0].opponentTeam, "Someone"); // newest first
+});
+
+test("playerStats: youth pairings split into singles and doubles", () => {
+  const youth = parseReport(fixture("report-youth.html"), 398105);
+  const sila = playerStats([youth], "OT Bremen II").find((p) => p.name === "Yilmaz, Sila")!;
+  assert.deepEqual(sila.disciplines.map((d) => d.discipline), ["D2", "E4"]);
+  assert.deepEqual(sila.singles, { played: 1, won: 1, lost: 0 });
+  assert.deepEqual(sila.doubles, { played: 1, won: 1, lost: 0 });
+  assert.deepEqual(sila.partners.map((p) => p.name), ["Ruder, Emil"]);
+  assert.ok(isDoubles("D1") && isDoubles("GD") && isDoubles("1.HD"));
+  assert.ok(!isDoubles("E1") && !isDoubles("DE") && !isDoubles("2.HE"));
 });

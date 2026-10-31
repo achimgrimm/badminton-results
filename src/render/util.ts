@@ -1,4 +1,4 @@
-import { OWN_TEAM } from "../config.ts";
+import { ownTeam } from "./context.ts";
 import type { Meeting } from "../types.ts";
 
 const ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -49,7 +49,7 @@ export function displayName(name: string): string {
   return m ? `${m[2]} ${m[1]}` : name;
 }
 
-export const isOwn = (team: string) => team === OWN_TEAM;
+export const isOwn = (team: string) => team === ownTeam().name;
 export const involvesOwn = (m: Meeting) => isOwn(m.home) || isOwn(m.guest);
 
 export type Outcome = "win" | "draw" | "loss";
@@ -63,7 +63,7 @@ export function outcomeFor(team: string, m: Meeting): Outcome | null {
 
 /** Result from OT's point of view; null if OT didn't play or no result yet. */
 export function ownOutcome(m: Meeting): Outcome | null {
-  return outcomeFor(OWN_TEAM, m);
+  return outcomeFor(ownTeam().name, m);
 }
 
 /** "TV Eiche Horn V" -> "tv-eiche-horn-v" */

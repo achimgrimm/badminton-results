@@ -46,7 +46,7 @@ export function renderSpielplan(d: Dataset, now: Date): string {
   const body = html`
     <h1>Spielplan</h1>
     <div class="filter" role="group" aria-label="Filter">
-      <button type="button" data-mode="own" aria-pressed="false">Nur OT III</button>
+      <button type="button" data-mode="own" aria-pressed="false">Nur ${esc(d.own.label)}</button>
       <button type="button" data-mode="all" aria-pressed="true">Alle Spiele</button>
     </div>
     ${days}

@@ -58,7 +58,10 @@ export interface DisciplineLineup {
   entries: LineupEntry[];
 }
 
-export const DISCIPLINE_ORDER = ["1.HD", "2.HD", "DD", "1.HE", "2.HE", "DE", "3.HE", "GD"];
+export const DISCIPLINE_ORDER = ["1.HD", "2.HD", "DD", "1.HE", "2.HE", "DE", "3.HE", "GD", "D1", "D2", "E1", "E2", "E3", "E4"];
+
+/** Doubles: HD, DD, GD and the youth leagues' D1, D2. */
+export const isDoubles = (discipline: string) => /D$|^D\d$/.test(discipline);
 
 const disciplineRank = (d: string) => DISCIPLINE_ORDER.indexOf(d) + 1 || 99;
 

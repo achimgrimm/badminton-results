@@ -73,3 +73,17 @@ export interface Hall {
   address: string[];
   mapsUrl: string | null;
 }
+
+/** One OT team with everything needed to scrape and render it. */
+export interface ClubTeam {
+  /** URL folder, e.g. "aktive-3" */
+  slug: string;
+  /** Club label, e.g. "Aktive III" */
+  label: string;
+  /** Name in the league, e.g. "OT Bremen III" */
+  name: string;
+  league: string;
+  championship: string;
+  group: number;
+  teamtable: number;
+}

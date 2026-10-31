@@ -1,12 +1,16 @@
-import { LEAGUE_NAME, OWN_TEAM, SEASON_LABEL, urls } from "../config.ts";
+import { CLUB_NAME, SEASON_LABEL, urls } from "../config.ts";
+import type { ClubTeam } from "../types.ts";
+import { clubTeams, currentTeam } from "./context.ts";
 import { esc, formatTimestamp, html } from "./util.ts";
 
 export type NavKey = "index" | "tabelle" | "spielplan" | "spieler" | null;
 
 export interface PageOptions {
   title: string;
-  /** Path prefix back to the site root, e.g. "" or "../" */
+  /** Path prefix back to the team's folder, e.g. "" or "../" */
   root: string;
+  /** Path prefix back to the site root with the shared assets; defaults to one level above root */
+  assets?: string;
   nav: NavKey;
   checkedAt: string | null;
   sourceUrl?: string;
@@ -24,6 +28,25 @@ const NAV: { key: Exclude<NavKey, null>; href: string; label: string }[] = [
 ];
 
 const THEME_KEY = "theme";
+export const TEAM_KEY = "team";
+
+/** Team pages remember themselves, so the chooser can forward there next time. */
+const REMEMBER = (slug: string) => `try { localStorage.setItem("${TEAM_KEY}", "${slug}"); } catch (e) {}`;
+
+const TEAM_SWITCH = `(function () {
+  var btn = document.getElementById("team-btn"), dlg = document.getElementById("team-dialog");
+  if (!btn) return;
+  btn.addEventListener("click", function () { dlg.showModal(); });
+  dlg.querySelector(".dialog-close").addEventListener("click", function () { dlg.close(); });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+})();`;
+
+/** Youth teams after the adult ones, each in club order. */
+export function teamGroups(teams: ClubTeam[]): [string, ClubTeam[]][] {
+  const youth = (t: ClubTeam) => /jugend|schüler|schueler|mini/i.test(t.label);
+  return ([["Erwachsene", teams.filter((t) => !youth(t))], ["Jugend", teams.filter(youth)]] as [string, ClubTeam[]][])
+    .filter(([, list]) => list.length);
+}
 
 /** Runs in <head> before paint: applies the saved choice, else the system setting. */
 const THEME_INIT = `(function () {
@@ -79,55 +102,91 @@ const SHARE_ICON = `<svg class="inline-icon" viewBox="0 0 24 24" fill="none" str
 const MOON = `<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`;
 const SUN = `<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
 
+const CHEVRON = `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
+
+/** Dialog listing all club teams; the current one is marked. */
+function teamDialog(team: ClubTeam, assets: string): string {
+  return html`<dialog class="team-dialog" id="team-dialog" aria-labelledby="team-dialog-h">
+  <div class="dialog-head">
+    <h2 id="team-dialog-h">Mannschaft wählen</h2>
+    <button type="button" class="dialog-close" aria-label="Schließen">×</button>
+  </div>
+  ${teamGroups(clubTeams()).map(
+    ([heading, list]) => html`<h3>${heading}</h3>
+      <ul class="team-list">
+        ${list.map(
+          (t) => html`<li><a href="${assets}${t.slug}/index.html"${t.slug === team.slug ? ' aria-current="page"' : ""}>
+            <span class="team-label">${esc(t.label)}</span><span class="small muted">${esc(t.league)}</span>
+          </a></li>`,
+        )}
+      </ul>`,
+  )}
+  <p class="small"><a href="${assets}index.html#auswahl">Alle Mannschaften im Überblick</a></p>
+</dialog>`;
+}
+
 export function layout(o: PageOptions): string {
+  const team = currentTeam();
+  const assets = o.assets ?? `${o.root}../`;
+  const brand = team
+    ? html`<button type="button" class="brand brand-btn" id="team-btn" aria-haspopup="dialog" aria-label="Mannschaft wechseln, aktuell ${esc(team.label)}">
+        <span class="brand-team">${esc(team.label)}${CHEVRON}</span>
+        <span class="brand-league">${esc(team.league)} ${esc(SEASON_LABEL)}</span>
+      </button>`
+    : html`<a class="brand" href="${assets}index.html#auswahl">
+        <span class="brand-team">${esc(CLUB_NAME)} Badminton</span>
+        <span class="brand-league">Alle Mannschaften ${esc(SEASON_LABEL)}</span>
+      </a>`;
+
   return html`<!doctype html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a409f">
-${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.title)} · ${esc(OWN_TEAM)}</title>
+${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.title)} · ${esc(team ? `${CLUB_NAME} ${team.label}` : `${CLUB_NAME} Badminton`)}</title>
 <script>${THEME_INIT}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="${o.root}styles.css">
-<link rel="icon" href="${o.root}favicon.svg" type="image/svg+xml">
-<link rel="manifest" href="${o.root}manifest.webmanifest">
-<link rel="apple-touch-icon" href="${o.root}icons/apple-touch-icon.png">
+<link rel="stylesheet" href="${assets}styles.css">
+<link rel="icon" href="${assets}favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="${assets}manifest.webmanifest">
+<link rel="apple-touch-icon" href="${assets}icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="OT III">
+<meta name="apple-mobile-web-app-title" content="OT Badminton">
 </head>
 <body>
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand" href="${o.root}index.html">
-      <span class="brand-team">${esc(OWN_TEAM)}</span>
-      <span class="brand-league">${esc(LEAGUE_NAME)} ${esc(SEASON_LABEL)}</span>
-    </a>
+    <img class="club-logo" src="${assets}club-logo.png" alt="TSV Osterholz-Tenever" width="40" height="40">
+    ${brand}
     <div class="header-actions">
       <button type="button" class="header-btn install-btn" id="install-btn" aria-label="App installieren" title="App installieren" hidden>${INSTALL_ICON}<span>App</span></button>
       <button type="button" class="header-btn theme-toggle" id="theme-toggle" aria-label="Dunkles Design einschalten">${MOON}${SUN}</button>
     </div>
   </div>
-  <nav class="tabs" aria-label="Hauptnavigation">
-    <div class="container tabs-inner">
-      ${NAV.map(
-        (n) => `<a href="${o.root}${n.href}"${n.key === o.nav ? ' aria-current="page"' : ""}>${n.label}</a>`,
-      )}
-    </div>
-  </nav>
+  ${team
+    ? html`<nav class="tabs" aria-label="Hauptnavigation">
+        <div class="container tabs-inner">
+          ${NAV.map(
+            (n) => `<a href="${o.root}${n.href}"${n.key === o.nav ? ' aria-current="page"' : ""}>${n.label}</a>`,
+          )}
+        </div>
+      </nav>`
+    : ""}
 </header>
 <main class="container">
 ${o.body}
 </main>
 <footer class="site-footer">
   <div class="container">
-    <p>Inoffizielle Ansicht. Daten: <a href="${esc(o.sourceUrl ?? urls.groupPage())}">nuLiga</a> / Bremer Badminton-Verband.</p>
+    <p>Inoffizielle Ansicht. Daten: <a href="${esc(o.sourceUrl ?? (team ? urls.groupPage(team) : urls.clubTeams()))}">nuLiga</a> / Bremer Badminton-Verband.</p>
     ${o.checkedAt ? `<p>Stand: ${esc(formatTimestamp(o.checkedAt))}</p>` : ""}
   </div>
 </footer>
+${team ? teamDialog(team, assets) : ""}
 <dialog class="install-help" id="install-help" aria-labelledby="install-help-h">
   <h2 id="install-help-h">App installieren</h2>
   <p>So legst Du die Seite als App auf Deinen Home-Bildschirm:</p>
@@ -139,7 +198,8 @@ ${o.body}
   <button type="button" class="btn btn-primary">Verstanden</button>
 </dialog>
 <script>${THEME_TOGGLE}</script>
-<script>${INSTALL(o.root)}</script>
+<script>${INSTALL(assets)}</script>
+${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}</script>` : ""}
 ${o.script ? `<script>${o.script}</script>` : ""}
 </body>
 </html>

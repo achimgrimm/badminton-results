@@ -15,6 +15,7 @@ export async function fetchHtml(url: string, retries = 3): Promise<string> {
       return await res.text();
     } catch (err) {
       if (attempt >= retries) throw new Error(`fetch failed for ${url}: ${(err as Error).message}`);
+      console.warn(`  retry ${attempt}/${retries - 1} after ${(err as Error).message}: ${url}`);
       await new Promise((r) => setTimeout(r, 2000 * attempt));
     }
   }

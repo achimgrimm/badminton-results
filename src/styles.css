@@ -87,10 +87,14 @@ main.container { padding-bottom: 32px; }
 /* Header */
 .site-header { background: var(--ot-header); color: var(--ot-on-primary); position: sticky; top: 0; z-index: 10; }
 .header-inner { padding-top: 12px; padding-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.theme-toggle { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(255,255,255,.4);
-                background: transparent; color: var(--ot-on-primary); cursor: pointer; transition: background .3s var(--ot-ease); }
-.theme-toggle:hover { background: rgba(255,255,255,.15); }
-.theme-toggle svg { width: 20px; height: 20px; }
+.header-actions { flex: none; display: flex; gap: 8px; }
+.header-btn { height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 20px;
+              border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; font: 600 .9375rem var(--ot-font);
+              cursor: pointer; transition: background .3s var(--ot-ease); }
+.header-btn:hover { background: rgba(255,255,255,.15); }
+.header-btn svg { width: 20px; height: 20px; }
+.header-btn[hidden] { display: none; }
+.install-btn { padding: 0 14px 0 10px; }
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
@@ -223,3 +227,12 @@ body.only-own .card.match-card:not(.is-own) { display: none; }
 .lineup li:first-child { border-top: 0; }
 .lineup .who span { display: block; line-height: 1.3; }
 .lineup .rec { flex: none; color: var(--ot-text-muted); font-size: .875rem; }
+
+/* Install help (iOS) */
+.install-help { border: 0; border-radius: var(--ot-radius); box-shadow: var(--ot-shadow-hover); background: var(--ot-bg); color: var(--ot-text);
+                padding: 20px; width: min(92vw, 380px); }
+.install-help::backdrop { background: rgba(0,0,0,.5); }
+.install-help h2 { margin: 0 0 8px; }
+.install-help ol { padding-left: 1.25rem; margin: 8px 0 16px; }
+.install-help li { margin: 6px 0; }
+.inline-icon { width: 1.1em; height: 1.1em; vertical-align: -0.15em; color: var(--ot-primary); }

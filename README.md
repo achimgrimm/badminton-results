@@ -29,6 +29,7 @@ npm test         # parser tests against test/fixtures
 - `src/parse/*` hold the cheerio parsers for each nuLiga page type. If nuLiga changes its markup, update the matching parser and refresh the fixture in `test/fixtures/`.
 - `src/render/*` render the plain HTML pages. Styling follows the OT design tokens in `src/styles.css`.
 - `.github/workflows/update.yml` runs hourly and on every push to `main`. It tests, scrapes, builds and deploys `dist/` to GitHub Pages. If a parse fails, the job fails and the last good deploy stays online.
+- The site is an installable PWA. `src/render/pwa.ts` generates the manifest and the service worker. Pages are network-first with an offline fallback to the last cached copy. The app icons in `src/icons/` are rendered from `icon.svg`.
 - `data/` is not in git. The workflow keeps it in the GitHub Actions cache between runs. If the cache is evicted, the next run simply fetches all Spielberichte again.
 
 ## Live site

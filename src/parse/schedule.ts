@@ -25,6 +25,7 @@ export function parseSchedule(html: string): Meeting[] {
     const hallCode = clean(hallLink.text() || td.eq(3).text());
 
     const resultLink = td.eq(6).find("a");
+    const result = pair(td.eq(6).text());
 
     meetings.push({
       date,
@@ -40,7 +41,9 @@ export function parseSchedule(html: string): Meeting[] {
         : null,
       home: clean(td.eq(4).text()),
       guest: clean(td.eq(5).text()),
-      result: pair(td.eq(6).text()),
+      // nuLiga shows 0:0 for a report that was opened but not filled in yet.
+      // A team match always has 8 games, so 0:0 is never a real result.
+      result: result && result[0] + result[1] > 0 ? result : null,
       meeting: param(resultLink.attr("href"), "meeting"),
       approved: $(tr).find('img[title="Spielbericht genehmigt"]').length > 0,
     });

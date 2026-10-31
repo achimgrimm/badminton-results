@@ -43,7 +43,7 @@ export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {})
 
   const inner = html`<div class="card-meta"><span>${meta.join(" · ")}</span>${badges ? `<span class="badges">${badges}</span>` : ""}</div>${body}`;
   const cls = `card match-card${own ? " is-own" : ""}`;
-  if (m.meeting) {
+  if (m.meeting && played) {
     return `<a class="${cls}" href="${reportHref(root, m.meeting)}" aria-label="Spielbericht ${esc(m.home)} gegen ${esc(m.guest)}">${inner}</a>`;
   }
   if (hasPreview(m)) {

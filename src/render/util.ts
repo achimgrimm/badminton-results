@@ -84,9 +84,9 @@ export function previewName(m: Meeting): string {
   return `${isOwn(m.home) ? "heim" : "auswaerts"}-${slug(opponentOf(m))}`;
 }
 
-/** OT meetings without a Spielbericht yet get a Vorschau page instead. */
+/** OT meetings without a result yet get a Vorschau page instead of a Spielbericht. */
 export function hasPreview(m: Meeting): boolean {
-  return involvesOwn(m) && !m.meeting;
+  return involvesOwn(m) && !m.result;
 }
 
 export function previewHref(root: string, m: Meeting): string {

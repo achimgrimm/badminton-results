@@ -17,6 +17,11 @@ function players(cell: Cheerio): Player[] {
     .map((name) => ({ name, person: null }));
 }
 
+/** False when nuLiga serves the page without its result table (report being edited). */
+export function reportAvailable(html: string): boolean {
+  return load(html)("#content table.result-set").length > 0;
+}
+
 export function parseReport(html: string, meeting: number): MatchReport {
   const $ = load(html);
   const table = resultTable($);

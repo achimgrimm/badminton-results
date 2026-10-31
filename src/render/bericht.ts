@@ -73,7 +73,9 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
       ${outcome ? `<p>${outcomeBadge(outcome)}</p>` : ""}
     </section>
 
-    ${r.games.map((game) => gameCard(game, r, link))}
+    ${r.games.length
+      ? r.games.map((game) => gameCard(game, r, link))
+      : `<p class="muted">Die Einzelergebnisse sind bei nuLiga gerade nicht abrufbar.</p>`}
 
     <h2>Infos</h2>
     <div class="card">

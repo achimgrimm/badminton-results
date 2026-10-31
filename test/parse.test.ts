@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { parseTable } from "../src/parse/table.ts";
 import { parseSchedule } from "../src/parse/schedule.ts";
-import { parseReport } from "../src/parse/report.ts";
+import { parseReport, reportAvailable } from "../src/parse/report.ts";
 import { parseCourt, parseTeam } from "../src/parse/team.ts";
 
 const fixture = (name: string) => readFileSync(new URL(`fixtures/${name}`, import.meta.url), "utf8");
@@ -73,4 +73,16 @@ test("court", () => {
   assert.equal(c.name, "Sportanlage Schevemoor (09-28325-1)");
   assert.deepEqual(c.address, ["Walliser Straße 119", "28325 Bremen (Osterholz)"]);
   assert.match(c.mapsUrl!, /google\.com\/maps/);
+});
+
+test("schedule: 0:0 placeholder of an unfilled report is no result", () => {
+  const html = fixture("schedule.html").replace(/(meeting=397415[^>]*>\s*<span>\s*)7:1/, "$10:0");
+  const m = parseSchedule(html).find((x) => x.meeting === 397415)!;
+  assert.equal(m.result, null);
+  assert.equal(m.meeting, 397415);
+});
+
+test("report: empty page while nuLiga edits the report", () => {
+  assert.equal(reportAvailable(fixture("report-empty.html")), false);
+  assert.equal(reportAvailable(fixture("report-397415.html")), true);
 });

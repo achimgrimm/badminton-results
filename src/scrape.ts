@@ -1,7 +1,7 @@
 import { urls } from "./config.ts";
 import { loadDataset, writeJson } from "./data.ts";
 import { fetchHtml } from "./fetch.ts";
-import { parseReport } from "./parse/report.ts";
+import { parseReport, reportAvailable } from "./parse/report.ts";
 import { parseSchedule } from "./parse/schedule.ts";
 import { parseTable } from "./parse/table.ts";
 import { parseCourt, parseTeam } from "./parse/team.ts";
@@ -23,10 +23,17 @@ if (writeJson("team.json", team)) changed.push("team");
 
 // Reports: fetch new ones, and refetch until nuLiga marks them approved.
 for (const m of schedule) {
-  if (!m.meeting) continue;
+  if (!m.meeting || !m.result) continue;
   const known = previous.reports[m.meeting];
   if (known?.approved) continue;
-  const report = parseReport(await fetchHtml(urls.report(m.meeting)), m.meeting);
+  const page = await fetchHtml(urls.report(m.meeting));
+  // nuLiga sometimes serves an empty page for a report that is being edited.
+  // Keep the last good copy; any other parse error still fails the run.
+  if (!reportAvailable(page)) {
+    console.warn(`report ${m.meeting} (${m.home} – ${m.guest}) currently empty on nuLiga, ${known ? "keeping previous copy" : "skipped"}`);
+    continue;
+  }
+  const report = parseReport(page, m.meeting);
   // The schedule's approval icon is the authoritative signal.
   report.approved ||= m.approved;
   if (writeJson(`reports/${m.meeting}.json`, report)) changed.push(`report ${m.meeting}`);

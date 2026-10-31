@@ -1,6 +1,8 @@
 [tools]
 # Everything else (TypeScript, tsx, cheerio) comes from package.json via `npm ci`.
 node = "22"
+# GitHub CLI, for repo and workflow management
+gh = "2"
 
 [tasks.install]
 description = "Install npm dependencies"

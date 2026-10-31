@@ -1,4 +1,4 @@
-const USER_AGENT = "ot-bremen-results/1.0 (+https://github.com; unofficial mobile view)";
+const USER_AGENT = "ot-bremen-results/1.0 (+https://github.com/achimgrimm/badminton-results; unofficial mobile view)";
 const MIN_INTERVAL_MS = 1000;
 
 let last = 0;

@@ -1,9 +1,10 @@
 import { LEAGUE_NAME, OWN_TEAM } from "../config.ts";
 import type { Dataset } from "../data.ts";
-import { headToHead, lineup, teamForm } from "../stats.ts";
+import { headToHead, lineup, playerStats, teamForm, type PlayerStats, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard } from "./components.ts";
 import { layout } from "./layout.ts";
+import { disciplinePills, quota, record } from "./spieler.ts";
 import { displayName, esc, formatDate, html, isOwn, opponentOf, previewName } from "./util.ts";
 
 const MATCH_HOURS = 3; // same duration as nuLiga's own calendar feed
@@ -50,6 +51,28 @@ export function renderIcs(d: Dataset, m: Meeting, now: Date): string {
     .join("\r\n");
 }
 
+/** One row per opposing player: appearances, record, sets, disciplines, usual partner. */
+function opponentRow(s: PlayerStats): string {
+  const vsUs = s.log.filter((g) => g.opponentTeam === OWN_TEAM);
+  const usTally: Tally = {
+    played: vsUs.length,
+    won: vsUs.filter((g) => g.outcome === "win").length,
+    lost: vsUs.filter((g) => g.outcome === "loss").length,
+  };
+  const partner = s.partners[0];
+  return html`<tr>
+      <td>
+        <span class="player-name">${esc(displayName(s.name))}</span>
+        ${disciplinePills(s)}
+        ${partner ? `<span class="small muted">meist mit ${esc(displayName(partner.name))}</span>` : ""}
+        ${vsUs.length ? `<span class="small vs-us">gegen uns: ${record(usTally)}</span>` : ""}
+      </td>
+      <td class="num">${s.played}</td>
+      <td class="num"><b>${record(s)}</b><br><span class="small muted">${quota(s)}</span></td>
+      <td class="num">${s.sets[0]}:${s.sets[1]}</td>
+    </tr>`;
+}
+
 export function renderVorschau(d: Dataset, m: Meeting): string {
   const root = "../";
   const opponent = opponentOf(m);
@@ -63,6 +86,7 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
   );
   const opponentReports = Object.values(d.reports).filter((r) => r.home === opponent || r.guest === opponent);
   const lineups = lineup(opponentReports, opponent);
+  const opponentPlayers = playerStats(opponentReports, opponent);
 
   const body = html`
     <section class="next">
@@ -103,6 +127,22 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
       : `<p class="muted">Noch kein Spiel in dieser Saison.${
           returnMatch ? ` Das Rückspiel ist am ${esc(formatDate(returnMatch.date))}.` : ""
         }</p>`}
+
+    <h2>Spieler des Gegners</h2>
+    ${opponentPlayers.length
+      ? html`<p class="small muted">Alle ${opponentPlayers.length} Spieler, die ${esc(opponent)} bisher eingesetzt hat, nach Einsätzen.</p>
+        <div class="results-wrap">
+          <table class="results results--plain players-table">
+            <thead><tr>
+              <th scope="col">Spieler</th>
+              <th class="num" scope="col" title="Spiele">Sp.</th>
+              <th class="num" scope="col">S–N</th>
+              <th class="num" scope="col">Sätze</th>
+            </tr></thead>
+            <tbody>${opponentPlayers.map(opponentRow)}</tbody>
+          </table>
+        </div>`
+      : `<p class="muted">Noch keine Spielberichte.</p>`}
 
     <h2>Aufstellung des Gegners</h2>
     ${lineups.length

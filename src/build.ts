@@ -4,6 +4,7 @@ import { loadDataset } from "./data.ts";
 import { renderBericht } from "./render/bericht.ts";
 import { renderIndex } from "./render/index.ts";
 import { renderManifest, renderServiceWorker } from "./render/pwa.ts";
+import { ownPlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
 import { renderSpielplan } from "./render/spielplan.ts";
 import { renderTabelle } from "./render/tabelle.ts";
 import { hasPreview, previewName } from "./render/util.ts";
@@ -19,15 +20,20 @@ const now = new Date();
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(join(DIST, "bericht"), { recursive: true });
 mkdirSync(join(DIST, "vorschau"), { recursive: true });
+mkdirSync(join(DIST, "spieler"), { recursive: true });
 mkdirSync(join(DIST, "icons"), { recursive: true });
 
 const write = (file: string, content: string) => writeFileSync(join(DIST, file), content);
 write("index.html", renderIndex(d, now));
 write("tabelle.html", renderTabelle(d));
 write("spielplan.html", renderSpielplan(d, now));
+const players = ownPlayers(d);
+const link = playerLinker(players, "../");
 for (const r of Object.values(d.reports)) {
-  write(`bericht/${r.meeting}.html`, renderBericht(d, r, d.schedule.find((m) => m.meeting === r.meeting)));
+  write(`bericht/${r.meeting}.html`, renderBericht(d, r, d.schedule.find((m) => m.meeting === r.meeting), link));
 }
+write("spieler.html", renderSpielerListe(d, players));
+for (const p of players) write(`spieler/${p.slug}.html`, renderSpieler(d, p));
 const previews = d.schedule.filter(hasPreview);
 for (const m of previews) {
   write(`vorschau/${previewName(m)}.html`, renderVorschau(d, m));
@@ -42,4 +48,4 @@ write("manifest.webmanifest", renderManifest());
 write("sw.js", renderServiceWorker(now.getTime().toString(36)));
 writeFileSync(join(DIST, ".nojekyll"), "");
 
-console.log(`built ${3 + Object.keys(d.reports).length + previews.length} pages into dist/`);
+console.log(`built ${4 + Object.keys(d.reports).length + previews.length + players.length} pages into dist/`);

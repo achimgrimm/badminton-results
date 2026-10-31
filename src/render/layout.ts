@@ -1,7 +1,7 @@
 import { LEAGUE_NAME, OWN_TEAM, SEASON_LABEL, urls } from "../config.ts";
 import { esc, formatTimestamp, html } from "./util.ts";
 
-export type NavKey = "index" | "tabelle" | "spielplan" | null;
+export type NavKey = "index" | "tabelle" | "spielplan" | "spieler" | null;
 
 export interface PageOptions {
   title: string;
@@ -10,6 +10,8 @@ export interface PageOptions {
   nav: NavKey;
   checkedAt: string | null;
   sourceUrl?: string;
+  /** Keep the page out of search engines (personal stats) */
+  noindex?: boolean;
   body: string;
   script?: string;
 }
@@ -18,6 +20,7 @@ const NAV: { key: Exclude<NavKey, null>; href: string; label: string }[] = [
   { key: "index", href: "index.html", label: "Übersicht" },
   { key: "tabelle", href: "tabelle.html", label: "Tabelle" },
   { key: "spielplan", href: "spielplan.html", label: "Spielplan" },
+  { key: "spieler", href: "spieler.html", label: "Spieler" },
 ];
 
 const THEME_KEY = "theme";
@@ -83,7 +86,7 @@ export function layout(o: PageOptions): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a409f">
-<title>${esc(o.title)} · ${esc(OWN_TEAM)}</title>
+${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.title)} · ${esc(OWN_TEAM)}</title>
 <script>${THEME_INIT}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -13,11 +13,19 @@ const DISCIPLINES: Record<string, string> = {
   GD: "Gemischtes Doppel",
 };
 
-function players(list: Player[]): string {
-  return list.map((p) => `<span>${esc(displayName(p.name))}</span>`).join("");
+export type PlayerLink = (p: Player) => string | null;
+
+function players(list: Player[], link?: PlayerLink): string {
+  return list
+    .map((p) => {
+      const href = link?.(p);
+      const name = esc(displayName(p.name));
+      return href ? `<a href="${href}">${name}</a>` : `<span>${name}</span>`;
+    })
+    .join("");
 }
 
-function gameCard(g: Game, r: MatchReport): string {
+function gameCard(g: Game, r: MatchReport, link?: PlayerLink): string {
   const [hw, gw] = g.result ?? [0, 0];
   const ownSide = isOwn(r.home) ? 0 : isOwn(r.guest) ? 1 : null;
   const ownWon = ownSide == null || !g.result ? null : (ownSide === 0 ? hw > gw : gw > hw);
@@ -34,16 +42,16 @@ function gameCard(g: Game, r: MatchReport): string {
         ${ownWon == null ? "" : outcomeBadge(ownWon ? "win" : "loss")}
       </div>
       <div class="game" style="--sets:${cols}">
-        <div class="side${hw > gw ? " won" : ""}">${players(g.home)}</div>
+        <div class="side${hw > gw ? " won" : ""}">${players(g.home, isOwn(r.home) ? link : undefined)}</div>
         ${g.sets.map((s) => cell(0, s))}${pad(cols - g.sets.length)}
         <div class="divider"></div>
-        <div class="side${gw > hw ? " won" : ""}">${players(g.guest)}</div>
+        <div class="side${gw > hw ? " won" : ""}">${players(g.guest, isOwn(r.guest) ? link : undefined)}</div>
         ${g.sets.map((s) => cell(1, s))}${pad(cols - g.sets.length)}
       </div>
     </article>`;
 }
 
-export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | undefined): string {
+export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | undefined, link?: PlayerLink): string {
   const [h, g] = r.totals.games ?? meeting?.result ?? [0, 0];
   const outcome = meeting ? ownOutcome(meeting) : null;
   const date = r.date ?? meeting?.date;
@@ -65,7 +73,7 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
       ${outcome ? `<p>${outcomeBadge(outcome)}</p>` : ""}
     </section>
 
-    ${r.games.map((game) => gameCard(game, r))}
+    ${r.games.map((game) => gameCard(game, r, link))}
 
     <h2>Infos</h2>
     <div class="card">

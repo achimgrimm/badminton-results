@@ -32,7 +32,7 @@ export function renderManifest(): string {
  */
 export function renderServiceWorker(version: string): string {
   return `const CACHE = "ot-results-${version}";
-const PRECACHE = ["./", "index.html", "tabelle.html", "spielplan.html", "styles.css", "favicon.svg", "manifest.webmanifest", "icons/icon-192.png"];
+const PRECACHE = ["./", "index.html", "tabelle.html", "spielplan.html", "spieler.html", "styles.css", "favicon.svg", "manifest.webmanifest", "icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));

@@ -1,0 +1,33 @@
+name: Dependabot auto-merge
+
+# Tests Dependabot PRs and merges them when type check and tests pass.
+# A failing PR stays open with a red check.
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  test-and-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Merge
+        run: gh pr merge "$PR" --squash --delete-branch
+        env:
+          PR: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Merges made with GITHUB_TOKEN don't trigger the push workflow, so deploy explicitly.
+      - name: Deploy
+        run: gh workflow run update.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}

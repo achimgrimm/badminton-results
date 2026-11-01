@@ -1,4 +1,4 @@
-import { CLUB_NAME, SEASON_LABEL, urls } from "../config.ts";
+import { CLUB_NAME, SEASON_LABEL, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
 import { clubTeams, currentTeam } from "./context.ts";
 import { esc, formatTimestamp, html } from "./util.ts";
@@ -57,6 +57,26 @@ const THEME_INIT = `(function () {
   document.documentElement.dataset.theme = t;
 })();`;
 
+/**
+ * Loads Umami (cookieless) and tags every page view and event "app" or "browser", so the
+ * dashboard can filter by installed PWA. otTrack() is a no-op until the script has loaded
+ * or when it is blocked.
+ */
+const ANALYTICS = `function otTrack(name, data) { if (window.umami) umami.track(name, data); }
+(function () {
+  var s = document.createElement("script");
+  var app = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  s.defer = true;
+  s.src = "${UMAMI_SCRIPT}";
+  s.dataset.websiteId = "${UMAMI_WEBSITE_ID}";
+  s.dataset.domains = "${UMAMI_DOMAIN}";
+  s.dataset.tag = app ? "app" : "browser";
+  document.head.appendChild(s);
+})();`;
+const TRACKING = UMAMI_WEBSITE_ID !== "";
+/** Stub when tracking is off, so the other scripts can call otTrack() unconditionally. */
+const NO_ANALYTICS = `function otTrack() {}`;
+
 const THEME_TOGGLE = `(function () {
   var root = document.documentElement, btn = document.getElementById("theme-toggle");
   function label() {
@@ -68,6 +88,7 @@ const THEME_TOGGLE = `(function () {
   btn.addEventListener("click", function () {
     root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
     try { localStorage.setItem("${THEME_KEY}", root.dataset.theme); } catch (e) {}
+    otTrack("theme", { to: root.dataset.theme });
     label();
   });
   label();
@@ -94,7 +115,10 @@ const INSTALL = (root: string) => `(function () {
   if (ios || otherAndroid) btn.hidden = false;
   if (otherAndroid) {
     var intent = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=com.android.chrome;end";
-    document.querySelectorAll(".open-in-chrome").forEach(function (a) { a.href = intent; });
+    document.querySelectorAll(".open-in-chrome").forEach(function (a) {
+      a.href = intent;
+      a.addEventListener("click", function () { otTrack("open-in-chrome"); });
+    });
     var dismissed = false;
     try { dismissed = localStorage.getItem("${HINT_KEY}") === "1"; } catch (e) {}
     if (!dismissed) hint.hidden = false;
@@ -108,12 +132,14 @@ const INSTALL = (root: string) => `(function () {
     deferred.prompt();
     deferred.userChoice.then(function (choice) {
       deferred = null;
+      otTrack(choice.outcome === "accepted" ? "install-accepted" : "install-dismissed");
       if (choice.outcome === "accepted") btn.hidden = true;
     });
   }
   addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; btn.hidden = false; });
-  addEventListener("appinstalled", function () { deferred = null; btn.hidden = true; });
+  addEventListener("appinstalled", function () { deferred = null; btn.hidden = true; otTrack("app-installed"); });
   btn.addEventListener("click", function () {
+    otTrack("install-click", { platform: otherAndroid ? "android-other" : deferred ? "prompt" : ios ? "ios" : "other" });
     if (otherAndroid) { installHere.hidden = !deferred; helpAndroid.showModal(); return; }
     if (!deferred) { help.showModal(); return; }
     prompt();
@@ -133,6 +159,7 @@ const INSTALL = (root: string) => `(function () {
     }
     sb.hidden = false;
     sb.addEventListener("click", function () {
+      otTrack("share", { method: navigator.share ? "share" : navigator.clipboard ? "clipboard" : "prompt" });
       if (navigator.share) {
         navigator.share({ title: "${SHARE_TITLE}", text: "${SHARE_TEXT}", url: url }).catch(function () {});
       } else if (navigator.clipboard) {
@@ -201,6 +228,7 @@ export function layout(o: PageOptions): string {
 <meta name="theme-color" content="#0a409f">
 ${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.title)} · ${esc(team ? `${CLUB_NAME} ${team.label}` : `${CLUB_NAME} Badminton`)}</title>
 <script>${THEME_INIT}</script>
+<script>${TRACKING ? ANALYTICS : NO_ANALYTICS}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -246,6 +274,7 @@ ${o.body}
 <footer class="site-footer">
   <div class="container">
     <p>Inoffizielle Ansicht. Daten: <a href="${esc(o.sourceUrl ?? (team ? urls.groupPage(team) : urls.clubTeams()))}">nuLiga</a> / Bremer Badminton-Verband.</p>
+    ${TRACKING ? `<p>Anonyme Nutzungsstatistik mit Umami, ohne Cookies und ohne persönliche Daten.</p>` : ""}
     ${o.checkedAt ? `<p>Stand: ${esc(formatTimestamp(o.checkedAt))}</p>` : ""}
   </div>
 </footer>

@@ -33,6 +33,7 @@ npm test         # parser tests against test/fixtures
 - `src/render/*` render the plain HTML pages. Styling follows the OT design tokens in `src/styles.css`.
 - `.github/workflows/update.yml` runs hourly and on every push to `main`. It tests, scrapes, builds and deploys `dist/` to GitHub Pages. If a parse fails, the job fails and the last good deploy stays online.
 - The site is an installable PWA. `src/render/pwa.ts` generates the manifest and the service worker. Pages are network-first with an offline fallback to the last cached copy. The app icons in `src/icons/` are rendered from `icon.svg`.
+- Usage is counted with [Umami Cloud](https://cloud.umami.is) (cookieless, no consent banner needed). The website ID is `UMAMI_WEBSITE_ID` in `src/config.ts`; an empty ID turns tracking off. Only the live domain is counted, not local previews. Every page view is tagged `app` (installed PWA) or `browser`; events: `theme`, `install-click`, `install-accepted`/`install-dismissed`, `app-installed`, `open-in-chrome`, `share`.
 - `data/` is not in git. The workflow keeps it in the GitHub Actions cache between runs. If the cache is evicted, the next run simply fetches all Spielberichte again.
 
 ## Live site

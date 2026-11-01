@@ -26,3 +26,9 @@ export const urls = {
   report: (g: Group, meeting: number) => `${WA}/groupMeetingReport?meeting=${meeting}&${groupQuery(g)}`,
   court: (location: number) => `${WA}/courtInfo?federation=BrBV&location=${location}`,
 };
+
+/** Umami Cloud: cookieless page view counting. An empty ID disables tracking. */
+export const UMAMI_SCRIPT = "https://cloud.umami.is/script.js";
+export const UMAMI_WEBSITE_ID: string = "3063f1a3-eff3-4074-9e54-08f13cd3b50d";
+/** Only the live site is counted, not local previews. */
+export const UMAMI_DOMAIN = "achimgrimm.github.io";

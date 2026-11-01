@@ -94,7 +94,7 @@ main.container { padding-bottom: 32px; }
 .header-btn:hover { background: rgba(255,255,255,.15); }
 .header-btn svg { width: 20px; height: 20px; }
 .header-btn[hidden] { display: none; }
-.install-btn { padding: 0 14px 0 10px; }
+.install-btn, .share-btn { padding: 0 14px 0 10px; }
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }

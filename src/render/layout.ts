@@ -90,7 +90,7 @@ const INSTALL = (root: string) => `(function () {
   var chrome = /Chrome\\//.test(ua) && !/SamsungBrowser|EdgA|OPR|Firefox|YaBrowser|MiuiBrowser|UCBrowser|Vivaldi|DuckDuckGo|; wv\\)/.test(ua)
     && (!brands || brands.some(function (b) { return b.brand === "Google Chrome"; }));
   var otherAndroid = /Android/i.test(ua) && !chrome;
-  if (standalone) return;
+  if (standalone) { share(); return; }
   if (ios || otherAndroid) btn.hidden = false;
   if (otherAndroid) {
     var intent = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=com.android.chrome;end";
@@ -121,12 +121,38 @@ const INSTALL = (root: string) => `(function () {
   installHere.addEventListener("click", function () { helpAndroid.close(); if (deferred) prompt(); });
   help.querySelector("button").addEventListener("click", function () { help.close(); });
   helpAndroid.querySelector(".dialog-close").addEventListener("click", function () { helpAndroid.close(); });
+
+  /** Installed app only: no browser UI is left to pass the link on. Shares the chooser at the root. */
+  function share() {
+    var sb = document.getElementById("share-btn"), label = sb.querySelector("span"), timer = null;
+    var url = new URL("${root}", location.href).href;
+    function copied(text) {
+      label.textContent = text;
+      clearTimeout(timer);
+      timer = setTimeout(function () { label.textContent = "Teilen"; }, 2000);
+    }
+    sb.hidden = false;
+    sb.addEventListener("click", function () {
+      if (navigator.share) {
+        navigator.share({ title: "${SHARE_TITLE}", text: "${SHARE_TEXT}", url: url }).catch(function () {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function () { copied("Link kopiert"); }, function () { prompt("Link zum Teilen:", url); });
+      } else {
+        prompt("Link zum Teilen:", url);
+      }
+    });
+  }
 })();`;
+
+const SHARE_TITLE = "OT Badminton";
+const SHARE_TEXT = `Tabellen, Spielpläne und Ergebnisse aller ${CLUB_NAME}-Badmintonmannschaften`;
 
 const CHROME_NOTE = "Installiere die App am besten über Chrome. Andere Browser erzeugen eine veraltete App, vor der Android warnt.";
 
 const INSTALL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>`;
 const SHARE_ICON = `<svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Teilen"><path d="M12 15V3M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>`;
+/** The common three-node share symbol; SHARE_ICON above mimics Safari's own button for the iOS how-to. */
+const SHARE_BTN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>`;
 
 const MOON = `<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`;
 const SUN = `<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
@@ -193,6 +219,7 @@ ${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.tit
     ${brand}
     <div class="header-actions">
       <button type="button" class="header-btn install-btn" id="install-btn" aria-label="App installieren" title="App installieren" hidden>${INSTALL_ICON}<span>App</span></button>
+      <button type="button" class="header-btn share-btn" id="share-btn" aria-label="App teilen" title="App teilen" hidden>${SHARE_BTN_ICON}<span>Teilen</span></button>
       <button type="button" class="header-btn theme-toggle" id="theme-toggle" aria-label="Dunkles Design einschalten">${MOON}${SUN}</button>
     </div>
   </div>

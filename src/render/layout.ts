@@ -28,6 +28,7 @@ const NAV: { key: Exclude<NavKey, null>; href: string; label: string }[] = [
 ];
 
 const THEME_KEY = "theme";
+const HINT_KEY = "chromeHintDismissed";
 export const TEAM_KEY = "team";
 
 /** Team pages remember themselves, so the chooser can forward there next time. */
@@ -75,26 +76,54 @@ const THEME_TOGGLE = `(function () {
 /**
  * Install button: Chrome/Edge/Android fire beforeinstallprompt; iOS Safari has no prompt,
  * so the button opens a short how-to instead. Hidden when already running as an app.
+ * Android browsers other than Chrome (e.g. Samsung Internet) wrap the site in an outdated APK
+ * that Play Protect blocks, so there a note and the button point to Chrome instead.
  */
 const INSTALL = (root: string) => `(function () {
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("${root}sw.js");
   var btn = document.getElementById("install-btn"), help = document.getElementById("install-help"), deferred = null;
+  var helpAndroid = document.getElementById("install-help-android"), hint = document.getElementById("chrome-hint");
+  var ua = navigator.userAgent;
   var standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var ios = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var brands = navigator.userAgentData && navigator.userAgentData.brands;
+  var chrome = /Chrome\\//.test(ua) && !/SamsungBrowser|EdgA|OPR|Firefox|YaBrowser|MiuiBrowser|UCBrowser|Vivaldi|DuckDuckGo|; wv\\)/.test(ua)
+    && (!brands || brands.some(function (b) { return b.brand === "Google Chrome"; }));
+  var otherAndroid = /Android/i.test(ua) && !chrome;
   if (standalone) return;
-  if (ios) btn.hidden = false;
-  addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; btn.hidden = false; });
-  addEventListener("appinstalled", function () { deferred = null; btn.hidden = true; });
-  btn.addEventListener("click", function () {
-    if (!deferred) { help.showModal(); return; }
+  if (ios || otherAndroid) btn.hidden = false;
+  if (otherAndroid) {
+    var intent = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=com.android.chrome;end";
+    document.querySelectorAll(".open-in-chrome").forEach(function (a) { a.href = intent; });
+    var dismissed = false;
+    try { dismissed = localStorage.getItem("${HINT_KEY}") === "1"; } catch (e) {}
+    if (!dismissed) hint.hidden = false;
+    hint.querySelector(".dialog-close").addEventListener("click", function () {
+      hint.hidden = true;
+      try { localStorage.setItem("${HINT_KEY}", "1"); } catch (e) {}
+    });
+  }
+  var installHere = helpAndroid.querySelector(".install-here");
+  function prompt() {
     deferred.prompt();
     deferred.userChoice.then(function (choice) {
       deferred = null;
       if (choice.outcome === "accepted") btn.hidden = true;
     });
+  }
+  addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; btn.hidden = false; });
+  addEventListener("appinstalled", function () { deferred = null; btn.hidden = true; });
+  btn.addEventListener("click", function () {
+    if (otherAndroid) { installHere.hidden = !deferred; helpAndroid.showModal(); return; }
+    if (!deferred) { help.showModal(); return; }
+    prompt();
   });
+  installHere.addEventListener("click", function () { helpAndroid.close(); if (deferred) prompt(); });
   help.querySelector("button").addEventListener("click", function () { help.close(); });
+  helpAndroid.querySelector(".dialog-close").addEventListener("click", function () { helpAndroid.close(); });
 })();`;
+
+const CHROME_NOTE = "Installiere die App am besten über Chrome. Andere Browser erzeugen eine veraltete App, vor der Android warnt.";
 
 const INSTALL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>`;
 const SHARE_ICON = `<svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Teilen"><path d="M12 15V3M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>`;
@@ -177,6 +206,13 @@ ${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.tit
       </nav>`
     : ""}
 </header>
+<div class="container chrome-hint-wrap">
+  <div class="chrome-hint" id="chrome-hint" role="note" hidden>
+    <p>${CHROME_NOTE}</p>
+    <a class="btn btn-primary open-in-chrome" href="#">In Chrome öffnen</a>
+    <button type="button" class="dialog-close" aria-label="Hinweis schließen">×</button>
+  </div>
+</div>
 <main class="container">
 ${o.body}
 </main>
@@ -196,6 +232,17 @@ ${team ? teamDialog(team, assets) : ""}
     <li>Tippe auf <b>„Hinzufügen“</b>.</li>
   </ol>
   <button type="button" class="btn btn-primary">Verstanden</button>
+</dialog>
+<dialog class="install-help" id="install-help-android" aria-labelledby="install-help-android-h">
+  <div class="dialog-head">
+    <h2 id="install-help-android-h">App installieren</h2>
+    <button type="button" class="dialog-close" aria-label="Schließen">×</button>
+  </div>
+  <p>${CHROME_NOTE}</p>
+  <div class="btn-row">
+    <a class="btn btn-primary open-in-chrome" href="#">In Chrome öffnen</a>
+    <button type="button" class="btn btn-secondary install-here" hidden>Trotzdem hier installieren</button>
+  </div>
 </dialog>
 <script>${THEME_TOGGLE}</script>
 <script>${INSTALL(assets)}</script>

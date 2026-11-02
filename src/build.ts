@@ -5,7 +5,8 @@ import { loadClubTeams, loadDataset, type Dataset } from "./data.ts";
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
 import { renderChooser } from "./render/chooser.ts";
-import { setTeam, setVersion, type BuildVersion } from "./render/context.ts";
+import { setReleases, setTeam, setVersion, type BuildVersion } from "./render/context.ts";
+import { loadReleases } from "./releases.ts";
 import { renderIndex } from "./render/index.ts";
 import { renderManifest, renderServiceWorker } from "./render/pwa.ts";
 import { ownPlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
@@ -36,6 +37,7 @@ function gitVersion(): BuildVersion | null {
   }
 }
 setVersion(gitVersion());
+setReleases(loadReleases(new URL("../release-notes/", import.meta.url).pathname));
 
 const teams = loadClubTeams();
 if (teams.length === 0) throw new Error("no data – run `npm run scrape` first");

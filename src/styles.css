@@ -271,6 +271,12 @@ body.only-own .card.match-card:not(.is-own) { display: none; }
 .team-list a:hover { background: var(--ot-bg-alt); text-decoration: none; }
 .team-list div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 12px; color: var(--ot-text-strong); }
 .new-dialog .team-list .small { white-space: nowrap; }
+.release-dialog article + article { border-top: 1px solid var(--ot-border); margin-top: 16px; padding-top: 16px; }
+.release-dialog article h3 { font-size: 1.125rem; text-transform: none; letter-spacing: 0; color: var(--ot-text-strong); margin: 12px 0 0; }
+.release-dialog article > p.small { margin: 0 0 8px; }
+.release-dialog ul { padding-left: 1.25rem; }
+.release-dialog li { margin: 4px 0; }
+.release-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 .new-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 .team-list a[aria-current="page"] { box-shadow: inset 4px 0 0 var(--ot-primary); background: var(--ot-bg-alt); color: var(--ot-primary); }
 .team-label { font-weight: 600; }

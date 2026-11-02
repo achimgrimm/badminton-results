@@ -1,3 +1,4 @@
+import type { Release } from "../releases.ts";
 import type { ClubTeam } from "../types.ts";
 
 let current: ClubTeam | null = null;
@@ -32,3 +33,10 @@ export function setVersion(v: BuildVersion | null): void {
   version = v;
 }
 export const buildVersion = (): BuildVersion | null => version;
+
+/** Release notes from release-notes/, newest first. */
+let releases: Release[] = [];
+export function setReleases(r: Release[]): void {
+  releases = r;
+}
+export const releaseNotes = (): Release[] => releases;

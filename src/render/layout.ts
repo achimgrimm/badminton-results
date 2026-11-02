@@ -1,7 +1,7 @@
 import { CLUB_NAME, REPO_URL, SEASON_LABEL, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
-import { buildVersion, clubTeams, currentTeam } from "./context.ts";
-import { esc, formatTimestamp, html, todayInBremen } from "./util.ts";
+import { buildVersion, clubTeams, currentTeam, releaseNotes } from "./context.ts";
+import { esc, formatDate, formatTimestamp, html, todayInBremen } from "./util.ts";
 
 export type NavKey = "index" | "tabelle" | "spielplan" | "spieler" | null;
 
@@ -94,6 +94,64 @@ const NEW_RESULTS = (slug: string) => `(function () {
     otTrack("new-results", { count: cards.length });
   }
 })();`;
+
+/** How many of the newest release notes each page carries. */
+const RELEASES_SHOWN = 3;
+const RELEASE_KEY = "releaseSeen";
+
+/**
+ * Release notes dialog. The footer link opens it with all embedded notes. On team pages it opens
+ * by itself with the notes newer than the last one seen; new users (no team chosen yet) skip
+ * those and start from the newest. "Seen" is stored when the dialog is closed. If the new-results
+ * pop-up is open, the notes wait until it is closed. Must run before REMEMBER sets the team key.
+ */
+const RELEASE_NOTES = (auto: boolean) => `(function () {
+  var dlg = document.getElementById("release-dialog");
+  if (!dlg) return;
+  var arts = Array.prototype.slice.call(dlg.querySelectorAll("[data-release]"));
+  var newest = arts[0].dataset.release, seen = null, known = null;
+  try { seen = localStorage.getItem("${RELEASE_KEY}"); known = localStorage.getItem("${TEAM_KEY}"); } catch (e) {}
+  function show(list, via) {
+    arts.forEach(function (a) { a.hidden = list.indexOf(a) < 0; });
+    dlg.showModal();
+    otTrack("release-notes", { id: newest, via: via });
+  }
+  // Saved right away on a click too: the close event fires a moment later, possibly after a reload.
+  function done() { try { localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} dlg.close(); }
+  dlg.querySelectorAll(".dialog-close, .btn").forEach(function (b) { b.addEventListener("click", done); });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) done(); });
+  dlg.addEventListener("close", function () { try { localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} });
+  document.getElementById("release-link").addEventListener("click", function (e) { e.preventDefault(); show(arts, "footer"); });
+  if (!${auto}) return;
+  if (!seen && !known) { try { localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} return; }
+  var fresh = arts.filter(function (a) { return !seen || a.dataset.release > seen; });
+  if (!fresh.length) return;
+  // Runs after the other page scripts, so an open new-results pop-up goes first.
+  setTimeout(function () {
+    var other = document.getElementById("new-dialog");
+    if (other && other.open) other.addEventListener("close", function () { show(fresh, "auto"); }, { once: true });
+    else show(fresh, "auto");
+  }, 0);
+})();`;
+
+function releaseDialog(): string {
+  const shown = releaseNotes().slice(0, RELEASES_SHOWN);
+  if (!shown.length) return "";
+  return html`<dialog class="team-dialog release-dialog" id="release-dialog" aria-labelledby="release-dialog-h">
+  <div class="dialog-head">
+    <h2 id="release-dialog-h">Was ist neu?</h2>
+    <button type="button" class="dialog-close" aria-label="Schließen">×</button>
+  </div>
+  ${shown.map(
+    (r) => html`<article data-release="${esc(r.id)}">
+      <h3>${esc(r.title)}</h3>
+      <p class="small muted">${esc(formatDate(r.date))}</p>
+      ${r.html}
+    </article>`,
+  )}
+  <div class="btn-row"><button type="button" class="btn btn-primary" autofocus>OK</button></div>
+</dialog>`;
+}
 
 const TEAM_SWITCH = `(function () {
   var btn = document.getElementById("team-btn"), dlg = document.getElementById("team-dialog");
@@ -278,13 +336,14 @@ function teamDialog(team: ClubTeam, assets: string): string {
 </dialog>`;
 }
 
-/** "Stand: <data timestamp> · Version <commit> vom <commit date>", whichever parts are known. */
+/** "Stand: <data timestamp> · Version <commit> vom <commit date> · Was ist neu?", whichever parts are known. */
 function footerStatus(checkedAt: string | null): string {
   const v = buildVersion();
   const parts = [
     checkedAt ? `Stand: ${esc(formatTimestamp(checkedAt))}` : "",
     v ? `Version <a href="${REPO_URL}/commit/${esc(v.sha)}">${esc(v.sha.slice(0, 7))}</a> vom ${todayInBremen(new Date(v.date)).split("-").reverse().join(".")}` : "",
   ].filter(Boolean);
+  if (releaseNotes().length) parts.push(`<a href="#" id="release-link">Was ist neu?</a>`);
   return parts.length ? `<p>${parts.join(" · ")}</p>` : "";
 }
 
@@ -361,6 +420,7 @@ ${o.body}
 </footer>
 ${team ? teamDialog(team, assets) : ""}
 ${team ? NEW_DIALOG : ""}
+${releaseDialog()}
 <dialog class="install-help" id="install-help" aria-labelledby="install-help-h">
   <h2 id="install-help-h">App installieren</h2>
   <p>So legst Du die Seite als App auf Deinen Home-Bildschirm:</p>
@@ -384,6 +444,7 @@ ${team ? NEW_DIALOG : ""}
 </dialog>
 <script>${THEME_TOGGLE}</script>
 <script>${INSTALL(assets)}</script>
+${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}
 ${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}</script>` : ""}
 ${o.script ? `<script>${o.script}</script>` : ""}
 </body>

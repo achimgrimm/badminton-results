@@ -19,3 +19,16 @@ export function ownTeam(): ClubTeam {
 
 export const currentTeam = (): ClubTeam | null => current;
 export const clubTeams = (): ClubTeam[] => all;
+
+/** The git commit the site is built from; null when git isn't available. */
+export interface BuildVersion {
+  sha: string;
+  /** ISO commit date */
+  date: string;
+}
+
+let version: BuildVersion | null = null;
+export function setVersion(v: BuildVersion | null): void {
+  version = v;
+}
+export const buildVersion = (): BuildVersion | null => version;

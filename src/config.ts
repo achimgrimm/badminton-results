@@ -7,6 +7,8 @@ export const CLUB_NAME = "OT Bremen";
 /** Team names in the leagues: "OT Bremen", "OT Bremen II", … */
 export const CLUB_PREFIX = "OT Bremen";
 export const SEASON_LABEL = "2026/27";
+/** The footer links the build's commit here. */
+export const REPO_URL = "https://github.com/achimgrimm/badminton-results";
 
 /** A league on nuLiga. */
 export interface Group {

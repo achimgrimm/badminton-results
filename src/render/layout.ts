@@ -1,7 +1,7 @@
-import { CLUB_NAME, SEASON_LABEL, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
+import { CLUB_NAME, REPO_URL, SEASON_LABEL, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
-import { clubTeams, currentTeam } from "./context.ts";
-import { esc, formatTimestamp, html } from "./util.ts";
+import { buildVersion, clubTeams, currentTeam } from "./context.ts";
+import { esc, formatTimestamp, html, todayInBremen } from "./util.ts";
 
 export type NavKey = "index" | "tabelle" | "spielplan" | "spieler" | null;
 
@@ -278,6 +278,16 @@ function teamDialog(team: ClubTeam, assets: string): string {
 </dialog>`;
 }
 
+/** "Stand: <data timestamp> · Version <commit> vom <commit date>", whichever parts are known. */
+function footerStatus(checkedAt: string | null): string {
+  const v = buildVersion();
+  const parts = [
+    checkedAt ? `Stand: ${esc(formatTimestamp(checkedAt))}` : "",
+    v ? `Version <a href="${REPO_URL}/commit/${esc(v.sha)}">${esc(v.sha.slice(0, 7))}</a> vom ${todayInBremen(new Date(v.date)).split("-").reverse().join(".")}` : "",
+  ].filter(Boolean);
+  return parts.length ? `<p>${parts.join(" · ")}</p>` : "";
+}
+
 export function layout(o: PageOptions): string {
   const team = currentTeam();
   const assets = o.assets ?? `${o.root}../`;
@@ -346,7 +356,7 @@ ${o.body}
   <div class="container">
     <p>Inoffizielle Ansicht. Daten: <a href="${esc(o.sourceUrl ?? (team ? urls.groupPage(team) : urls.clubTeams()))}">nuLiga</a> / Bremer Badminton-Verband.</p>
     ${TRACKING ? `<p>Anonyme Nutzungsstatistik mit Umami, ohne Cookies und ohne persönliche Daten.</p>` : ""}
-    ${o.checkedAt ? `<p>Stand: ${esc(formatTimestamp(o.checkedAt))}</p>` : ""}
+    ${footerStatus(o.checkedAt)}
   </div>
 </footer>
 ${team ? teamDialog(team, assets) : ""}

@@ -1,10 +1,11 @@
+import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadClubTeams, loadDataset, type Dataset } from "./data.ts";
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
 import { renderChooser } from "./render/chooser.ts";
-import { setTeam } from "./render/context.ts";
+import { setTeam, setVersion, type BuildVersion } from "./render/context.ts";
 import { renderIndex } from "./render/index.ts";
 import { renderManifest, renderServiceWorker } from "./render/pwa.ts";
 import { ownPlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
@@ -23,6 +24,18 @@ function stubReport(m: Meeting): MatchReport {
 
 const SRC = new URL(".", import.meta.url).pathname;
 const DIST = new URL("../dist/", import.meta.url).pathname;
+
+/** The checked-out commit, shown in the footer; the build works without git, just without it. */
+function gitVersion(): BuildVersion | null {
+  try {
+    const [sha, date] = execFileSync("git", ["log", "-1", "--format=%H %cI"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
+      .trim().split(" ");
+    return sha && date ? { sha, date } : null;
+  } catch {
+    return null;
+  }
+}
+setVersion(gitVersion());
 
 const teams = loadClubTeams();
 if (teams.length === 0) throw new Error("no data – run `npm run scrape` first");

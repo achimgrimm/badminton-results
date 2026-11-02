@@ -138,6 +138,9 @@ a.card:hover { box-shadow: var(--ot-shadow-hover); text-decoration: none; color:
 .badge--win  { background: var(--ot-success-bg); color: var(--ot-success); }
 .badge--draw, .badge--warn { background: var(--ot-warning-bg); color: var(--ot-warning); }
 .badge--loss { background: var(--ot-error-bg); color: var(--ot-error); }
+.badge--new { background: var(--ot-primary); color: var(--ot-on-primary); }
+.card.match-card.is-new { box-shadow: inset 4px 0 0 var(--ot-primary), var(--ot-shadow); }
+a.card.match-card.is-new:hover { box-shadow: inset 4px 0 0 var(--ot-primary), var(--ot-shadow-hover); }
 
 /* Match line: teams stacked, score on the right */
 .match { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; }
@@ -266,6 +269,9 @@ body.only-own .card.match-card:not(.is-own) { display: none; }
 .team-list { list-style: none; margin: 0; padding: 0; }
 .team-list a { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 12px; border-radius: var(--ot-radius); color: var(--ot-text-strong); }
 .team-list a:hover { background: var(--ot-bg-alt); text-decoration: none; }
+.team-list div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 12px; color: var(--ot-text-strong); }
+.new-dialog .team-list .small { white-space: nowrap; }
+.new-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 .team-list a[aria-current="page"] { box-shadow: inset 4px 0 0 var(--ot-primary); background: var(--ot-bg-alt); color: var(--ot-primary); }
 .team-label { font-weight: 600; }
 

@@ -41,15 +41,25 @@ export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {})
       </div>`
     : html`<div class="match match--upcoming">${team(m.home)}${team(m.guest)}</div>`;
 
-  const inner = html`<div class="card-meta"><span>${meta.join(" · ")}</span>${badges ? `<span class="badges">${badges}</span>` : ""}</div>${body}`;
+  // The selected team's results can be flagged "Neu" on the device (see NEW_RESULTS in layout.ts).
+  const markable = own && played;
+  const inner = html`<div class="card-meta"><span>${meta.join(" · ")}</span>${badges || markable ? `<span class="badges">${badges}</span>` : ""}</div>${body}`;
   const cls = `card match-card${own ? " is-own" : ""}`;
+  const key = markable
+    ? ` data-result-key="${esc(resultKey(m))}" data-result-text="${esc(`${m.home} ${h}:${g} ${m.guest}`)}" data-result-date="${esc(formatDate(m.date))}"`
+    : "";
   if (m.meeting && played) {
-    return `<a class="${cls}" href="${reportHref(root, m.meeting)}" aria-label="Spielbericht ${esc(m.home)} gegen ${esc(m.guest)}">${inner}</a>`;
+    return `<a class="${cls}"${key} href="${reportHref(root, m.meeting)}" aria-label="Spielbericht ${esc(m.home)} gegen ${esc(m.guest)}">${inner}</a>`;
   }
   if (hasPreview(m)) {
     return `<a class="${cls}" href="${previewHref(root, m)}" aria-label="Vorschau auf das Spiel gegen ${esc(opponentOf(m))}">${inner}</a>`;
   }
-  return `<div class="${cls}">${inner}</div>`;
+  return `<div class="${cls}"${key}>${inner}</div>`;
+}
+
+/** Stable per-device id of a result: the nuLiga meeting number, else date and teams. */
+export function resultKey(m: Meeting): string {
+  return m.meeting ? String(m.meeting) : `${m.date}|${m.home}|${m.guest}`;
 }
 
 export function hallAddress(hall: Hall | undefined): string {

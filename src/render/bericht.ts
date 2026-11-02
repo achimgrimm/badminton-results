@@ -101,6 +101,7 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
     nav: null,
     checkedAt: d.meta.checkedAt,
     sourceUrl: urls.report(d.own, r.meeting),
+    meeting: r.meeting,
     body,
   });
 }

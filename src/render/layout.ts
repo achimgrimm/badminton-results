@@ -18,6 +18,8 @@ export interface PageOptions {
   noindex?: boolean;
   body: string;
   script?: string;
+  /** Spielbericht pages: the meeting shown, so its "Neu" marker is cleared */
+  meeting?: number;
 }
 
 const NAV: { key: Exclude<NavKey, null>; href: string; label: string }[] = [
@@ -33,6 +35,65 @@ export const TEAM_KEY = "team";
 
 /** Team pages remember themselves, so the chooser can forward there next time. */
 const REMEMBER = (slug: string) => `try { localStorage.setItem("${TEAM_KEY}", "${slug}"); } catch (e) {}`;
+
+/** A result counts as new for this long after the device first saw it. */
+const NEW_FOR_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Marks the selected team's results that are new on this device: the first time a result card
+ * shows up, its key is stored with the time; for a day after that it gets a "Neu" badge.
+ * On the first visit to a team everything is recorded as already seen, so a whole season isn't new.
+ * Opening a Spielbericht clears its marker. Results first seen on this page load are also listed
+ * in a dialog, once.
+ */
+const NEW_RESULTS = (slug: string) => `(function () {
+  var KEY = "seen-${slug}", seen = null, now = Date.now();
+  try { seen = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+  var first = !seen || typeof seen !== "object";
+  if (first) seen = {};
+  var read = document.body.dataset.meeting;
+  if (read) seen[read] = 0;
+  var fresh = [];
+  document.querySelectorAll(".match-card[data-result-key]").forEach(function (card) {
+    var k = card.dataset.resultKey;
+    if (!(k in seen)) {
+      seen[k] = first ? 0 : now;
+      if (!first) fresh.push(card);
+    }
+    if (seen[k] && now - seen[k] < ${NEW_FOR_MS}) {
+      card.classList.add("is-new");
+      var b = document.createElement("span");
+      b.className = "badge badge--new";
+      b.textContent = "Neu";
+      card.querySelector(".badges").prepend(b);
+    }
+  });
+  try { localStorage.setItem(KEY, JSON.stringify(seen)); } catch (e) {}
+  if (fresh.length) popup(fresh);
+
+  function popup(cards) {
+    var dlg = document.getElementById("new-dialog"), list = dlg.querySelector(".team-list");
+    dlg.querySelector("h2").textContent = cards.length === 1 ? "Neues Ergebnis" : cards.length + " neue Ergebnisse";
+    cards.forEach(function (card) {
+      var item = document.createElement(card.href ? "a" : "div"), text = document.createElement("span");
+      if (card.href) item.href = card.href;
+      text.className = "team-label";
+      text.textContent = card.dataset.resultText;
+      var side = document.createElement("span"), outcome = card.querySelector(".badge--win, .badge--draw, .badge--loss");
+      side.className = "small muted";
+      side.textContent = card.dataset.resultDate + " ";
+      if (outcome) side.appendChild(outcome.cloneNode(true));
+      item.append(text, side);
+      var li = document.createElement("li");
+      li.appendChild(item);
+      list.appendChild(li);
+    });
+    dlg.querySelectorAll(".dialog-close, .btn").forEach(function (b) { b.addEventListener("click", function () { dlg.close(); }); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    dlg.showModal();
+    otTrack("new-results", { count: cards.length });
+  }
+})();`;
 
 const TEAM_SWITCH = `(function () {
   var btn = document.getElementById("team-btn"), dlg = document.getElementById("team-dialog");
@@ -186,6 +247,16 @@ const SUN = `<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="curre
 
 const CHEVRON = `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
 
+/** Filled and opened by NEW_RESULTS when results appeared since the last visit. */
+const NEW_DIALOG = html`<dialog class="team-dialog new-dialog" id="new-dialog" aria-labelledby="new-dialog-h">
+  <div class="dialog-head">
+    <h2 id="new-dialog-h">Neue Ergebnisse</h2>
+    <button type="button" class="dialog-close" aria-label="Schließen">×</button>
+  </div>
+  <ul class="team-list"></ul>
+  <div class="btn-row"><button type="button" class="btn btn-primary" autofocus>OK</button></div>
+</dialog>`;
+
 /** Dialog listing all club teams; the current one is marked. */
 function teamDialog(team: ClubTeam, assets: string): string {
   return html`<dialog class="team-dialog" id="team-dialog" aria-labelledby="team-dialog-h">
@@ -240,7 +311,7 @@ ${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.tit
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="OT Badminton">
 </head>
-<body>
+<body${o.meeting ? ` data-meeting="${o.meeting}"` : ""}>
 <header class="site-header">
   <div class="container header-inner">
     <img class="club-logo" src="${assets}club-logo.png" alt="TSV Osterholz-Tenever" width="40" height="40">
@@ -279,6 +350,7 @@ ${o.body}
   </div>
 </footer>
 ${team ? teamDialog(team, assets) : ""}
+${team ? NEW_DIALOG : ""}
 <dialog class="install-help" id="install-help" aria-labelledby="install-help-h">
   <h2 id="install-help-h">App installieren</h2>
   <p>So legst Du die Seite als App auf Deinen Home-Bildschirm:</p>
@@ -302,7 +374,7 @@ ${team ? teamDialog(team, assets) : ""}
 </dialog>
 <script>${THEME_TOGGLE}</script>
 <script>${INSTALL(assets)}</script>
-${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}</script>` : ""}
+${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}</script>` : ""}
 ${o.script ? `<script>${o.script}</script>` : ""}
 </body>
 </html>

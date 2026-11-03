@@ -34,6 +34,16 @@ export function setVersion(v: BuildVersion | null): void {
 }
 export const buildVersion = (): BuildVersion | null => version;
 
+/**
+ * Stylesheet URL with a hash of its content. The service worker serves assets from its cache first,
+ * so a new page would otherwise get the old stylesheet once; a changed hash makes it fetch the new one.
+ */
+let styles = "styles.css";
+export function setStylesHref(href: string): void {
+  styles = href;
+}
+export const stylesHref = (): string => styles;
+
 /** Release notes from release-notes/, newest first. */
 let releases: Release[] = [];
 export function setReleases(r: Release[]): void {

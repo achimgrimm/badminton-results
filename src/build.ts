@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadClubTeams, loadDataset, type Dataset } from "./data.ts";
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
 import { renderChooser } from "./render/chooser.ts";
-import { setReleases, setTeam, setVersion, type BuildVersion } from "./render/context.ts";
+import { setReleases, setStylesHref, setTeam, setVersion, stylesHref, type BuildVersion } from "./render/context.ts";
 import { loadReleases } from "./releases.ts";
 import { renderIndex } from "./render/index.ts";
 import { renderManifest, renderServiceWorker } from "./render/pwa.ts";
@@ -37,6 +38,7 @@ function gitVersion(): BuildVersion | null {
   }
 }
 setVersion(gitVersion());
+setStylesHref(`styles.css?v=${createHash("sha256").update(readFileSync(join(SRC, "styles.css"))).digest("hex").slice(0, 10)}`);
 setReleases(loadReleases(new URL("../release-notes/", import.meta.url).pathname));
 
 const teams = loadClubTeams();
@@ -97,7 +99,7 @@ for (const icon of ["icon-192.png", "icon-512.png", "apple-touch-icon.png"]) {
   copyFileSync(join(SRC, "icons", icon), join(DIST, "icons", icon));
 }
 writeFileSync(join(DIST, "manifest.webmanifest"), renderManifest());
-writeFileSync(join(DIST, "sw.js"), renderServiceWorker(now.getTime().toString(36)));
+writeFileSync(join(DIST, "sw.js"), renderServiceWorker(now.getTime().toString(36), stylesHref()));
 writeFileSync(join(DIST, ".nojekyll"), "");
 
 console.log(`built ${pages + 1} pages for ${teams.length} teams into dist/`);

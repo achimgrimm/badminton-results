@@ -49,7 +49,7 @@ export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {})
   const cls = `card match-card${own ? " is-own" : ""}`;
   const key = (markable
     ? ` data-result-key="${esc(resultKey(m))}" data-result-text="${esc(`${m.home} ${h}:${g} ${m.guest}`)}" data-result-date="${esc(formatDate(m.date))}"`
-    : "") + (own ? ` data-play-key="${esc(previewName(m))}"` : "");
+    : "") + (own ? ` data-play-key="${esc(previewName(m))}"` : "") + (own && !played ? shareData(m) : "");
   const card = cardElement(m, root, cls, key, inner);
   return opts.toggle && own && !played ? `<div class="play-wrap">${card}${playToggle(m)}</div>` : card;
 }
@@ -65,7 +65,14 @@ function cardElement(m: Meeting, root: string, cls: string, key: string, inner: 
   return `<div class="${cls}"${key}>${inner}</div>`;
 }
 
-const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+/** Text for sharing "Meine Spiele" (see the Spielplan script): when, and home or away against whom. */
+function shareData(m: Meeting): string {
+  const when = `${formatDate(m.date)}${m.time ? `, ${m.time} Uhr` : ""}`;
+  const vs = isOwn(m.home) ? `Heim gegen ${m.guest}` : `Auswärts bei ${m.home}`;
+  return ` data-play-when="${esc(when)}" data-play-vs="${esc(vs)}"`;
+}
+
+const CHECK = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 
 /**
  * Button that marks an own match as one the user plays in. The client script PLAYING (layout.ts)

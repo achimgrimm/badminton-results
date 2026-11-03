@@ -31,10 +31,11 @@ export function renderManifest(): string {
  * copy is the offline fallback. Static assets: served from cache, refreshed in the background.
  * The version changes on every build, which replaces the old cache.
  */
-export function renderServiceWorker(version: string): string {
+/** styles: the hashed stylesheet URL the pages link to, so it is available offline right away. */
+export function renderServiceWorker(version: string, styles: string): string {
   return `const CACHE = "ot-results-${version}";
 // Team pages are cached when visited; the chooser and shared assets up front.
-const PRECACHE = ["./", "index.html", "styles.css", "favicon.svg", "club-logo.png", "manifest.webmanifest", "icons/icon-192.png"];
+const PRECACHE = ["./", "index.html", "${styles}", "favicon.svg", "club-logo.png", "manifest.webmanifest", "icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));

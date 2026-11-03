@@ -228,6 +228,9 @@ body.only-mine .day:not(.has-mine) { display: none; }
 body.only-mine .card.match-card:not(.is-playing), body.only-mine .play-wrap:not(:has(.is-playing)) { display: none; }
 .mine-empty { display: none; }
 body.only-mine.no-playing .mine-empty { display: block; }
+.share-plan { display: none; margin: 12px 0 0; }
+.share-plan svg { width: 18px; height: 18px; flex: none; }
+body.only-mine:has(.day.upcoming.has-mine) .share-plan { display: inline-flex; }
 @media (max-width: 400px) { .filter button { padding: 6px 12px; } }
 
 /* Match report */

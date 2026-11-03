@@ -1,5 +1,5 @@
 import type { Dataset } from "../data.ts";
-import { hallAddress, matchCard } from "./components.ts";
+import { hallAddress, matchCard, playToggle } from "./components.ts";
 import { layout } from "./layout.ts";
 import { esc, formatDate, html, involvesOwn, isOwn, previewHref, todayInBremen } from "./util.ts";
 
@@ -20,7 +20,10 @@ export function renderIndex(d: Dataset, now: Date): string {
         ${next.hall ? `<div>${esc(next.hall.name ?? next.hall.code)}</div>` : ""}
         ${next.hall?.location ? `<div class="small">${hallAddress(d.halls[next.hall.location])}</div>` : ""}
         ${next.postponed ? `<p class="small"><span class="badge">verlegt</span> ${esc(next.note)}</p>` : ""}
-        <a class="btn btn-on-dark" href="${previewHref("", next)}">Zur Vorschau</a>
+        <div class="btn-row">
+          <a class="btn btn-on-dark" href="${previewHref("", next)}">Zur Vorschau</a>
+          ${playToggle(next, "hero")}
+        </div>
       </section>`
     : `<section class="next"><h2>Saison</h2><div class="when">Keine weiteren Spiele geplant</div></section>`;
 
@@ -43,9 +46,9 @@ export function renderIndex(d: Dataset, now: Date): string {
     ${nextBlock}
     ${stats}
     ${calendar}
-    ${pending.length ? `<h2>Ergebnis offen</h2>${pending.map((m) => matchCard(m, "", { showDate: true, pending: true })).join("")}` : ""}
+    ${pending.length ? `<h2>Ergebnis offen</h2>${pending.map((m) => matchCard(m, "", { showDate: true, pending: true, toggle: true })).join("")}` : ""}
     ${played.length ? `<h2>Letzte Ergebnisse</h2>${played.map((m) => matchCard(m, "", { showDate: true })).join("")}` : ""}
-    ${upcoming.length > 1 ? `<h2>Weitere Spiele</h2>${upcoming.slice(1).map((m) => matchCard(m, "", { showDate: true })).join("")}` : ""}
+    ${upcoming.length > 1 ? `<h2>Weitere Spiele</h2>${upcoming.slice(1).map((m) => matchCard(m, "", { showDate: true, toggle: true })).join("")}` : ""}
   `;
 
   return layout({ title: "Übersicht", root: "", nav: "index", checkedAt: d.meta.checkedAt, body });

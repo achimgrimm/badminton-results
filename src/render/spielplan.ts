@@ -9,7 +9,9 @@ const SCRIPT = `
   var KEY = "spielplan-filter";
   var buttons = document.querySelectorAll(".filter button");
   function apply(mode) {
+    if (mode !== "own" && mode !== "mine" && mode !== "all") mode = "own";
     document.body.classList.toggle("only-own", mode === "own");
+    document.body.classList.toggle("only-mine", mode === "mine");
     buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === mode)); });
     try { localStorage.setItem(KEY, mode); } catch (e) {}
   }
@@ -17,7 +19,7 @@ const SCRIPT = `
   var saved = "own";
   try { saved = localStorage.getItem(KEY) || "own"; } catch (e) {}
   apply(saved);
-  var today = document.querySelector(".day.upcoming" + (saved === "own" ? ".has-own" : ""));
+  var today = document.querySelector(".day.upcoming" + (saved === "own" ? ".has-own" : saved === "mine" ? ".has-mine" : ""));
   if (today && location.hash === "") today.scrollIntoView();
 })();`;
 
@@ -39,7 +41,7 @@ export function renderSpielplan(d: Dataset, now: Date): string {
     const cls = ["day", meetings.some(involvesOwn) && "has-own", date >= today && "upcoming"].filter(Boolean).join(" ");
     return html`<section class="${cls}">
         <h2${date === today ? ' class="is-today"' : ""}>${esc(formatDate(date, true))}${date === today ? " · Heute" : ""}</h2>
-        ${meetings.map((m) => matchCard(m, "", { pending: !m.result && m.date < today }))}
+        ${meetings.map((m) => matchCard(m, "", { pending: !m.result && m.date < today, toggle: true }))}
       </section>`;
   });
 
@@ -47,8 +49,10 @@ export function renderSpielplan(d: Dataset, now: Date): string {
     <h1>Spielplan</h1>
     <div class="filter" role="group" aria-label="Filter">
       <button type="button" data-mode="own" aria-pressed="false">Nur ${esc(d.own.label)}</button>
-      <button type="button" data-mode="all" aria-pressed="true">Alle Spiele</button>
+      <button type="button" data-mode="mine" aria-pressed="false">Meine Spiele</button>
+      <button type="button" data-mode="all" aria-pressed="true">Alle</button>
     </div>
+    <p class="mine-empty muted">Noch keine Spiele ausgewählt. Tippe bei einem Spiel auf „Ich spiele“.</p>
     ${days}
   `;
 

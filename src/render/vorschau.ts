@@ -1,7 +1,7 @@
 import type { Dataset } from "../data.ts";
 import { headToHead, lineup, playerStats, teamForm, type PlayerStats, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
-import { hallAddress, matchCard } from "./components.ts";
+import { hallAddress, matchCard, playToggle } from "./components.ts";
 import { layout } from "./layout.ts";
 import { disciplinePills, quota, record } from "./spieler.ts";
 import { displayName, esc, formatDate, html, isOwn, opponentOf, previewName } from "./util.ts";
@@ -93,6 +93,7 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
       <div class="when">${esc(formatDate(m.date, true))}${m.time ? `, ${esc(m.time)} Uhr` : ""}</div>
       <div class="vs">${home ? `<b>Heim</b> gegen ${esc(opponent)}` : `<b>Auswärts</b> bei ${esc(opponent)}`}</div>
       ${m.postponed ? `<p class="small"><span class="badge">verlegt</span> ${esc(m.note)}</p>` : ""}
+      <div class="btn-row">${playToggle(m, "hero")}</div>
     </section>
 
     <h2>Anfahrt</h2>

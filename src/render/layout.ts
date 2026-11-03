@@ -95,6 +95,52 @@ const NEW_RESULTS = (slug: string) => `(function () {
   }
 })();`;
 
+/**
+ * "Ich spiele": the user marks own matches they play in. Stored per team and season as a list of
+ * previewName keys (stable across postponements and after the result). Every own card with that key
+ * gets a "Dabei" badge, toggles show their state, and Spielplan days with a marked match get
+ * "has-mine" for the "Meine Spiele" filter. Must run before the page script.
+ */
+const PLAYING = (slug: string) => `(function () {
+  var KEY = "playing-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}", mine = [];
+  try { mine = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) {}
+  if (!Array.isArray(mine)) mine = [];
+  function has(k) { return mine.indexOf(k) >= 0; }
+  function render() {
+    var any = false;
+    document.querySelectorAll(".match-card[data-play-key]").forEach(function (card) {
+      var on = has(card.dataset.playKey), badge = card.querySelector(".badge--playing");
+      card.classList.toggle("is-playing", on);
+      if (on) any = true;
+      if (on && !badge) {
+        badge = document.createElement("span");
+        badge.className = "badge badge--playing";
+        badge.textContent = "Dabei";
+        card.querySelector(".badges").prepend(badge);
+      } else if (!on && badge) badge.remove();
+    });
+    document.querySelectorAll(".play-toggle").forEach(function (b) {
+      var on = has(b.dataset.playKey);
+      b.setAttribute("aria-pressed", String(on));
+      b.querySelector("span").textContent = on ? "Dabei" : "Ich spiele";
+    });
+    document.querySelectorAll(".day").forEach(function (day) {
+      day.classList.toggle("has-mine", !!day.querySelector(".match-card.is-playing"));
+    });
+    document.body.classList.toggle("no-playing", !any);
+  }
+  document.querySelectorAll(".play-toggle").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var k = b.dataset.playKey, on = !has(k);
+      if (on) mine.push(k); else mine = mine.filter(function (x) { return x !== k; });
+      try { localStorage.setItem(KEY, JSON.stringify(mine)); } catch (e) {}
+      render();
+      otTrack("playing", { on: on });
+    });
+  });
+  render();
+})();`;
+
 /** How many of the newest release notes each page carries. */
 const RELEASES_SHOWN = 3;
 const RELEASE_KEY = "releaseSeen";
@@ -445,7 +491,7 @@ ${releaseDialog()}
 <script>${THEME_TOGGLE}</script>
 <script>${INSTALL(assets)}</script>
 ${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}
-${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}</script>` : ""}
+${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${PLAYING(team.slug)}</script>` : ""}
 ${o.script ? `<script>${o.script}</script>` : ""}
 </body>
 </html>

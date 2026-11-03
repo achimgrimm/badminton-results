@@ -3,6 +3,24 @@ import { hallAddress, matchCard, playToggle } from "./components.ts";
 import { layout } from "./layout.ts";
 import { esc, formatDate, html, involvesOwn, isOwn, previewHref, todayInBremen } from "./util.ts";
 
+/**
+ * Android has no handler for webcal: links, so a tap does nothing there (also in the installed app).
+ * There the button subscribes through Google Calendar's "add by URL" link instead, which keeps the
+ * feed updated and syncs to the calendar app on the phone.
+ */
+const CALENDAR = `(function () {
+  var btn = document.getElementById("calendar-btn");
+  if (!btn) return;
+  var android = /Android/i.test(navigator.userAgent);
+  if (android) {
+    btn.href = "https://calendar.google.com/calendar/r?cid=" + encodeURIComponent(btn.dataset.webcal);
+    btn.target = "_blank";
+    btn.rel = "noopener";
+    document.getElementById("calendar-hint").hidden = false;
+  }
+  btn.addEventListener("click", function () { otTrack("calendar", { via: android ? "google" : "webcal" }); });
+})();`;
+
 export function renderIndex(d: Dataset, now: Date): string {
   const today = todayInBremen(now);
   const own = d.schedule.filter(involvesOwn);
@@ -37,9 +55,10 @@ export function renderIndex(d: Dataset, now: Date): string {
 
   const calendar = d.team.webcalUrl
     ? html`<div class="btn-row">
-        <a class="btn btn-primary" href="${esc(d.team.webcalUrl)}">📅 Spiele in Deinen Kalender</a>
+        <a class="btn btn-primary" id="calendar-btn" href="${esc(d.team.webcalUrl)}" data-webcal="${esc(d.team.webcalUrl)}">📅 Spiele in Deinen Kalender</a>
         ${d.team.icalUrl ? `<a class="btn btn-secondary" href="${esc(d.team.icalUrl)}">.ics herunterladen</a>` : ""}
-      </div>`
+      </div>
+      <p class="small muted" id="calendar-hint" hidden>Öffnet Google Kalender. Nach „Hinzufügen“ erscheinen die Spiele in Deiner Kalender-App und bleiben aktuell.</p>`
     : "";
 
   const body = html`
@@ -51,5 +70,5 @@ export function renderIndex(d: Dataset, now: Date): string {
     ${upcoming.length > 1 ? `<h2>Weitere Spiele</h2>${upcoming.slice(1).map((m) => matchCard(m, "", { showDate: true, toggle: true })).join("")}` : ""}
   `;
 
-  return layout({ title: "Übersicht", root: "", nav: "index", checkedAt: d.meta.checkedAt, body });
+  return layout({ title: "Übersicht", root: "", nav: "index", checkedAt: d.meta.checkedAt, body, script: CALENDAR });
 }

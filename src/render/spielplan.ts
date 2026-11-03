@@ -29,6 +29,8 @@ const SCRIPT = `
     var btn = document.querySelector(".share-plan"), label = btn.querySelector("span"), timer = null;
     btn.addEventListener("click", function () {
       var cards = document.querySelectorAll(".day.upcoming .match-card.is-playing[data-play-when]");
+      // Always visible: with nothing to share it says what to do instead.
+      if (!cards.length) { flash("Erst Spiele mit „Ich spiele“ markieren"); return; }
       var lines = [btn.dataset.shareTitle];
       cards.forEach(function (c) {
         lines.push("", c.dataset.playWhen, c.dataset.playVs);
@@ -40,15 +42,16 @@ const SCRIPT = `
       if (navigator.share) {
         navigator.share({ title: btn.dataset.shareTitle, text: text }).catch(function () {});
       } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function () {
-          label.textContent = "Kopiert";
-          clearTimeout(timer);
-          timer = setTimeout(function () { label.textContent = "Meine Spiele teilen"; }, 2000);
-        }, function () { prompt("Zum Kopieren:", text); });
+        navigator.clipboard.writeText(text).then(function () { flash("Kopiert"); }, function () { prompt("Zum Kopieren:", text); });
       } else {
         prompt("Zum Kopieren:", text);
       }
     });
+    function flash(text) {
+      label.textContent = text;
+      clearTimeout(timer);
+      timer = setTimeout(function () { label.textContent = "Meine Spiele teilen"; }, 2500);
+    }
   }
 })();`;
 

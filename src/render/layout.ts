@@ -96,21 +96,31 @@ const NEW_RESULTS = (slug: string) => `(function () {
   }
 })();`;
 
+/** The chosen player ("Wer bist Du?"), per team and season; read by PLAYING, written by ME. */
+const meKey = (slug: string) => storageKey(`me-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}`);
+
 /**
  * "Ich spiele": the user marks own matches they play in. Stored per team and season as a list of
  * previewName keys (stable across postponements and after the result). Every own card with that key
  * gets a "Dabei" badge, toggles show their state, and Spielplan days with a marked match get
- * "has-mine" for the "Meine Spiele" filter. Must run before the page script.
+ * "has-mine" for the "Meine Spiele" filter. Played matches whose Spielbericht lists the chosen player
+ * (data-players, see ME) count as theirs too, tagged or not. Must run before the page script.
  */
 const PLAYING = (slug: string) => `(function () {
   var KEY = "${storageKey(`playing-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}`)}", mine = [];
   try { mine = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) {}
   if (!Array.isArray(mine)) mine = [];
   function has(k) { return mine.indexOf(k) >= 0; }
+  function me() {
+    var m = null;
+    try { m = JSON.parse(localStorage.getItem("${meKey(slug)}") || "null"); } catch (e) {}
+    return m && m.person ? String(m.person) : null;
+  }
   function render() {
-    var any = false;
+    var any = false, person = me();
     document.querySelectorAll(".match-card[data-play-key]").forEach(function (card) {
-      var on = has(card.dataset.playKey), badge = card.querySelector(".badge--playing");
+      var played = person && (card.dataset.players || "").split(" ").indexOf(person) >= 0;
+      var on = has(card.dataset.playKey) || !!played, badge = card.querySelector(".badge--playing");
       card.classList.toggle("is-playing", on);
       if (on) any = true;
       if (on && !badge) {
@@ -130,6 +140,7 @@ const PLAYING = (slug: string) => `(function () {
     });
     document.body.classList.toggle("no-playing", !any);
   }
+  window.otPlayingRender = render;
   document.querySelectorAll(".play-toggle").forEach(function (b) {
     b.addEventListener("click", function () {
       var k = b.dataset.playKey, on = !has(k);
@@ -148,7 +159,7 @@ const PLAYING = (slug: string) => `(function () {
  * Every element with the chosen data-person gets "is-me", its card "has-me".
  */
 const ME = (slug: string) => `(function () {
-  var KEY = "${storageKey(`me-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}`)}", me = null;
+  var KEY = "${meKey(slug)}", me = null;
   try { me = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!me || typeof me !== "object" || !me.person) me = null;
   var card = document.getElementById("me-card"), dlg = document.getElementById("me-dialog");
@@ -156,6 +167,7 @@ const ME = (slug: string) => `(function () {
     me = next;
     try { if (me) localStorage.setItem(KEY, JSON.stringify(me)); else localStorage.removeItem(KEY); } catch (e) {}
     render();
+    if (window.otPlayingRender) window.otPlayingRender();
     otTrack("me", { action: me ? "set" : "clear", via: via });
   }
   function render() {

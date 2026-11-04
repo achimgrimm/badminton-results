@@ -1,5 +1,5 @@
 import type { Hall, Meeting } from "../types.ts";
-import { ownTeam } from "./context.ts";
+import { lineupOf, ownTeam } from "./context.ts";
 import { esc, formatDate, hasPreview, html, involvesOwn, isOwn, opponentOf, outcomeBadge, outcomeFor, previewHref, previewName } from "./util.ts";
 
 export function reportHref(root: string, meeting: number): string {
@@ -49,7 +49,8 @@ export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {})
   const cls = `card match-card${own ? " is-own" : ""}`;
   const key = (markable
     ? ` data-result-key="${esc(resultKey(m))}" data-result-text="${esc(`${m.home} ${h}:${g} ${m.guest}`)}" data-result-date="${esc(formatDate(m.date))}"`
-    : "") + (own ? ` data-play-key="${esc(previewName(m))}"` : "") + (own && !played ? shareData(m) : "");
+    : "") + (own ? ` data-play-key="${esc(previewName(m))}"` : "") + (own && !played ? shareData(m) : "")
+    + (own && played && lineupOf(m.meeting).length ? ` data-players="${lineupOf(m.meeting).join(" ")}"` : "");
   const card = cardElement(m, root, cls, key, inner);
   return opts.toggle && own && !played ? `<div class="play-wrap">${card}${playToggle(m)}</div>` : card;
 }

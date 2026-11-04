@@ -85,7 +85,7 @@ export function renderSpielplan(d: Dataset, now: Date): string {
       <button type="button" data-mode="all" aria-pressed="true">Alle</button>
     </div>
     <div><button type="button" class="btn btn-primary share-plan" data-share-title="${esc(`Meine Spiele · ${CLUB_NAME} ${d.own.label}`)}">${SHARE_BTN_ICON}<span>Meine Spiele teilen</span></button></div>
-    <p class="mine-empty muted">Noch keine Spiele ausgewählt. Tippe bei einem Spiel auf „Ich spiele“.</p>
+    <p class="mine-empty muted">Noch keine Spiele ausgewählt. Tippe bei einem Spiel auf „Ich spiele“ oder wähle unter <a href="spieler.html">Spieler</a> Deinen Namen.</p>
     ${days}
   `;
 

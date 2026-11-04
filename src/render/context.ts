@@ -21,6 +21,13 @@ export function ownTeam(): ClubTeam {
 export const currentTeam = (): ClubTeam | null => current;
 export const clubTeams = (): ClubTeam[] => all;
 
+/** Per played meeting of the current team: the nuLiga person ids of the OT players in its Spielbericht. */
+let lineups = new Map<number, number[]>();
+export function setLineups(l: Map<number, number[]>): void {
+  lineups = l;
+}
+export const lineupOf = (meeting: number | null): number[] => (meeting != null ? (lineups.get(meeting) ?? []) : []);
+
 /** The git commit the site is built from; null when git isn't available. */
 export interface BuildVersion {
   sha: string;

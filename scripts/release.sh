@@ -19,7 +19,9 @@ sha=$(git rev-parse HEAD)
 stage=$(printf '%s' "$branch" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')
 url="$SITE/stage/$stage/"
 short=${sha:0:7}
-curl -fsS "${url}index.html" | grep -q "/commit/$sha\">$short<" \
+# Fetched first: grep -q stops reading early, which makes curl fail under pipefail.
+page=$(curl -fsS "${url}index.html") || die "can't load $url"
+grep -q "/commit/$sha\">$short<" <<<"$page" \
   || die "the stage $url doesn't show $short yet: wait for the deploy, test it, then try again"
 
 git merge-base --is-ancestor origin/main "$sha" \

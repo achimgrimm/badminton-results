@@ -79,7 +79,8 @@ jobs:
       - uses: actions/upload-artifact@v5
         with:
           name: site-${{ matrix.site.name }}
-          path: ${{ matrix.site.stage && format('dist/stage/{0}', matrix.site.stage) || 'dist' }}
+          # A stage build writes to dist/stage/<name>/, so its artifact already holds that path.
+          path: dist
           include-hidden-files: true
           retention-days: 1
 
@@ -93,21 +94,20 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # Downloaded by name: a missing live build fails here, and nothing is deployed.
       - uses: actions/download-artifact@v5
         with:
-          pattern: site-*
-          path: artifacts
-      - name: Assemble live site and stages
-        run: |
-          test -d artifacts/site-live || { echo "live build failed, not deploying"; exit 1; }
-          mv artifacts/site-live site
-          for dir in artifacts/site-stage-*; do
-            [ -d "$dir" ] || continue
-            stage=${dir#artifacts/site-stage-}
-            mkdir -p site/stage
-            mv "$dir" "site/stage/$stage"
-            echo "stage: $stage"
-          done
+          name: site-live
+          path: site
+      # Stage artifacts contain stage/<name>/, so merging them into site/ puts each in place.
+      # Without any stage there is nothing to download; that must not stop the live deploy.
+      - uses: actions/download-artifact@v5
+        continue-on-error: true
+        with:
+          pattern: site-stage-*
+          path: site
+          merge-multiple: true
+      - run: ls site/stage 2>/dev/null || echo "no stages"
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

@@ -17,12 +17,14 @@ const DISCIPLINES: Record<string, string> = {
 
 export type PlayerLink = (p: Player) => string | null;
 
-function players(list: Player[], link?: PlayerLink): string {
+/** Own players carry their nuLiga person id, so the chosen player can be highlighted (see ME in layout.ts). */
+function players(list: Player[], own: boolean, link?: PlayerLink): string {
   return list
     .map((p) => {
-      const href = link?.(p);
+      const href = own ? link?.(p) : null;
       const name = esc(displayName(p.name));
-      return href ? `<a href="${href}">${name}</a>` : `<span>${name}</span>`;
+      const person = own && p.person != null ? ` data-person="${p.person}"` : "";
+      return href ? `<a href="${href}"${person}>${name}</a>` : `<span${person}>${name}</span>`;
     })
     .join("");
 }
@@ -44,10 +46,10 @@ function gameCard(g: Game, r: MatchReport, link?: PlayerLink): string {
         ${ownWon == null ? "" : outcomeBadge(ownWon ? "win" : "loss")}
       </div>
       <div class="game" style="--sets:${cols}">
-        <div class="side${hw > gw ? " won" : ""}">${players(g.home, isOwn(r.home) ? link : undefined)}</div>
+        <div class="side${hw > gw ? " won" : ""}">${players(g.home, isOwn(r.home), link)}</div>
         ${g.sets.map((s) => cell(0, s))}${pad(cols - g.sets.length)}
         <div class="divider"></div>
-        <div class="side${gw > hw ? " won" : ""}">${players(g.guest, isOwn(r.guest) ? link : undefined)}</div>
+        <div class="side${gw > hw ? " won" : ""}">${players(g.guest, isOwn(r.guest), link)}</div>
         ${g.sets.map((s) => cell(1, s))}${pad(cols - g.sets.length)}
       </div>
     </article>`;

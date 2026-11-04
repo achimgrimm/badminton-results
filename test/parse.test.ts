@@ -6,6 +6,7 @@ import { parseSchedule } from "../src/parse/schedule.ts";
 import { normalizeDiscipline, parseReport, reportAvailable } from "../src/parse/report.ts";
 import { leagueName, parseClubTeams, teamSlug } from "../src/parse/club.ts";
 import { parseCourt, parseTeam } from "../src/parse/team.ts";
+import { parsePools } from "../src/parse/pools.ts";
 
 const fixture = (name: string) => readFileSync(new URL(`fixtures/${name}`, import.meta.url), "utf8");
 
@@ -123,4 +124,14 @@ test("report with totals only", () => {
   assert.equal(r.guest, "TV Bremen-Walle 1875");
   assert.deepEqual(r.games, []);
   assert.deepEqual(r.totals, { points: [218, 190], sets: [14, 8], games: [4, 2] });
+});
+
+test("club pools", () => {
+  const rows = parsePools(fixture("club-pools.html"));
+  assert.equal(rows.length, 27);
+  assert.deepEqual(rows[0], { rank: 1, team: 1, name: "Mojzis, Christoph", person: 1340016 });
+  assert.deepEqual(rows.filter((r) => r.team === 3).map((r) => r.name), ["Böse, Frank", "Bischoff, Denis", "Schütte, Timo", "Groenhoff, Nils"]);
+  const reserve = rows.find((r) => r.name === "Grimm, Achim")!;
+  assert.deepEqual(reserve, { rank: 24, team: null, name: "Grimm, Achim", person: 1541141 });
+  assert.deepEqual(parsePools(fixture("club-pools-empty.html")), []);
 });

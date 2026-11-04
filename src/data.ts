@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ClubTeam, Hall, MatchReport, Meeting, Standing, TeamInfo } from "./types.ts";
+import type { ClubTeam, Hall, MatchReport, Meeting, RosterPlayer, Standing, TeamInfo } from "./types.ts";
 
 export const DATA_DIR = new URL("../data/", import.meta.url).pathname;
 
@@ -14,6 +14,7 @@ export const paths = {
   reports: (group: number) => `groups/${group}/reports`,
   report: (group: number, meeting: number) => `groups/${group}/reports/${meeting}.json`,
   team: (slug: string) => `teams/${slug}.json`,
+  roster: (slug: string) => `rosters/${slug}.json`,
 };
 
 export interface Meta {
@@ -33,6 +34,8 @@ export interface Dataset {
   team: TeamInfo;
   halls: Record<string, Hall>;
   reports: Record<string, MatchReport>;
+  /** Players from nuLiga's club roster who can play for the team (Stammspieler and reserves) */
+  roster: RosterPlayer[];
 }
 
 export function readJson<T>(file: string, fallback: T): T {
@@ -79,5 +82,6 @@ export function loadDataset(own: ClubTeam): Dataset {
     team: readJson<TeamInfo>(paths.team(own.slug), { title: "", icalUrl: null, webcalUrl: null, pdfUrl: null, halls: [] }),
     halls: loadHalls(),
     reports: loadReports(own.group),
+    roster: readJson<RosterPlayer[]>(paths.roster(own.slug), []),
   };
 }

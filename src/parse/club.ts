@@ -33,6 +33,12 @@ export function leagueName(label: string): string {
 
 const ROMAN: Record<string, number> = { II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10 };
 
+/** The team's number within its age class: "Aktive III" -> 3, "Jugend" -> 1. */
+export function teamNumber(label: string): number {
+  const suffix = label.match(/\s([IVX]+)$/)?.[1];
+  return suffix ? (ROMAN[suffix] ?? 1) : 1;
+}
+
 /** URL folder for a team: "Aktive III" -> "aktive-3", "Schüler" -> "schueler". */
 export function teamSlug(label: string): string {
   return label

@@ -87,3 +87,13 @@ export interface ClubTeam {
   group: number;
   teamtable: number;
 }
+
+/** A player the team can field: from nuLiga's club roster, or a substitute seen in its reports. */
+export interface RosterPlayer {
+  name: string;
+  person: number;
+  /** Position in the club roster; null when only seen in a Spielbericht */
+  rank: number | null;
+  /** "team" = Stammspieler of this team, "reserve" = club reserve, "report" = played for it, listed elsewhere */
+  role: "team" | "reserve" | "report";
+}

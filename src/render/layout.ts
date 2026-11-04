@@ -142,6 +142,67 @@ const PLAYING = (slug: string) => `(function () {
   render();
 })();`;
 
+/**
+ * "Wer bist Du?": the user picks themselves from the team's players (Spieler page) or with
+ * "Das bin ich" on a player page. Stored per team and season as { person, name }, on the device only.
+ * Every element with the chosen data-person gets "is-me", its card "has-me".
+ */
+const ME = (slug: string) => `(function () {
+  var KEY = "${storageKey(`me-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}`)}", me = null;
+  try { me = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+  if (!me || typeof me !== "object" || !me.person) me = null;
+  var card = document.getElementById("me-card"), dlg = document.getElementById("me-dialog");
+  function save(next, via) {
+    me = next;
+    try { if (me) localStorage.setItem(KEY, JSON.stringify(me)); else localStorage.removeItem(KEY); } catch (e) {}
+    render();
+    otTrack("me", { action: me ? "set" : "clear", via: via });
+  }
+  function render() {
+    var id = me ? String(me.person) : "";
+    if (id) document.body.dataset.me = id; else delete document.body.dataset.me;
+    document.querySelectorAll(".is-me, .has-me").forEach(function (el) { el.classList.remove("is-me", "has-me"); });
+    if (id) document.querySelectorAll('[data-person="' + id + '"]:not(button)').forEach(function (el) {
+      el.classList.add("is-me");
+      var c = el.parentElement && el.parentElement.closest(".card");
+      if (c) c.classList.add("has-me");
+    });
+    document.querySelectorAll(".me-toggle").forEach(function (b) {
+      var on = b.dataset.person === id;
+      b.setAttribute("aria-pressed", String(on));
+      b.querySelector("span").textContent = on ? "Das bist Du" : "Das bin ich";
+    });
+    if (dlg) dlg.querySelectorAll(".me-option").forEach(function (o) {
+      if (o.dataset.person === id) o.setAttribute("aria-current", "true"); else o.removeAttribute("aria-current");
+    });
+    if (card) {
+      card.querySelector(".me-none").hidden = !!me;
+      card.querySelector(".me-some").hidden = !me;
+      if (me) {
+        var opt = dlg && dlg.querySelector('.me-option[data-person="' + id + '"]'), link = card.querySelector(".me-link");
+        card.querySelector(".me-name").textContent = opt ? opt.querySelector(".team-label").textContent : me.name;
+        link.hidden = !(opt && opt.dataset.href);
+        if (opt && opt.dataset.href) link.href = opt.dataset.href;
+      }
+    }
+  }
+  document.querySelectorAll(".me-toggle").forEach(function (b) {
+    b.addEventListener("click", function () {
+      save(me && String(me.person) === b.dataset.person ? null : { person: Number(b.dataset.person), name: b.dataset.name }, "page");
+    });
+  });
+  if (card && dlg) {
+    card.querySelectorAll(".me-pick").forEach(function (b) { b.addEventListener("click", function () { dlg.showModal(); }); });
+    card.querySelector(".me-clear").addEventListener("click", function () { save(null, "list"); });
+    dlg.querySelector(".dialog-close").addEventListener("click", function () { dlg.close(); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    dlg.querySelectorAll(".me-option").forEach(function (o) {
+      o.addEventListener("click", function () { dlg.close(); save({ person: Number(o.dataset.person), name: o.dataset.name }, "list"); });
+    });
+  }
+  render();
+})();`;
+
 /** How many of the newest release notes each page carries. */
 const RELEASES_SHOWN = 3;
 const RELEASE_KEY = storageKey("releaseSeen");
@@ -497,7 +558,7 @@ ${releaseDialog()}
 <script>${THEME_TOGGLE}</script>
 <script>${INSTALL(assets)}</script>
 ${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}
-${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${PLAYING(team.slug)}</script>` : ""}
+${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${PLAYING(team.slug)}${ME(team.slug)}</script>` : ""}
 ${o.script ? `<script>${o.script}</script>` : ""}
 </body>
 </html>

@@ -1,13 +1,15 @@
 import { rmSync } from "node:fs";
 import { join } from "node:path";
-import { urls } from "./config.ts";
+import { urls, type PoolRound } from "./config.ts";
 import { DATA_DIR, loadClubTeams, loadHalls, loadReports, paths, writeJson } from "./data.ts";
 import { fetchHtml } from "./fetch.ts";
 import { leagueName, parseClubTeams, teamSlug } from "./parse/club.ts";
 import { parseReport, reportAvailable } from "./parse/report.ts";
 import { parseSchedule } from "./parse/schedule.ts";
 import { parseTable } from "./parse/table.ts";
+import { parsePools } from "./parse/pools.ts";
 import { parseCourt, parseTeam } from "./parse/team.ts";
+import { poolTypes, teamRoster, type Pools } from "./roster.ts";
 import type { ClubTeam, Meeting } from "./types.ts";
 
 const started = Date.now();
@@ -84,6 +86,21 @@ for (const t of teams) {
   if (writeJson(paths.team(t.slug), info)) changed.push(`team ${t.slug}`);
 }
 if (writeJson(paths.club, teams)) changed.push("club");
+
+// Club rosters: who can play for which team, so players can pick themselves in the app.
+const pools: Pools = {};
+for (const type of [...new Set(teams.flatMap((t) => poolTypes(t.label)))]) {
+  pools[type] = {};
+  for (const round of ["vorrunde", "rueckrunde"] as PoolRound[]) {
+    pools[type][round] = parsePools(await fetchHtml(urls.pools(type, round)));
+  }
+  log(`roster ${type}: ${pools[type].vorrunde!.length} Vorrunde, ${pools[type].rueckrunde!.length} Rückrunde`);
+}
+for (const t of teams) {
+  const roster = teamRoster(t.label, pools);
+  if (!roster.length) console.warn(`roster ${t.label}: no players listed`);
+  if (writeJson(paths.roster(t.slug), roster)) changed.push(`roster ${t.slug}`);
+}
 const gone = previousTeams.filter((p) => !teams.some((t) => t.slug === p.slug));
 if (gone.length) log(`teams no longer listed: ${gone.map((t) => t.label).join(", ")}`);
 

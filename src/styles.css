@@ -312,6 +312,25 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .release-dialog li { margin: 4px 0; }
 .release-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 .new-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
+/* "Wer bist Du?": the chosen player (see ME in layout.ts) */
+.me-card p { margin: 0 0 8px; }
+.me-card .btn-row { margin: 8px 0; }
+.me-card .small { margin: 0; }
+.team-list .me-option { display: flex; width: 100%; padding: 10px 12px; border: 0; border-radius: var(--ot-radius); background: none;
+  color: var(--ot-text-strong); font: inherit; text-align: left; cursor: pointer; }
+.team-list .me-option:hover { background: var(--ot-bg-alt); }
+.team-list .me-option[aria-current="true"] { box-shadow: inset 4px 0 0 var(--ot-primary); background: var(--ot-bg-alt); color: var(--ot-primary); }
+.me-toggle svg { width: 16px; height: 16px; flex: none; opacity: .35; }
+.me-toggle[aria-pressed="true"] { background: var(--ot-primary); color: var(--ot-on-primary); }
+.me-toggle[aria-pressed="true"] svg { opacity: 1; }
+.is-me:not(.card) { font-weight: 700; color: var(--ot-primary); }
+.side .is-me::after, h1.is-me::after, .player-card.is-me .player-name::after {
+  content: "Du"; display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: var(--ot-radius-pill);
+  background: var(--ot-primary); color: var(--ot-on-primary); font-size: .75rem; font-weight: 600; vertical-align: middle; }
+h1.is-me:not(.card) { color: var(--ot-text-strong); }
+.card.has-me, .card.player-card.is-me { box-shadow: inset 4px 0 0 var(--ot-primary), var(--ot-shadow); }
+a.card.player-card.is-me:hover { box-shadow: inset 4px 0 0 var(--ot-primary), var(--ot-shadow-hover); }
+
 .team-list a[aria-current="page"] { box-shadow: inset 4px 0 0 var(--ot-primary); background: var(--ot-bg-alt); color: var(--ot-primary); }
 .team-label { font-weight: 600; }
 

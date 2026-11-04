@@ -1,7 +1,7 @@
 import type { Dataset } from "../data.ts";
 import { isDoubles, playerStats, type PlayerGame, type PlayerStats, type Tally } from "../stats.ts";
-import type { Player } from "../types.ts";
-import { reportHref } from "./components.ts";
+import type { Player, RosterPlayer } from "../types.ts";
+import { CHECK, reportHref } from "./components.ts";
 import { layout } from "./layout.ts";
 import { displayName, esc, formatDate, html, outcomeBadge, slug } from "./util.ts";
 
@@ -30,6 +30,65 @@ export function playerLinker(pages: PlayerPage[], root: string): (p: Player) => 
     const name = p.person != null ? byPerson.get(p.person) : undefined;
     return name ? `${root}spieler/${name}.html` : null;
   };
+}
+
+/** Someone the user can pick as themselves, with a link to their stats page if they have one. */
+export interface Pickable extends RosterPlayer {
+  href: string | null;
+}
+
+/** "Böse, Frank" sorts under B; the list shows "Frank Böse". */
+const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "de");
+
+/**
+ * Everyone who can pick themselves on this team: the nuLiga roster (Stammspieler and club reserves)
+ * plus anyone else who already played for the team according to its Spielberichte.
+ */
+export function pickablePlayers(d: Dataset, pages: PlayerPage[]): Pickable[] {
+  const hrefs = new Map(pages.map((p) => [p.stats.person, `spieler/${p.slug}.html`]));
+  const all = new Map<number, Pickable>(d.roster.map((r) => [r.person, { ...r, href: hrefs.get(r.person) ?? null }]));
+  for (const { stats } of pages) {
+    if (stats.person == null || all.has(stats.person)) continue;
+    all.set(stats.person, { name: stats.name, person: stats.person, rank: null, role: "report", href: hrefs.get(stats.person)! });
+  }
+  return [...all.values()].sort(byName);
+}
+
+/** "Wer bist Du?" card and the dialog with the names to pick from (see ME in layout.ts). */
+function mePicker(players: Pickable[]): string {
+  if (!players.length) return "";
+  const option = (p: Pickable) =>
+    html`<li><button type="button" class="me-option" data-person="${p.person}" data-name="${esc(p.name)}"${p.href ? ` data-href="${esc(p.href)}"` : ""}>
+      <span class="team-label">${esc(displayName(p.name))}</span>
+    </button></li>`;
+  const groups: [string, Pickable[]][] = [
+    ["Stammspieler", players.filter((p) => p.role === "team")],
+    ["Ersatzspieler", players.filter((p) => p.role !== "team")],
+  ];
+  return html`<section class="card me-card" id="me-card">
+      <div class="me-none">
+        <p><b>Wer bist Du?</b> Wähle Deinen Namen, dann hebt die App Deine Spiele hervor.</p>
+        <div class="btn-row"><button type="button" class="btn btn-primary me-pick">Namen wählen</button></div>
+      </div>
+      <div class="me-some" hidden>
+        <p>Du bist <b class="me-name"></b>.</p>
+        <div class="btn-row">
+          <a class="btn btn-primary me-link" href="#" hidden>Meine Statistik</a>
+          <button type="button" class="btn btn-secondary me-pick">Ändern</button>
+          <button type="button" class="btn btn-secondary me-clear">Entfernen</button>
+        </div>
+      </div>
+      <p class="small muted">Wird nur auf diesem Gerät gespeichert.</p>
+    </section>
+    <dialog class="team-dialog me-dialog" id="me-dialog" aria-labelledby="me-dialog-h">
+      <div class="dialog-head">
+        <h2 id="me-dialog-h">Wer bist Du?</h2>
+        <button type="button" class="dialog-close" aria-label="Schließen">×</button>
+      </div>
+      ${groups.filter(([, list]) => list.length).map(
+        ([heading, list]) => html`<h3>${heading}</h3><ul class="team-list">${list.map(option)}</ul>`,
+      )}
+    </dialog>`;
 }
 
 export const quota = (t: Tally) => (t.played ? `${Math.round((t.won / t.played) * 100)} %` : "–");
@@ -70,10 +129,11 @@ function gameLog(g: PlayerGame, root: string): string {
 export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
   const body = html`
     <h1>Spieler</h1>
+    ${mePicker(pickablePlayers(d, pages))}
     <p class="small muted">Alle Einsätze für ${esc(d.own.name)} in dieser Saison, aus den Spielberichten.</p>
     ${pages.length
       ? pages.map(
-          ({ stats: s, slug }) => html`<a class="card player-card" href="spieler/${slug}.html">
+          ({ stats: s, slug }) => html`<a class="card player-card" href="spieler/${slug}.html"${s.person != null ? ` data-person="${s.person}"` : ""}>
             <div class="player-head">
               <span class="player-name">${esc(displayName(s.name))}</span>
               <span class="player-rec num">${record(s)}</span>
@@ -95,7 +155,10 @@ export function renderSpieler(d: Dataset, { stats: s }: PlayerPage): string {
   const doubles = s.disciplines.filter((x) => isDoubles(x.discipline));
 
   const body = html`
-    <h1>${esc(displayName(s.name))}</h1>
+    <h1${s.person != null ? ` data-person="${s.person}"` : ""}>${esc(displayName(s.name))}</h1>
+    ${s.person != null
+      ? html`<div class="btn-row"><button type="button" class="btn btn-secondary me-toggle" data-person="${s.person}" data-name="${esc(s.name)}" aria-pressed="false">${CHECK}<span>Das bin ich</span></button></div>`
+      : ""}
     <div class="stats">
       <div class="stat"><span class="stat-value">${s.played}</span><span class="stat-label">Spiele</span></div>
       <div class="stat"><span class="stat-value">${record(s)}</span><span class="stat-label">Siege–Niederl.</span></div>

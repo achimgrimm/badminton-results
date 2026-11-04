@@ -10,6 +10,18 @@ export const SEASON_LABEL = "2026/27";
 /** The footer links the build's commit here. */
 export const REPO_URL = "https://github.com/achimgrimm/badminton-results";
 
+export type PoolRound = "vorrunde" | "rueckrunde";
+
+/**
+ * nuLiga roster age classes ("contestType" on the clubPools page) per team label, matched on the
+ * label's first word: "Aktive III" plays from O19 Herren and O19 Damen, Mannschaft 3.
+ */
+export const POOLS: Record<string, string[]> = {
+  Aktive: ["O19 Herren", "O19 Damen"],
+  Jugend: ["U19 Jugend (gemischt)"],
+  "Schüler": ["U15 Schüler (gemischt)"],
+};
+
 /** A league on nuLiga. */
 export interface Group {
   championship: string;
@@ -26,6 +38,9 @@ export const urls = {
   groupPage: (g: Group) => `${WA}/groupPage?${groupQuery(g)}`,
   team: (g: Group, teamtable: number) => `${WA}/teamPortrait?teamtable=${teamtable}&pageState=gesamt&${groupQuery(g)}`,
   report: (g: Group, meeting: number) => `${WA}/groupMeetingReport?meeting=${meeting}&${groupQuery(g)}`,
+  /** Club roster for an age class; round "vorrunde" or "rueckrunde". */
+  pools: (contestType: string, round: PoolRound) =>
+    `${WA}/clubPools?${new URLSearchParams({ displayTyp: round, club: String(CLUB), contestType, seasonName: SEASON_LABEL })}`,
   court: (location: number) => `${WA}/courtInfo?federation=BrBV&location=${location}`,
 };
 

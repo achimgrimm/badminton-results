@@ -1,5 +1,6 @@
-import { CLUB_NAME, REPO_URL, SEASON_LABEL, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
+import { CLUB_NAME, REPO_URL, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
+import { APP_SHORT_NAME } from "./pwa.ts";
 import { buildVersion, clubTeams, currentTeam, releaseNotes, stylesHref } from "./context.ts";
 import { esc, formatDate, formatTimestamp, html, todayInBremen } from "./util.ts";
 
@@ -29,9 +30,9 @@ const NAV: { key: Exclude<NavKey, null>; href: string; label: string }[] = [
   { key: "spieler", href: "spieler.html", label: "Spieler" },
 ];
 
-const THEME_KEY = "theme";
-const HINT_KEY = "chromeHintDismissed";
-export const TEAM_KEY = "team";
+const THEME_KEY = storageKey("theme");
+const HINT_KEY = storageKey("chromeHintDismissed");
+export const TEAM_KEY = storageKey("team");
 
 /** Team pages remember themselves, so the chooser can forward there next time. */
 const REMEMBER = (slug: string) => `try { localStorage.setItem("${TEAM_KEY}", "${slug}"); } catch (e) {}`;
@@ -47,7 +48,7 @@ const NEW_FOR_MS = 24 * 60 * 60 * 1000;
  * in a dialog, once.
  */
 const NEW_RESULTS = (slug: string) => `(function () {
-  var KEY = "seen-${slug}", seen = null, now = Date.now();
+  var KEY = "${storageKey(`seen-${slug}`)}", seen = null, now = Date.now();
   try { seen = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   var first = !seen || typeof seen !== "object";
   if (first) seen = {};
@@ -102,7 +103,7 @@ const NEW_RESULTS = (slug: string) => `(function () {
  * "has-mine" for the "Meine Spiele" filter. Must run before the page script.
  */
 const PLAYING = (slug: string) => `(function () {
-  var KEY = "playing-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}", mine = [];
+  var KEY = "${storageKey(`playing-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}`)}", mine = [];
   try { mine = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) {}
   if (!Array.isArray(mine)) mine = [];
   function has(k) { return mine.indexOf(k) >= 0; }
@@ -143,7 +144,7 @@ const PLAYING = (slug: string) => `(function () {
 
 /** How many of the newest release notes each page carries. */
 const RELEASES_SHOWN = 3;
-const RELEASE_KEY = "releaseSeen";
+const RELEASE_KEY = storageKey("releaseSeen");
 
 /**
  * Release notes dialog. The footer link opens it with all embedded notes. On team pages it opens
@@ -238,7 +239,8 @@ const ANALYTICS = `function otTrack(name, data) { if (window.umami) umami.track(
   s.dataset.tag = app ? "app" : "browser";
   document.head.appendChild(s);
 })();`;
-const TRACKING = UMAMI_WEBSITE_ID !== "";
+/** Stages share the live hostname, so Umami's domain filter wouldn't keep them out: no tracking there. */
+const TRACKING = UMAMI_WEBSITE_ID !== "" && !STAGE;
 /** Stub when tracking is off, so the other scripts can call otTrack() unconditionally. */
 const NO_ANALYTICS = `function otTrack() {}`;
 
@@ -393,6 +395,9 @@ function footerStatus(checkedAt: string | null): string {
   return parts.length ? `<p>${parts.join(" · ")}</p>` : "";
 }
 
+/** From a stage's root (stage/<name>/) back to the live site's root. */
+const STAGE_TO_LIVE = "../../index.html";
+
 export function layout(o: PageOptions): string {
   const team = currentTeam();
   const assets = o.assets ?? `${o.root}../`;
@@ -412,7 +417,7 @@ export function layout(o: PageOptions): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a409f">
-${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.title)} · ${esc(team ? `${CLUB_NAME} ${team.label}` : `${CLUB_NAME} Badminton`)}</title>
+${o.noindex || STAGE ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.title)} · ${esc(team ? `${CLUB_NAME} ${team.label}` : `${CLUB_NAME} Badminton`)}</title>
 <script>${THEME_INIT}</script>
 <script>${TRACKING ? ANALYTICS : NO_ANALYTICS}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -424,9 +429,10 @@ ${o.noindex ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.tit
 <link rel="apple-touch-icon" href="${assets}icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="OT Badminton">
+<meta name="apple-mobile-web-app-title" content="${esc(APP_SHORT_NAME)}">
 </head>
 <body${o.meeting ? ` data-meeting="${o.meeting}"` : ""}>
+${STAGE ? html`<div class="stage-banner" role="note">Testversion: <b>${esc(STAGE)}</b> · <a href="${assets}${STAGE_TO_LIVE}">Zur Live-Version</a></div>` : ""}
 <header class="site-header">
   <div class="container header-inner">
     <img class="club-logo" src="${assets}club-logo.png" alt="TSV Osterholz-Tenever" width="40" height="40">

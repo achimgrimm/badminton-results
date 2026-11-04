@@ -31,7 +31,7 @@ npm test         # parser tests against test/fixtures
 - Youth leagues use numbered pairings (`D1-D1`, `2-2`), stored as `D1`, `E2`.
 - `src/parse/*` hold the cheerio parsers for each nuLiga page type. If nuLiga changes its markup, update the matching parser and refresh the fixture in `test/fixtures/`.
 - `src/render/*` render the plain HTML pages. Styling follows the OT design tokens in `src/styles.css`.
-- `.github/workflows/update.yml` runs hourly and on every push to `main`. It tests, scrapes, builds and deploys `dist/` to GitHub Pages. If a parse fails, the job fails and the last good deploy stays online.
+- `.github/workflows/update.yml` runs hourly and on every push to `main`. It builds the live site from `main` and a test stage from every other branch (see [Test stages](#test-stages)), each with its own tests, scrape and data cache, and deploys them together to GitHub Pages. If the live build fails, nothing is deployed and the last good deploy stays online; a failing stage only misses its folder.
 - The site is an installable PWA. `src/render/pwa.ts` generates the manifest and the service worker. Pages are network-first with an offline fallback to the last cached copy. The app icons in `src/icons/` are rendered from `icon.svg`.
 - Results of the selected team that are new on the device get a "Neu" badge for 24 hours (or until their Spielbericht is opened). The client script `NEW_RESULTS` in `src/render/layout.ts` keeps first-seen times in localStorage under `seen-<team slug>`; on the first visit to a team nothing is marked. Results first seen on a page load are also listed once in a pop-up (Umami event `new-results`).
 - Players can mark the own matches they play in ("Ich spiele" next to every unplayed match card, in the "Nächstes Spiel" box and on the Vorschau page). Marked matches get a "Dabei" badge, also after the result is in, and the Spielplan filter "Meine Spiele" shows only them. The Spielplan's always visible "Meine Spiele teilen" button sends the upcoming marked matches (date, time, home/away, opponent, Vorschau link) as plain text through the phone's share sheet (WhatsApp, Signal, …), falling back to the clipboard; with none marked it asks to mark matches first. The client script `PLAYING` in `src/render/layout.ts` keeps the marked `previewName` keys (`heim-<opponent>`/`auswaerts-<opponent>`) in localStorage under `playing-<team slug>-<season>`; nothing leaves the device (Umami event `playing`).
@@ -39,6 +39,15 @@ npm test         # parser tests against test/fixtures
 - Usage is counted with [Umami Cloud](https://cloud.umami.is) (cookieless, no consent banner needed). The website ID is `UMAMI_WEBSITE_ID` in `src/config.ts`; an empty ID turns tracking off. Only the live domain is counted, not local previews. Every page view is tagged `app` (installed PWA) or `browser`; events: `theme`, `install-click`, `install-accepted`/`install-dismissed`, `app-installed`, `open-in-chrome`, `share`, `new-results`, `release-notes`, `playing`, `share-plan`, `calendar`.
 - The footer shows the data timestamp and the git commit the site was built from (short hash linked to GitHub, commit date). Without git the build still works, just without the version.
 - `data/` is not in git. The workflow keeps it in the GitHub Actions cache between runs. If the cache is evicted, the next run simply fetches all Spielberichte again.
+
+## Test stages
+
+Every pushed branch (except Dependabot's) gets its own test stage at `https://achimgrimm.github.io/badminton-results/stage/<branch>/`. The branch name is lowercased and other characters become `-`, so `feature/Lineup` is served at `stage/feature-lineup/`. `main` is the live site.
+
+- Pushing or deleting a branch runs `.github/workflows/stage.yml`, which starts the main workflow on `main` (only `main` may deploy to GitHub Pages). So a stage appears a few minutes after the push and disappears when the branch is deleted.
+- A stage is built with `STAGE=<branch>`. It shows a "Testversion" banner, isn't indexed or counted by Umami, installs as a separate app ("OT Test <stage>"), and prefixes its localStorage keys with `stage-<stage>-`, so testing never touches the live app's data. The live service worker ignores `stage/`.
+- `mise run release`, run on the branch, releases it. It checks that the branch is pushed and that its stage already shows that commit, fast-forwards `main` to it (which deploys it live) and deletes the branch (which removes the stage). If `main` has moved on, rebase, push and test the stage again.
+- Local preview of a stage next to live: `npm run build && STAGE=my-branch npm run build && npm run serve`, then open `/stage/my-branch/`. A live build clears `dist/`, so build live first.
 
 ## Release notes
 

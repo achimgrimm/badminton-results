@@ -1,12 +1,15 @@
-import { CLUB_NAME } from "../config.ts";
+import { CLUB_NAME, STAGE } from "../config.ts";
+
+/** Home screen name; a stage's installed app is named after it, so it can't be mixed up with the live app. */
+export const APP_SHORT_NAME = STAGE ? `OT Test ${STAGE}` : "OT Badminton";
 
 /** Paths are relative to the manifest, so the site works under any base path (e.g. GitHub Pages). */
 export function renderManifest(): string {
   return JSON.stringify(
     {
       id: "./",
-      name: `${CLUB_NAME} Badminton`,
-      short_name: "OT Badminton",
+      name: STAGE ? `${CLUB_NAME} Badminton (Test: ${STAGE})` : `${CLUB_NAME} Badminton`,
+      short_name: APP_SHORT_NAME,
       description: `Tabellen, Spielpläne, Spielberichte und Spielerstatistiken aller ${CLUB_NAME}-Mannschaften`,
       lang: "de",
       // The chooser at the root forwards to the last selected team.
@@ -14,7 +17,7 @@ export function renderManifest(): string {
       scope: "./",
       display: "standalone",
       background_color: "#f5f5f5",
-      theme_color: "#0a409f",
+      theme_color: STAGE ? "#ac6c00" : "#0a409f",
       icons: [
         { src: "icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
         { src: "icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
@@ -61,6 +64,8 @@ function remember(req, res) {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
+  // Test stages live in stage/<name>/ inside this scope; their own service workers handle them.
+  if (req.url.startsWith(self.registration.scope + "stage/")) return;
 
   if (req.mode === "navigate") {
     // Offline and never visited: redirect to the team's cached overview, so relative links still

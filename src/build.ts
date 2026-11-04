@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { STAGE } from "./config.ts";
 import { loadClubTeams, loadDataset, type Dataset } from "./data.ts";
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
@@ -25,7 +26,8 @@ function stubReport(m: Meeting): MatchReport {
 }
 
 const SRC = new URL(".", import.meta.url).pathname;
-const DIST = new URL("../dist/", import.meta.url).pathname;
+/** The live site goes into dist/, a test stage into dist/stage/<name>/ (as served), so both can be previewed together. */
+const DIST = new URL(STAGE ? `../dist/stage/${STAGE}/` : "../dist/", import.meta.url).pathname;
 
 /** The checked-out commit, shown in the footer; the build works without git, just without it. */
 function gitVersion(): BuildVersion | null {
@@ -102,4 +104,4 @@ writeFileSync(join(DIST, "manifest.webmanifest"), renderManifest());
 writeFileSync(join(DIST, "sw.js"), renderServiceWorker(now.getTime().toString(36), stylesHref()));
 writeFileSync(join(DIST, ".nojekyll"), "");
 
-console.log(`built ${pages + 1} pages for ${teams.length} teams into dist/`);
+console.log(`built ${pages + 1} pages for ${teams.length} teams into ${STAGE ? `dist/stage/${STAGE}/` : "dist/"}`);

@@ -1,5 +1,8 @@
 name: Update results
 
+# Builds the live site from main and a test stage from every other branch (stage/<branch>/),
+# then deploys them together: GitHub Pages holds one site per repo. Runs hourly, on every push
+# to main, and when stage.yml asks for it after a branch push or delete.
 on:
   schedule:
     - cron: "17 * * * *" # hourly
@@ -17,36 +20,97 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  update:
+  branches:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+    outputs:
+      sites: ${{ steps.list.outputs.sites }}
     steps:
       - uses: actions/checkout@v7
+      # main is the live site; every other branch except Dependabot's is a test stage.
+      - id: list
+        run: |
+          sites=$(git ls-remote --heads origin | sed 's|.*refs/heads/||' | grep -v '^dependabot/' | jq -R -s -c '
+            split("\n") | map(select(length > 0)) | map(
+              if . == "main" then {ref: ., stage: "", name: "live"}
+              else (ascii_downcase | gsub("[^a-z0-9]+"; "-") | gsub("^-+|-+$"; "")) as $s
+                | select($s != "") | {ref: ., stage: $s, name: ("stage-" + $s)} end) | unique_by(.name)')
+          echo "sites=$sites" >> "$GITHUB_OUTPUT"
+          echo "$sites" | jq .
+
+  site:
+    needs: branches
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJSON(needs.branches.outputs.sites) }}
+    name: site (${{ matrix.site.name }})
+    env:
+      STAGE: ${{ matrix.site.stage }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.site.ref }}
       # Node version comes from mise.toml
       - uses: jdx/mise-action@v4
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
 
-      # data/ is not in git; it lives in the Actions cache so each run only
-      # re-fetches new or unapproved Spielberichte.
+      # data/ is not in git; it lives in the Actions cache so each run only re-fetches new or
+      # unapproved Spielberichte. Each site has its own cache, so a stage that changes the data
+      # format can't break live; a new stage starts from live's data.
       - uses: actions/cache/restore@v6
         with:
           path: data
-          key: data-${{ github.run_id }}
-          restore-keys: data-
+          key: data-${{ matrix.site.name }}-${{ github.run_id }}
+          restore-keys: |
+            data-${{ matrix.site.name }}-
+            data-live-
+            data-
       - run: npm run scrape
       - run: npm run build
       # Only reached when scrape and build succeeded, so bad data is never cached.
       - uses: actions/cache/save@v6
         with:
           path: data
-          key: data-${{ github.run_id }}
+          key: data-${{ matrix.site.name }}-${{ github.run_id }}
 
+      - uses: actions/upload-artifact@v5
+        with:
+          name: site-${{ matrix.site.name }}
+          path: ${{ matrix.site.stage && format('dist/stage/{0}', matrix.site.stage) || 'dist' }}
+          include-hidden-files: true
+          retention-days: 1
+
+  # A failed stage only misses its folder; if live failed, nothing is deployed and the last
+  # good deploy stays online.
+  deploy:
+    needs: [branches, site]
+    if: ${{ !cancelled() && needs.branches.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: site-*
+          path: artifacts
+      - name: Assemble live site and stages
+        run: |
+          test -d artifacts/site-live || { echo "live build failed, not deploying"; exit 1; }
+          mv artifacts/site-live site
+          for dir in artifacts/site-stage-*; do
+            [ -d "$dir" ] || continue
+            stage=${dir#artifacts/site-stage-}
+            mkdir -p site/stage
+            mv "$dir" "site/stage/$stage"
+            echo "stage: $stage"
+          done
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: dist
+          path: site
       - id: deploy
         uses: actions/deploy-pages@v5

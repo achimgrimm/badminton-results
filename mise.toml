@@ -39,3 +39,7 @@ run = "npm run serve"
 description = "Scrape and build, like the hourly CI job"
 depends = ["test"]
 run = ["npm run scrape", "npm run build"]
+
+[tasks.release]
+description = "Release the current branch: check its test stage, fast-forward main, delete the branch"
+run = "scripts/release.sh"

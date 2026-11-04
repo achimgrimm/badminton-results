@@ -1,13 +1,13 @@
 import type { Dataset } from "../data.ts";
 import type { Meeting } from "../types.ts";
 import { matchCard } from "./components.ts";
-import { CLUB_NAME } from "../config.ts";
+import { CLUB_NAME, storageKey } from "../config.ts";
 import { layout, SHARE_BTN_ICON } from "./layout.ts";
 import { esc, formatDate, html, involvesOwn, todayInBremen } from "./util.ts";
 
 const SCRIPT = `
 (function () {
-  var KEY = "spielplan-filter";
+  var KEY = "${storageKey("spielplan-filter")}";
   var buttons = document.querySelectorAll(".filter button");
   function apply(mode) {
     if (mode !== "own" && mode !== "mine" && mode !== "all") mode = "own";

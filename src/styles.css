@@ -85,6 +85,9 @@ main.container { padding-bottom: 32px; }
 .num { font-variant-numeric: tabular-nums; }
 
 /* Header */
+/* Test stages only: a strip above the header, so a test build is never mistaken for the live app. */
+.stage-banner { background: var(--ot-warning-bg); color: var(--ot-warning); text-align: center; font-size: .875rem; padding: 4px 16px; }
+.stage-banner a { color: inherit; }
 .site-header { background: var(--ot-header); color: var(--ot-on-primary); position: sticky; top: 0; z-index: 10; }
 .header-inner { padding-top: 12px; padding-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .header-actions { flex: none; display: flex; gap: 8px; }

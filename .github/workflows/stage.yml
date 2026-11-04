@@ -1,0 +1,21 @@
+name: Update test stages
+
+# Pushing or deleting a branch changes its test stage (stage/<branch>/). Only main may deploy
+# to GitHub Pages, so this just starts the main workflow, which rebuilds the live site and
+# every stage from the current branches.
+on:
+  push:
+    branches-ignore: [main, "dependabot/**"]
+  delete:
+
+permissions:
+  actions: write
+
+jobs:
+  redeploy:
+    if: ${{ github.event_name == 'push' || (github.event.ref_type == 'branch' && !startsWith(github.event.ref, 'dependabot/')) }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run update.yml --repo "$GITHUB_REPOSITORY" --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

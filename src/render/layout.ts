@@ -139,6 +139,7 @@ const PLAYING = (slug: string) => `(function () {
       day.classList.toggle("has-mine", !!day.querySelector(".match-card.is-playing"));
     });
     document.body.classList.toggle("no-playing", !any);
+    document.dispatchEvent(new Event("ot-playing"));
   }
   window.otPlayingRender = render;
   document.querySelectorAll(".play-toggle").forEach(function (b) {
@@ -211,6 +212,8 @@ const ME = (slug: string) => `(function () {
     dlg.querySelectorAll(".me-option").forEach(function (o) {
       o.addEventListener("click", function () { dlg.close(); save({ person: Number(o.dataset.person), name: o.dataset.name }, "list"); });
     });
+    // The overview's "Wer bist Du?" hint links here to open the list right away.
+    if (location.hash === "#wer-bist-du" && !me) dlg.showModal();
   }
   render();
 })();`;

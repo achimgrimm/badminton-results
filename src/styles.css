@@ -354,3 +354,8 @@ a.card.player-card.is-me:hover { box-shadow: inset 4px 0 0 var(--ot-primary), va
 .chrome-hint[hidden] { display: none; }
 .chrome-hint p { flex: 1 1 220px; margin: 0; }
 .chrome-hint .dialog-close { margin-left: auto; }
+main > .chrome-hint { margin: 0 0 16px; }
+
+/* Overview: the first later match the user marked */
+.my-next { margin: 0 0 16px; }
+.my-next h2 { margin-top: 0; }

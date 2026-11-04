@@ -234,6 +234,8 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
   function show(list, via) {
     arts.forEach(function (a) { a.hidden = list.indexOf(a) < 0; });
     dlg.showModal();
+    // The OK button is focused, but the notes start at the top, newest first.
+    dlg.querySelector(".release-body").scrollTop = 0;
     otTrack("release-notes", { id: newest, via: via });
   }
   // Saved right away on a click too: the close event fires a moment later, possibly after a reload.
@@ -262,6 +264,7 @@ function releaseDialog(): string {
     <h2 id="release-dialog-h">Was ist neu?</h2>
     <button type="button" class="dialog-close" aria-label="Schließen">×</button>
   </div>
+  <div class="release-body">
   ${shown.map(
     (r) => html`<article data-release="${esc(r.id)}">
       <h3>${esc(r.title)}</h3>
@@ -269,6 +272,7 @@ function releaseDialog(): string {
       ${r.html}
     </article>`,
   )}
+  </div>
   <div class="btn-row"><button type="button" class="btn btn-primary" autofocus>OK</button></div>
 </dialog>`;
 }

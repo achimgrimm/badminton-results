@@ -46,7 +46,7 @@ Every pushed branch (except Dependabot's) gets its own test stage at `https://ac
 
 - Pushing or deleting a branch runs `.github/workflows/stage.yml`, which starts the main workflow on `main` (only `main` may deploy to GitHub Pages). So a stage appears a few minutes after the push and disappears when the branch is deleted.
 - A stage is built with `STAGE=<branch>`. It shows a "Testversion" banner, isn't indexed or counted by Umami, installs as a separate app ("OT Test <stage>"), and prefixes its localStorage keys with `stage-<stage>-`, so testing never touches the live app's data. The live service worker ignores `stage/`.
-- `mise run release`, run on the branch, releases it. It checks that the branch is pushed and that its stage already shows that commit, fast-forwards `main` to it (which deploys it live) and deletes the branch (which removes the stage). If `main` has moved on, rebase, push and test the stage again.
+- `mise run release`, run on the branch, releases it. It checks that the branch is pushed and that its stage already shows that commit, fast-forwards `main` to it and starts the live deploy (GitHub starts no push run for a commit that's already on another branch) and deletes the branch (which removes the stage). If `main` has moved on, rebase, push and test the stage again.
 - Local preview of a stage next to live: `npm run build && STAGE=my-branch npm run build && npm run serve`, then open `/stage/my-branch/`. A live build clears `dist/`, so build live first.
 
 ## Release notes

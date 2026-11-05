@@ -32,7 +32,7 @@ export function renderTabelle(d: Dataset): string {
   });
 
   const body = html`
-    <h1>Tabelle</h1>
+    <h1 class="visually-hidden">Tabelle</h1>
     <div class="results-wrap">
       <table class="results">
         <thead><tr>

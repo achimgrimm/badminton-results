@@ -157,13 +157,15 @@ const PLAYING = (slug: string) => `(function () {
 /**
  * "Wer bist Du?": the user picks themselves from the team's players (Spieler page) or with
  * "Das bin ich" on a player page. Stored per team and season as { person, name }, on the device only.
- * Every element with the chosen data-person gets "is-me", its card "has-me".
+ * Every element with the chosen data-person gets "is-me", its card "has-me". The Spieler page's
+ * player list (alphabetical) starts with the chosen player.
  */
 const ME = (slug: string) => `(function () {
   var KEY = "${meKey(slug)}", me = null;
   try { me = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!me || typeof me !== "object" || !me.person) me = null;
   var card = document.getElementById("me-card"), dlg = document.getElementById("me-dialog");
+  var list = document.getElementById("player-list"), order = list ? Array.prototype.slice.call(list.children) : [];
   function save(next, via) {
     me = next;
     try { if (me) localStorage.setItem(KEY, JSON.stringify(me)); else localStorage.removeItem(KEY); } catch (e) {}
@@ -180,6 +182,11 @@ const ME = (slug: string) => `(function () {
       var c = el.parentElement && el.parentElement.closest(".card");
       if (c) c.classList.add("has-me");
     });
+    if (list) {
+      order.forEach(function (c) { list.appendChild(c); });
+      var mine = id && list.querySelector('[data-person="' + id + '"]');
+      if (mine) list.prepend(mine);
+    }
     document.querySelectorAll(".me-toggle").forEach(function (b) {
       var on = b.dataset.person === id;
       b.setAttribute("aria-pressed", String(on));
@@ -193,7 +200,8 @@ const ME = (slug: string) => `(function () {
       card.querySelector(".me-some").hidden = !me;
       if (me) {
         var opt = dlg && dlg.querySelector('.me-option[data-person="' + id + '"]'), link = card.querySelector(".me-link");
-        card.querySelector(".me-name").textContent = opt ? opt.querySelector(".team-label").textContent : me.name;
+        var name = opt ? opt.querySelector(".team-label").textContent : me.name;
+        card.querySelectorAll(".me-name").forEach(function (el) { el.textContent = name; });
         link.hidden = !(opt && opt.dataset.href);
         if (opt && opt.dataset.href) link.href = opt.dataset.href;
       }

@@ -37,8 +37,8 @@ export interface Pickable extends RosterPlayer {
   href: string | null;
 }
 
-/** "Böse, Frank" sorts under B; the list shows "Frank Böse". */
-const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "de");
+/** Sorted as shown: "Böse, Frank" is listed as "Frank Böse", so it sorts under F. */
+const byName = (a: { name: string }, b: { name: string }) => displayName(a.name).localeCompare(displayName(b.name), "de");
 
 /**
  * Everyone who can pick themselves on this team: the nuLiga roster (Stammspieler and club reserves)
@@ -71,11 +71,9 @@ function mePicker(players: Pickable[]): string {
         <div class="btn-row"><button type="button" class="btn btn-primary me-pick">Namen wählen</button></div>
       </div>
       <div class="me-some" hidden>
-        <p>Du bist <b class="me-name"></b>.</p>
+        <p class="me-who"><span>Du bist <b class="me-name"></b>.</span> <button type="button" class="link-button me-clear">Ich bin nicht <span class="me-name"></span></button></p>
         <div class="btn-row">
           <a class="btn btn-primary me-link" href="#" hidden>Meine Statistik</a>
-          <button type="button" class="btn btn-secondary me-pick">Ändern</button>
-          <button type="button" class="btn btn-secondary me-clear">Entfernen</button>
         </div>
       </div>
       <p class="small muted">Wird nur auf diesem Gerät gespeichert.</p>
@@ -128,11 +126,11 @@ function gameLog(g: PlayerGame, root: string): string {
 
 export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
   const body = html`
-    <h1>Spieler</h1>
+    <h1 class="visually-hidden">Spieler</h1>
     ${mePicker(pickablePlayers(d, pages))}
     <p class="small muted">Alle Einsätze für ${esc(d.own.name)} in dieser Saison, aus den Spielberichten.</p>
     ${pages.length
-      ? pages.map(
+      ? `<div id="player-list">${[...pages].sort((a, b) => byName(a.stats, b.stats)).map(
           ({ stats: s, slug }) => html`<a class="card player-card" href="spieler/${slug}.html"${s.person != null ? ` data-person="${s.person}"` : ""}>
             <div class="player-head">
               <span class="player-name">${esc(displayName(s.name))}</span>
@@ -143,7 +141,7 @@ export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
             </div>
             ${disciplinePills(s)}
           </a>`,
-        )
+        ).join("")}</div>`
       : `<p class="muted">Noch keine Spielberichte.</p>`}
   `;
   return layout({ title: "Spieler", root: "", nav: "spieler", checkedAt: d.meta.checkedAt, noindex: true, body });

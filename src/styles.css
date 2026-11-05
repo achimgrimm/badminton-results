@@ -354,8 +354,8 @@ a.card.player-card.is-me:hover { box-shadow: inset 4px 0 0 var(--ot-primary), va
 .chrome-hint[hidden] { display: none; }
 .chrome-hint p { flex: 1 1 220px; margin: 0; }
 .chrome-hint .dialog-close { margin-left: auto; }
-main > .chrome-hint { margin: 0 0 16px; }
+main > .chrome-hint, .overview > .chrome-hint { margin: 0 0 16px; }
 
-/* Overview: the first later match the user marked */
-.my-next { margin: 0 0 16px; }
-.my-next h2 { margin-top: 0; }
+/* Overview with a chosen player: only their matches, so no "Ich spiele" toggles or "Dabei" badges */
+body[data-me] .overview .play-toggle, body[data-me] .overview .badge--playing { display: none; }
+body[data-me] .overview .play-wrap .match { padding-right: 0; }

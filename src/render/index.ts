@@ -1,35 +1,23 @@
 import { storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
+import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle } from "./components.ts";
 import { layout } from "./layout.ts";
 import { ownPlayers, pickablePlayers } from "./spieler.ts";
 import { esc, formatDate, html, involvesOwn, isOwn, previewHref, todayInBremen } from "./util.ts";
 
-/**
- * Android has no handler for webcal: links, so a tap does nothing there (also in the installed app).
- * There the button subscribes through Google Calendar's "add by URL" link instead, which keeps the
- * feed updated and syncs to the calendar app on the phone.
- */
-const CALENDAR = `(function () {
-  var btn = document.getElementById("calendar-btn");
-  if (!btn) return;
-  var android = /Android/i.test(navigator.userAgent);
-  if (android) {
-    btn.href = "https://calendar.google.com/calendar/r?cid=" + encodeURIComponent(btn.dataset.webcal);
-    btn.target = "_blank";
-    btn.rel = "noopener";
-    document.getElementById("calendar-hint").hidden = false;
-  }
-  btn.addEventListener("click", function () { otTrack("calendar", { via: android ? "google" : "webcal" }); });
-})();`;
-
 const ME_HINT_KEY = storageKey("meHintDismissed");
+
+/** Played matches older than this many days are left out of the personal overview. */
+const RECENT_DAYS = 14;
 
 /**
  * Personal parts of the overview. "Wer bist Du?" hint while no player is chosen (ME sets body
- * data-me before this runs) until dismissed. "Dein nächstes Spiel": the first marked match after the
- * team's next one, as a copy of its card; its toggle forwards to the original, and PLAYING's
- * "ot-playing" event keeps the copy current.
+ * data-me before this runs) until dismissed. Once a player is chosen, the overview shows only their
+ * matches (.is-playing, see PLAYING): the hero is their next marked match (or "Kein Spiel markiert"),
+ * "Weitere Spiele" the marked ones after it, and results only theirs of the last RECENT_DAYS days.
+ * Without a chosen player it is the team's view. PLAYING's "ot-playing" event (also fired after ME
+ * changes) keeps it current.
  */
 const PERSONAL = `(function () {
   var hint = document.getElementById("me-hint");
@@ -44,49 +32,74 @@ const PERSONAL = `(function () {
     });
     hint.querySelector(".btn").addEventListener("click", function () { otTrack("me-hint", { action: "pick" }); });
   }
-  var section = document.getElementById("my-next"), more = document.getElementById("more-matches");
-  if (!section || !more) return;
-  var slot = section.querySelector(".my-next-slot");
+  function items(list) { return list ? Array.prototype.slice.call(list.querySelectorAll(".ov-item")) : []; }
+  function mine(item) { var c = item.querySelector(".match-card"); return !!c && c.classList.contains("is-playing"); }
   function update() {
-    var card = more.querySelector(".match-card.is-playing"), wrap = card && card.closest(".play-wrap");
-    slot.textContent = "";
-    section.hidden = !wrap;
-    if (!wrap) return;
-    var copy = wrap.cloneNode(true), original = wrap.querySelector(".play-toggle");
-    copy.querySelector(".play-toggle").addEventListener("click", function () { original.click(); });
-    slot.appendChild(copy);
+    var personal = !!document.body.dataset.me;
+    var more = document.querySelector('[data-list="more"]'), upcoming = items(more);
+    var shown = personal ? upcoming.filter(mine) : upcoming, first = shown[0];
+    document.querySelectorAll(".next[data-index]").forEach(function (h) {
+      h.hidden = !first || h.dataset.index !== first.dataset.index;
+    });
+    var none = document.getElementById("next-none");
+    if (none) none.hidden = !(personal && !first);
+    upcoming.forEach(function (it) { it.hidden = it === first || shown.indexOf(it) < 0; });
+    if (more) more.hidden = shown.length < 2;
+    document.querySelectorAll('[data-list="pending"], [data-list="played"]').forEach(function (list) {
+      var any = false;
+      items(list).forEach(function (it) {
+        it.hidden = personal && (!mine(it) || it.hasAttribute("data-old"));
+        if (!it.hidden) any = true;
+      });
+      list.hidden = !any;
+    });
   }
   document.addEventListener("ot-playing", update);
   update();
 })();`;
 
+function nextHero(d: Dataset, m: Meeting, i: number, today: string): string {
+  return html`<section class="next" data-index="${i}" aria-labelledby="next-h-${i}"${i ? " hidden" : ""}>
+    <h2 id="next-h-${i}">${m.date === today ? "Heute" : "Nächstes Spiel"}</h2>
+    <div class="when">${esc(formatDate(m.date, true))}${m.time ? `, ${esc(m.time)} Uhr` : ""}</div>
+    <div class="vs">${isOwn(m.home) ? `<b>Heim</b> gegen ${esc(m.guest)}` : `<b>Auswärts</b> bei ${esc(m.home)}`}</div>
+    ${m.hall ? `<div>${esc(m.hall.name ?? m.hall.code)}</div>` : ""}
+    ${m.hall?.location ? `<div class="small">${hallAddress(d.halls[m.hall.location])}</div>` : ""}
+    ${m.postponed ? `<p class="small"><span class="badge">verlegt</span> ${esc(m.note)}</p>` : ""}
+    <div class="btn-row">
+      <a class="btn btn-on-dark" href="${previewHref("", m)}">Zur Vorschau</a>
+      ${playToggle(m, "hero")}
+    </div>
+  </section>`;
+}
+
+/** A titled list of match cards; each card is wrapped so the PERSONAL script can show or hide it. */
+function matchList(kind: string, title: string, items: string[], hidden = false): string {
+  return items.length
+    ? `<section class="ov-list" data-list="${kind}"${hidden ? " hidden" : ""}><h2>${title}</h2>${items.join("")}</section>`
+    : "";
+}
+
 export function renderIndex(d: Dataset, now: Date): string {
   const today = todayInBremen(now);
+  const cutoff = todayInBremen(new Date(now.getTime() - RECENT_DAYS * 864e5));
   const own = d.schedule.filter(involvesOwn);
   const upcoming = own.filter((m) => !m.result && m.date >= today);
   const pending = own.filter((m) => !m.result && m.date < today);
   const played = own.filter((m) => m.result).reverse();
-  const next = upcoming[0];
   const standing = d.table.find((s) => isOwn(s.team));
+  const item = (m: Meeting, card: string, attrs = "") =>
+    `<div class="ov-item"${m.date < cutoff ? " data-old" : ""}${attrs}>${card}</div>`;
 
-  const nextBlock = next
-    ? html`<section class="next" aria-labelledby="next-h">
-        <h2 id="next-h">${next.date === today ? "Heute" : "Nächstes Spiel"}</h2>
-        <div class="when">${esc(formatDate(next.date, true))}${next.time ? `, ${esc(next.time)} Uhr` : ""}</div>
-        <div class="vs">${isOwn(next.home) ? `<b>Heim</b> gegen ${esc(next.guest)}` : `<b>Auswärts</b> bei ${esc(next.home)}`}</div>
-        ${next.hall ? `<div>${esc(next.hall.name ?? next.hall.code)}</div>` : ""}
-        ${next.hall?.location ? `<div class="small">${hallAddress(d.halls[next.hall.location])}</div>` : ""}
-        ${next.postponed ? `<p class="small"><span class="badge">verlegt</span> ${esc(next.note)}</p>` : ""}
-        <div class="btn-row">
-          <a class="btn btn-on-dark" href="${previewHref("", next)}">Zur Vorschau</a>
-          ${playToggle(next, "hero")}
-        </div>
+  const nextBlock = upcoming.length
+    ? upcoming.map((m, i) => nextHero(d, m, i, today)).join("") +
+      html`<section class="next" id="next-none" hidden>
+        <h2>Nächstes Spiel</h2>
+        <div class="when">Kein Spiel markiert</div>
+        <p>Markiere im Spielplan, bei welchen Spielen Du dabei bist.</p>
+        <div class="btn-row"><a class="btn btn-on-dark" href="spielplan.html">Spiele markieren</a></div>
       </section>`
     : `<section class="next"><h2>Saison</h2><div class="when">Keine weiteren Spiele geplant</div></section>`;
-
-  const myNext = upcoming.length > 1
-    ? `<section class="my-next" id="my-next" aria-labelledby="my-next-h" hidden><h2 id="my-next-h">Dein nächstes Spiel</h2><div class="my-next-slot"></div></section>`
-    : "";
 
   const meHint = pickablePlayers(d, ownPlayers(d)).length
     ? html`<div class="chrome-hint" id="me-hint" role="note" hidden>
@@ -104,24 +117,18 @@ export function renderIndex(d: Dataset, now: Date): string {
       </div>`
     : "";
 
-  const calendar = d.team.webcalUrl
-    ? html`<div class="btn-row">
-        <a class="btn btn-primary" id="calendar-btn" href="${esc(d.team.webcalUrl)}" data-webcal="${esc(d.team.webcalUrl)}">📅 Spiele in Deinen Kalender</a>
-        ${d.team.icalUrl ? `<a class="btn btn-secondary" href="${esc(d.team.icalUrl)}">.ics herunterladen</a>` : ""}
-      </div>
-      <p class="small muted" id="calendar-hint" hidden>Öffnet Google Kalender. Nach „Hinzufügen“ erscheinen die Spiele in Deiner Kalender-App und bleiben aktuell.</p>`
-    : "";
+  // "Weitere Spiele" lists every upcoming match; the first one is in the hero, so its card starts hidden.
+  const more = upcoming.map((m, i) =>
+    item(m, matchCard(m, "", { showDate: true, toggle: true }), ` data-index="${i}"${i ? "" : " hidden"}`));
 
-  const body = html`
+  const body = html`<div class="overview">
     ${nextBlock}
-    ${myNext}
     ${stats}
     ${meHint}
-    ${calendar}
-    ${pending.length ? `<h2>Ergebnis offen</h2>${pending.map((m) => matchCard(m, "", { showDate: true, pending: true, toggle: true })).join("")}` : ""}
-    ${played.length ? `<h2>Letzte Ergebnisse</h2>${played.map((m) => matchCard(m, "", { showDate: true })).join("")}` : ""}
-    ${upcoming.length > 1 ? `<h2>Weitere Spiele</h2><div id="more-matches">${upcoming.slice(1).map((m) => matchCard(m, "", { showDate: true, toggle: true })).join("")}</div>` : ""}
-  `;
+    ${matchList("pending", "Ergebnis offen", pending.map((m) => item(m, matchCard(m, "", { showDate: true, pending: true, toggle: true }))))}
+    ${matchList("played", "Letzte Ergebnisse", played.map((m) => item(m, matchCard(m, "", { showDate: true }))))}
+    ${matchList("more", "Weitere Spiele", more, upcoming.length < 2)}
+  </div>`;
 
-  return layout({ title: "Übersicht", root: "", nav: "index", checkedAt: d.meta.checkedAt, body, script: CALENDAR + PERSONAL });
+  return layout({ title: "Übersicht", root: "", nav: "index", checkedAt: d.meta.checkedAt, body, script: PERSONAL });
 }

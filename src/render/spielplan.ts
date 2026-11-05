@@ -55,6 +55,24 @@ const SCRIPT = `
   }
 })();`;
 
+/**
+ * Android has no handler for webcal: links, so a tap does nothing there (also in the installed app).
+ * There the button subscribes through Google Calendar's "add by URL" link instead, which keeps the
+ * feed updated and syncs to the calendar app on the phone.
+ */
+const CALENDAR = `(function () {
+  var btn = document.getElementById("calendar-btn");
+  if (!btn) return;
+  var android = /Android/i.test(navigator.userAgent);
+  if (android) {
+    btn.href = "https://calendar.google.com/calendar/r?cid=" + encodeURIComponent(btn.dataset.webcal);
+    btn.target = "_blank";
+    btn.rel = "noopener";
+    document.getElementById("calendar-hint").hidden = false;
+  }
+  btn.addEventListener("click", function () { otTrack("calendar", { via: android ? "google" : "webcal" }); });
+})();`;
+
 function groupByDate(meetings: Meeting[]): [string, Meeting[]][] {
   const groups = new Map<string, Meeting[]>();
   for (const m of meetings) groups.set(m.date, [...(groups.get(m.date) ?? []), m]);
@@ -77,6 +95,14 @@ export function renderSpielplan(d: Dataset, now: Date): string {
       </section>`;
   });
 
+  const calendar = d.team.webcalUrl
+    ? html`<div class="btn-row">
+        <a class="btn btn-primary" id="calendar-btn" href="${esc(d.team.webcalUrl)}" data-webcal="${esc(d.team.webcalUrl)}">📅 Spiele in Deinen Kalender</a>
+        ${d.team.icalUrl ? `<a class="btn btn-secondary" href="${esc(d.team.icalUrl)}">.ics herunterladen</a>` : ""}
+      </div>
+      <p class="small muted" id="calendar-hint" hidden>Öffnet Google Kalender. Nach „Hinzufügen“ erscheinen die Spiele in Deiner Kalender-App und bleiben aktuell.</p>`
+    : "";
+
   const body = html`
     <h1>Spielplan</h1>
     <div class="filter" role="group" aria-label="Filter">
@@ -85,9 +111,10 @@ export function renderSpielplan(d: Dataset, now: Date): string {
       <button type="button" data-mode="all" aria-pressed="true">Alle</button>
     </div>
     <div><button type="button" class="btn btn-primary share-plan" data-share-title="${esc(`Meine Spiele · ${CLUB_NAME} ${d.own.label}`)}">${SHARE_BTN_ICON}<span>Meine Spiele teilen</span></button></div>
+    ${calendar}
     <p class="mine-empty muted">Noch keine Spiele ausgewählt. Tippe bei einem Spiel auf „Ich spiele“ oder wähle unter <a href="spieler.html">Spieler</a> Deinen Namen.</p>
     ${days}
   `;
 
-  return layout({ title: "Spielplan", root: "", nav: "spielplan", checkedAt: d.meta.checkedAt, body, script: SCRIPT });
+  return layout({ title: "Spielplan", root: "", nav: "spielplan", checkedAt: d.meta.checkedAt, body, script: SCRIPT + CALENDAR });
 }

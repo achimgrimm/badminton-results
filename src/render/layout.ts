@@ -1,4 +1,4 @@
-import { CLUB_NAME, REPO_URL, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
+import { CLUB_NAME, REPO_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
 import { APP_SHORT_NAME } from "./pwa.ts";
 import { buildVersion, clubTeams, currentTeam, releaseNotes, stylesHref } from "./context.ts";
@@ -97,7 +97,7 @@ const NEW_RESULTS = (slug: string) => `(function () {
 })();`;
 
 /** The chosen player ("Wer bist Du?"), per team and season; read by PLAYING, written by ME. */
-const meKey = (slug: string) => storageKey(`me-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}`);
+const meKey = (slug: string) => storageKey(`me-${slug}-${SEASON_KEY}`);
 
 /**
  * "Ich spiele": the user marks own matches they play in. Stored per team and season as a list of
@@ -107,7 +107,7 @@ const meKey = (slug: string) => storageKey(`me-${slug}-${SEASON_LABEL.replace(/[
  * (data-players, see ME) count as theirs too, tagged or not. Must run before the page script.
  */
 const PLAYING = (slug: string) => `(function () {
-  var KEY = "${storageKey(`playing-${slug}-${SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-")}`)}", mine = [];
+  var KEY = "${storageKey(`playing-${slug}-${SEASON_KEY}`)}", mine = [];
   try { mine = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) {}
   if (!Array.isArray(mine)) mine = [];
   function has(k) { return mine.indexOf(k) >= 0; }

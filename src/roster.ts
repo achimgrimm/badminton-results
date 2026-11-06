@@ -1,4 +1,4 @@
-import { POOLS, type PoolRound } from "./config.ts";
+import { POOLS, POOL_GENDER, type PoolRound } from "./config.ts";
 import { teamNumber } from "./parse/club.ts";
 import type { PoolRow } from "./parse/pools.ts";
 import type { RosterPlayer } from "./types.ts";
@@ -24,7 +24,8 @@ export function teamRoster(label: string, pools: Pools): RosterPlayer[] {
     for (const r of rows) {
       const role = r.team === number ? "team" : r.team == null ? "reserve" : null;
       if (!role || byPerson.get(r.person)?.role === "team") continue;
-      byPerson.set(r.person, { name: r.name, person: r.person, rank: r.rank, role });
+      const gender = POOL_GENDER[type];
+      byPerson.set(r.person, { name: r.name, person: r.person, rank: r.rank, role, ...(gender && { gender }) });
     }
   }
   return [...byPerson.values()];

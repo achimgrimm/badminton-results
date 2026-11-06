@@ -9,6 +9,7 @@ import { renderBericht } from "./render/bericht.ts";
 import { renderChooser } from "./render/chooser.ts";
 import { setLineups, setReleases, setStylesHref, setTeam, setVersion, stylesHref, type BuildVersion } from "./render/context.ts";
 import { loadReleases } from "./releases.ts";
+import { ownLineups } from "./lineup.ts";
 import { renderIndex } from "./render/index.ts";
 import { renderManifest, renderServiceWorker } from "./render/pwa.ts";
 import { ownPlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
@@ -49,18 +50,6 @@ const now = new Date();
 
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(join(DIST, "icons"), { recursive: true });
-
-/** Who of the team played in each meeting, so the chosen player's matches count as theirs (see PLAYING). */
-function ownLineups(d: Dataset): Map<number, number[]> {
-  const lineups = new Map<number, number[]>();
-  for (const r of Object.values(d.reports)) {
-    const side = r.home === d.own.name ? "home" : r.guest === d.own.name ? "guest" : null;
-    if (!side) continue;
-    const persons = new Set(r.games.flatMap((g) => g[side].map((p) => p.person)).filter((p): p is number => p != null));
-    if (persons.size) lineups.set(r.meeting, [...persons]);
-  }
-  return lineups;
-}
 
 /** Renders one team's pages into dist/<slug>/; returns the page count. */
 function buildTeam(d: Dataset): number {

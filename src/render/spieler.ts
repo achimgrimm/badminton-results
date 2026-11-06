@@ -1,6 +1,7 @@
 import type { Dataset } from "../data.ts";
 import { isDoubles, playerStats, type PlayerGame, type PlayerStats, type Tally } from "../stats.ts";
-import type { Player, RosterPlayer } from "../types.ts";
+import { playerGenders } from "../lineup.ts";
+import type { Gender, Player, RosterPlayer } from "../types.ts";
 import { CHECK, reportHref } from "./components.ts";
 import { layout } from "./layout.ts";
 import { displayName, esc, formatDate, html, outcomeBadge, slug } from "./util.ts";
@@ -10,6 +11,8 @@ export interface PlayerPage {
   /** File name without extension, e.g. "boese-frank" */
   slug: string;
 }
+
+const GENDER_LABEL: Record<Gender, string> = { m: "Herren", f: "Damen" };
 
 /** Every OT player who appears in a Spielbericht, with a unique page name each. */
 export function ownPlayers(d: Dataset): PlayerPage[] {
@@ -125,6 +128,7 @@ function gameLog(g: PlayerGame, root: string): string {
 }
 
 export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
+  const genders = playerGenders(d);
   const body = html`
     <h1 class="visually-hidden">Spieler</h1>
     ${mePicker(pickablePlayers(d, pages))}
@@ -137,7 +141,7 @@ export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
               <span class="player-rec num">${record(s)}</span>
             </div>
             <div class="card-meta">
-              <span>${s.played} Spiel${s.played === 1 ? "" : "e"} · ${quota(s)} gewonnen</span>
+              <span>${s.person != null && genders.has(s.person) ? `${GENDER_LABEL[genders.get(s.person)!]} · ` : ""}${s.played} Spiel${s.played === 1 ? "" : "e"} · ${quota(s)} gewonnen</span>
             </div>
             ${disciplinePills(s)}
           </a>`,
@@ -151,9 +155,11 @@ export function renderSpieler(d: Dataset, { stats: s }: PlayerPage): string {
   const root = "../";
   const singles = s.disciplines.filter((x) => !isDoubles(x.discipline));
   const doubles = s.disciplines.filter((x) => isDoubles(x.discipline));
+  const gender = s.person != null ? playerGenders(d).get(s.person) : undefined;
 
   const body = html`
     <h1${s.person != null ? ` data-person="${s.person}"` : ""}>${esc(displayName(s.name))}</h1>
+    ${gender ? `<p class="small muted">${GENDER_LABEL[gender]}</p>` : ""}
     ${s.person != null
       ? html`<div class="btn-row"><button type="button" class="btn btn-secondary me-toggle" data-person="${s.person}" data-name="${esc(s.name)}" aria-pressed="false">${CHECK}<span>Das bin ich</span></button></div>`
       : ""}

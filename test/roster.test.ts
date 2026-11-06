@@ -28,3 +28,13 @@ test("teamRoster prefers the Rückrunde once it has entries", () => {
   const pools = { "U19 Jugend (gemischt)": { vorrunde: [row(1, 1, "Alt, A", 1)], rueckrunde: [row(1, 1, "Neu, N", 2)] } };
   assert.deepEqual(teamRoster("Jugend", pools).map((p) => p.person), [2]);
 });
+
+test("teamRoster: gender comes from the separate Herren and Damen lists, not from the mixed youth lists", () => {
+  const pools = {
+    "O19 Herren": { vorrunde: [row(1, 3, "A, Herr", 1), row(13, null, "B, Reserve", 2)] },
+    "O19 Damen": { vorrunde: [row(5, 3, "C, Dame", 3)] },
+  };
+  assert.deepEqual(teamRoster("Aktive III", pools).map((p) => [p.person, p.gender]), [[1, "m"], [2, "m"], [3, "f"]]);
+  const youth = { "U19 Jugend (gemischt)": { vorrunde: [row(1, 1, "D, Jugend", 4)] } };
+  assert.equal("gender" in teamRoster("Jugend", youth)[0], false);
+});

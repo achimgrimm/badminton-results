@@ -7,6 +7,8 @@ export const CLUB_NAME = "OT Bremen";
 /** Team names in the leagues: "OT Bremen", "OT Bremen II", … */
 export const CLUB_PREFIX = "OT Bremen";
 export const SEASON_LABEL = "2026/27";
+/** The season as part of localStorage keys, e.g. "2026-27". */
+export const SEASON_KEY = SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-");
 /** The footer links the build's commit here. */
 export const REPO_URL = "https://github.com/achimgrimm/badminton-results";
 
@@ -20,6 +22,15 @@ export const POOLS: Record<string, string[]> = {
   Aktive: ["O19 Herren", "O19 Damen"],
   Jugend: ["U19 Jugend (gemischt)"],
   "Schüler": ["U15 Schüler (gemischt)"],
+};
+
+/**
+ * Roster lists that are split by gender: nuLiga has no gender field, only separate Herren and Damen lists.
+ * The mixed youth lists aren't here, so their players have no known gender.
+ */
+export const POOL_GENDER: Record<string, "m" | "f"> = {
+  "O19 Herren": "m",
+  "O19 Damen": "f",
 };
 
 /** A league on nuLiga. */

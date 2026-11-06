@@ -1,10 +1,150 @@
+import { SEASON_KEY, storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
+import { disciplines, kind, LINEUP_ISSUES, lineupPlayers, requiredGender, slots } from "../lineup.ts";
 import { headToHead, lineup, playerStats, teamForm, type PlayerStats, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle } from "./components.ts";
-import { layout } from "./layout.ts";
+import { layout, SHARE_BTN_ICON } from "./layout.ts";
 import { disciplinePills, quota, record } from "./spieler.ts";
 import { displayName, esc, formatDate, html, isOwn, opponentOf, previewName } from "./util.ts";
+
+/**
+ * Lineup editor: one select per player slot, stored per match on the device as { discipline: [person, …] }
+ * (saved on every change, errors or not). Warnings come from lineupIssues; sharing sends plain text.
+ */
+const LINEUP = (key: string) => `(function () {
+  ${LINEUP_ISSUES}
+  var KEY = "${key}", root = document.getElementById("lineup");
+  var rows = Array.prototype.slice.call(root.querySelectorAll(".lineup-row"));
+  var box = root.querySelector(".lineup-issues"), names = {}, genders = {}, saved = {};
+  root.querySelectorAll("option[value]").forEach(function (o) {
+    if (!o.value) return;
+    names[o.value] = o.dataset.name;
+    if (o.dataset.gender) genders[o.value] = o.dataset.gender;
+    o.dataset.label = o.textContent;
+  });
+  try { saved = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) {}
+  function read() {
+    var out = {};
+    rows.forEach(function (r) {
+      out[r.dataset.discipline] = Array.prototype.map.call(r.querySelectorAll("select"), function (s) { return s.value || null; });
+    });
+    return out;
+  }
+  function any(l) { return Object.keys(l).some(function (d) { return l[d].some(Boolean); }); }
+  function games() {
+    return rows.map(function (r) {
+      return { discipline: r.dataset.discipline, kind: r.dataset.kind, need: r.dataset.need, persons: Array.prototype.map.call(r.querySelectorAll("select"), function (s) { return s.value; }) };
+    });
+  }
+  function render() {
+    var issues = lineupIssues(games(), names, genders), count = {};
+    games().forEach(function (g) { g.persons.forEach(function (p) { if (p) count[p] = (count[p] || 0) + 1; }); });
+    root.querySelectorAll("option[value]").forEach(function (o) {
+      if (!o.value) return;
+      var busy = count[o.value] >= 2 && !o.parentElement.parentElement.value.match(new RegExp("^" + o.value + "$"));
+      o.textContent = o.dataset.label + (busy ? " (2×)" : "");
+    });
+    rows.forEach(function (r) {
+      r.querySelectorAll(".lineup-slot").forEach(function (slot) {
+        var sel = slot.querySelector("select"), pick = slot.querySelector(".lineup-pick");
+        pick.querySelector("span").textContent = sel.value ? names[sel.value] : "Spieler wählen";
+        pick.classList.toggle("is-empty", !sel.value);
+      });
+    });
+    box.hidden = false;
+    box.className = "lineup-issues" + (issues.length ? " has-issues" : "");
+    box.innerHTML = "";
+    if (!issues.length) { box.textContent = any(read()) ? "Keine Fehler gefunden." : "Noch niemand aufgestellt."; return; }
+    var ul = document.createElement("ul");
+    issues.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+    box.appendChild(ul);
+  }
+  /* A native select with 25+ names opens over the field in Chromium, so a click selects at once: use a dialog. */
+  var dlg = root.querySelector(".lineup-dialog"), list = dlg.querySelector(".lineup-list"), heading = dlg.querySelector("h2");
+  function choose(sel, value) {
+    dlg.close();
+    sel.value = value;
+    sel.dispatchEvent(new Event("change"));
+  }
+  function section(sel, label, options) {
+    if (label) { var h = document.createElement("h3"); h.textContent = label; list.appendChild(h); }
+    var ul = document.createElement("ul");
+    ul.className = "team-list";
+    options.forEach(function (o) {
+      var li = document.createElement("li"), b = document.createElement("button"), t = document.createElement("span");
+      b.type = "button";
+      b.className = "me-option";
+      t.className = "team-label";
+      t.textContent = o.value ? o.textContent : "Niemand";
+      if (o.value === sel.value && o.value) b.setAttribute("aria-current", "true");
+      b.addEventListener("click", function () { choose(sel, o.value); });
+      b.appendChild(t);
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+    list.appendChild(ul);
+  }
+  function openPicker(sel, row) {
+    heading.textContent = row.dataset.discipline + ": Spieler wählen";
+    list.innerHTML = "";
+    Array.prototype.forEach.call(sel.children, function (c) {
+      if (c.tagName === "OPTGROUP") section(sel, c.label, Array.prototype.slice.call(c.children));
+      else if (!c.value && sel.value) section(sel, "", [c]);
+    });
+    dlg.showModal();
+    dlg.scrollTop = 0;
+  }
+  dlg.querySelector(".dialog-close").addEventListener("click", function () { dlg.close(); });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+  rows.forEach(function (r) {
+    r.querySelectorAll(".lineup-slot").forEach(function (slot) {
+      slot.querySelector(".lineup-pick").addEventListener("click", function () { openPicker(slot.querySelector("select"), r); });
+    });
+  });
+  rows.forEach(function (r) {
+    var sel = r.querySelectorAll("select");
+    (saved[r.dataset.discipline] || []).forEach(function (p, i) { if (sel[i] && p) sel[i].value = String(p); });
+    sel.forEach(function (s) {
+      s.addEventListener("change", function () {
+        try { localStorage.setItem(KEY, JSON.stringify(read())); } catch (e) {}
+        render();
+      });
+    });
+  });
+  if (any(read())) root.open = true;
+  render();
+  root.querySelector(".lineup-clear").addEventListener("click", function () {
+    if (!any(read()) || !confirm("Aufstellung leeren?")) return;
+    root.querySelectorAll("select").forEach(function (s) { s.value = ""; });
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    render();
+    otTrack("lineup", { action: "clear" });
+  });
+  var btn = root.querySelector(".lineup-share"), label = btn.querySelector("span"), timer = null;
+  function flash(text) {
+    label.textContent = text;
+    clearTimeout(timer);
+    timer = setTimeout(function () { label.textContent = "Aufstellung teilen"; }, 2500);
+  }
+  btn.addEventListener("click", function () {
+    var lines = [btn.dataset.title, btn.dataset.when, btn.dataset.vs, ""];
+    rows.forEach(function (r) {
+      var who = Array.prototype.map.call(r.querySelectorAll("select"), function (s) { return s.value ? names[s.value] : "offen"; });
+      lines.push(r.dataset.discipline + ": " + who.join(" / "));
+    });
+    lines.push("", new URL(btn.dataset.href, location.href).href);
+    var text = lines.join("\\n"), method = navigator.share ? "share" : navigator.clipboard ? "clipboard" : "prompt";
+    otTrack("lineup", { action: "share", method: method });
+    if (navigator.share) {
+      navigator.share({ title: btn.dataset.title, text: text }).catch(function () {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () { flash("Kopiert"); }, function () { prompt("Zum Kopieren:", text); });
+    } else {
+      prompt("Zum Kopieren:", text);
+    }
+  });
+})();`;
 
 const MATCH_HOURS = 3; // same duration as nuLiga's own calendar feed
 
@@ -72,6 +212,48 @@ function opponentRow(s: PlayerStats, own: string): string {
     </tr>`;
 }
 
+/** "Aufstellung planen": who plays which game; collapsed until used (see LINEUP). */
+function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
+  const sections = lineupPlayers(d);
+  /** Herren games offer men, Damen games women; players of unknown gender are offered everywhere. */
+  const optionsFor = (need: string | null) => html`<option value="">–</option>${sections.map((s) => {
+    const players = s.players.filter((p) => !need || !p.gender || p.gender === need);
+    return players.length
+      ? html`<optgroup label="${esc(s.label)}">${players.map(
+          (p) => `<option value="${p.person}" data-name="${esc(displayName(p.name))}"${p.gender ? ` data-gender="${p.gender}"` : ""}>${esc(displayName(p.name))}</option>`,
+        )}</optgroup>`
+      : "";
+  })}`;
+  const games = disciplines(d);
+  if (!games.length) return "";
+  const when = `${formatDate(m.date)}${m.time ? `, ${m.time} Uhr` : ""}`;
+  const vs = home ? `Heim gegen ${m.guest}` : `Auswärts bei ${m.home}`;
+  return html`<details class="card lineup-editor" id="lineup">
+      <summary>Aufstellung planen</summary>
+      <p class="small muted">Wer spielt welches Spiel? Bei Herren- und Damenspielen siehst Du nur Herren bzw. Damen (aus den nuLiga-Ranglisten); Spieler ohne bekanntes Geschlecht stehen überall. Fehler werden nur angezeigt, gespeichert wird immer. Die Aufstellung bleibt auf diesem Gerät.</p>
+      ${games.map(
+        (g) => html`<div class="lineup-row" data-discipline="${esc(g)}" data-kind="${kind(g)}" data-need="${requiredGender(g) ?? ""}">
+          <span class="badge badge--primary">${esc(g)}</span>
+          <span class="lineup-selects">${Array.from({ length: slots(g) }, (_, i) =>
+            `<span class="lineup-slot"><select hidden aria-hidden="true" tabindex="-1">${optionsFor(requiredGender(g))}</select>`
+            + `<button type="button" class="lineup-pick" aria-haspopup="dialog" aria-label="${esc(g)}, Spieler ${i + 1} wählen"><span>Spieler wählen</span></button></span>`)}</span>
+        </div>`,
+      )}
+      <div class="lineup-issues" role="status" hidden></div>
+      <dialog class="team-dialog lineup-dialog" aria-labelledby="lineup-dialog-h">
+        <div class="dialog-head">
+          <h2 id="lineup-dialog-h">Spieler wählen</h2>
+          <button type="button" class="dialog-close" aria-label="Schließen">×</button>
+        </div>
+        <div class="lineup-list"></div>
+      </dialog>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary lineup-share" data-title="${esc(`Aufstellung · ${m.home} – ${m.guest}`)}" data-when="${esc(when)}" data-vs="${esc(vs)}" data-href="${esc(previewName(m))}.html">${SHARE_BTN_ICON}<span>Aufstellung teilen</span></button>
+        <button type="button" class="btn btn-secondary lineup-clear">Leeren</button>
+      </div>
+    </details>`;
+}
+
 export function renderVorschau(d: Dataset, m: Meeting): string {
   const root = "../";
   const opponent = opponentOf(m);
@@ -95,6 +277,8 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
       ${m.postponed ? `<p class="small"><span class="badge">verlegt</span> ${esc(m.note)}</p>` : ""}
       <div class="btn-row">${playToggle(m, "hero")}</div>
     </section>
+
+    ${lineupEditor(d, m, home)}
 
     <h2>Anfahrt</h2>
     <div class="card">
@@ -165,5 +349,5 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
       : `<p class="muted">Noch keine Spielberichte.</p>`}
   `;
 
-  return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: null, checkedAt: d.meta.checkedAt, body });
+  return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: null, checkedAt: d.meta.checkedAt, body, script: LINEUP(storageKey(`lineup-${d.own.slug}-${SEASON_KEY}-${previewName(m)}`)) });
 }

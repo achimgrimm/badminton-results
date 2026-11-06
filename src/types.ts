@@ -88,6 +88,9 @@ export interface ClubTeam {
   teamtable: number;
 }
 
+/** "m" = Herren, "f" = Damen; from nuLiga's separate Herren and Damen roster lists. */
+export type Gender = "m" | "f";
+
 /** A player the team can field: from nuLiga's club roster, or a substitute seen in its reports. */
 export interface RosterPlayer {
   name: string;
@@ -96,4 +99,6 @@ export interface RosterPlayer {
   rank: number | null;
   /** "team" = Stammspieler of this team, "reserve" = club reserve, "report" = played for it, listed elsewhere */
   role: "team" | "reserve" | "report";
+  /** Only for players on a Herren or Damen roster list; unknown for the mixed youth lists and report-only players */
+  gender?: Gender;
 }

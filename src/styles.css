@@ -273,6 +273,22 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .lineup li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--ot-border); }
 .lineup li:first-child { border-top: 0; }
 .lineup .who span { display: block; line-height: 1.3; }
+.lineup-editor summary { font-weight: 700; cursor: pointer; }
+.lineup-editor[open] summary { margin-bottom: 8px; }
+.lineup-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--ot-border); }
+.lineup-row .badge { justify-self: start; }
+.lineup-selects { display: grid; gap: 6px; }
+@media (min-width: 560px) { .lineup-selects { grid-template-columns: 1fr 1fr; } }
+.lineup-slot { display: block; }
+.lineup-pick { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-width: 0; font: inherit; text-align: left; padding: 6px 8px; color: var(--ot-text);
+  background: var(--ot-bg); border: 1px solid var(--ot-border); border-radius: var(--ot-radius); cursor: pointer; }
+.lineup-pick::after { content: "▾"; flex: none; color: var(--ot-text-muted); }
+.lineup-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lineup-pick.is-empty span { color: var(--ot-text-muted); }
+.lineup-pick:hover { border-color: var(--ot-primary); }
+.lineup-issues { margin-top: 12px; font-size: .9375rem; color: var(--ot-text-muted); }
+.lineup-issues.has-issues { background: var(--ot-warning-bg); color: var(--ot-warning); border-radius: var(--ot-radius); padding: 8px 12px; }
+.lineup-issues ul { margin: 0; padding-left: 18px; }
 .lineup .rec { flex: none; color: var(--ot-text-muted); font-size: .875rem; }
 
 /* Players */

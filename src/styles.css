@@ -298,6 +298,9 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .team-dialog { border: 0; border-radius: var(--ot-radius); box-shadow: var(--ot-shadow-hover); background: var(--ot-bg); color: var(--ot-text);
                padding: 16px 20px 12px; width: min(92vw, 400px); max-height: 85vh; }
 .team-dialog::backdrop { background: rgba(0,0,0,.5); }
+/* A modal must not let the page behind it scroll. */
+html:has(dialog:modal) { overflow: hidden; }
+dialog { overscroll-behavior: contain; }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .dialog-head h2 { margin: 0; }
 .dialog-close { font: 400 1.75rem/1 var(--ot-font); color: var(--ot-text-muted); background: none; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }

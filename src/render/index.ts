@@ -4,9 +4,12 @@ import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle } from "./components.ts";
 import { layout } from "./layout.ts";
 import { ownPlayers, pickablePlayers } from "./spieler.ts";
-import { esc, formatDate, html, involvesOwn, isOwn, previewHref, todayInBremen } from "./util.ts";
+import { esc, formatDate, html, involvesOwn, isOwn, postponedLabel, previewHref, todayInBremen } from "./util.ts";
 
 const ME_HINT_KEY = storageKey("meHintDismissed");
+
+/** "Weitere Spiele" shows this many matches after the next one; the rest is a link to the Spielplan. */
+const MORE_LIMIT = 3;
 
 /** Played matches older than this many days are left out of the personal overview. */
 const RECENT_DAYS = 14;
@@ -20,6 +23,7 @@ const RECENT_DAYS = 14;
  * changes) keeps it current.
  */
 const PERSONAL = `(function () {
+  var MORE_LIMIT = ${MORE_LIMIT};
   var hint = document.getElementById("me-hint");
   if (hint) {
     var dismissed = null;
@@ -43,8 +47,13 @@ const PERSONAL = `(function () {
     });
     var none = document.getElementById("next-none");
     if (none) none.hidden = !(personal && !first);
-    upcoming.forEach(function (it) { it.hidden = it === first || shown.indexOf(it) < 0; });
+    upcoming.forEach(function (it) { var i = shown.indexOf(it); it.hidden = it === first || i < 0 || i > MORE_LIMIT; });
     if (more) more.hidden = shown.length < 2;
+    var all = document.getElementById("more-all");
+    if (all) {
+      all.hidden = shown.length - 1 <= MORE_LIMIT;
+      all.querySelector("a").textContent = "Alle " + shown.length + " Spiele im Spielplan \u2192";
+    }
     document.querySelectorAll('[data-list="pending"], [data-list="played"]').forEach(function (list) {
       var any = false;
       items(list).forEach(function (it) {
@@ -65,7 +74,7 @@ function nextHero(d: Dataset, m: Meeting, i: number, today: string): string {
     <div class="vs">${isOwn(m.home) ? `<b>Heim</b> gegen ${esc(m.guest)}` : `<b>Auswärts</b> bei ${esc(m.home)}`}</div>
     ${m.hall ? `<div>${esc(m.hall.name ?? m.hall.code)}</div>` : ""}
     ${m.hall?.location ? `<div class="small">${hallAddress(d.halls[m.hall.location])}</div>` : ""}
-    ${m.postponed ? `<p class="small"><span class="badge">verlegt</span> ${esc(m.note)}</p>` : ""}
+    ${m.postponed ? `<p class="small"><span class="badge">${esc(postponedLabel(m))}</span></p>` : ""}
     <div class="btn-row">
       <a class="btn btn-on-dark" href="${previewHref("", m)}">Zur Vorschau</a>
       ${playToggle(m, "hero")}
@@ -112,21 +121,23 @@ export function renderIndex(d: Dataset, now: Date): string {
   const stats = standing
     ? html`<div class="stats">
         <a class="stat" href="tabelle.html"><span class="stat-value">${standing.rank}.</span><span class="stat-label">Platz</span></a>
-        <div class="stat"><span class="stat-value">${standing.points[0]}:${standing.points[1]}</span><span class="stat-label">Punkte</span></div>
-        <div class="stat"><span class="stat-value">${standing.won}-${standing.drawn}-${standing.lost}</span><span class="stat-label">S-U-N</span></div>
+        <a class="stat" href="tabelle.html"><span class="stat-value">${standing.points[0]}:${standing.points[1]}</span><span class="stat-label">Punkte</span></a>
+        <a class="stat" href="tabelle.html"><span class="stat-value">${standing.won}-${standing.drawn}-${standing.lost}</span><span class="stat-label">S-U-N</span></a>
       </div>`
     : "";
 
-  // "Weitere Spiele" lists every upcoming match; the first one is in the hero, so its card starts hidden.
+  // "Weitere Spiele" holds every upcoming match (PERSONAL shows the first few); the first one is in the
+  // hero, so its card starts hidden. The link to the full Spielplan is shown when more are left.
   const more = upcoming.map((m, i) =>
     item(m, matchCard(m, "", { showDate: true, toggle: true }), ` data-index="${i}"${i ? "" : " hidden"}`));
+  more.push(`<p class="more-all" id="more-all"${upcoming.length - 1 > MORE_LIMIT ? "" : " hidden"}><a href="spielplan.html">Alle ${upcoming.length} Spiele im Spielplan →</a></p>`);
 
   const body = html`<div class="overview">
     ${nextBlock}
     ${stats}
-    ${meHint}
     ${matchList("pending", "Ergebnis offen", pending.map((m) => item(m, matchCard(m, "", { showDate: true, pending: true, toggle: true }))))}
     ${matchList("played", "Letzte Ergebnisse", played.map((m) => item(m, matchCard(m, "", { showDate: true }))))}
+    ${meHint}
     ${matchList("more", "Weitere Spiele", more, upcoming.length < 2)}
   </div>`;
 

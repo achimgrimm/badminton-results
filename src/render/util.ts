@@ -98,3 +98,22 @@ export const OUTCOME_LABEL: Record<Outcome, string> = { win: "Sieg", draw: "Unen
 export function outcomeBadge(outcome: Outcome | null): string {
   return outcome ? `<span class="badge badge--${outcome}">${OUTCOME_LABEL[outcome]}</span>` : "";
 }
+
+/**
+ * Short text for a moved match from nuLiga's note ("verlegt, ursprünglicher Termin: Sa. 14.11.2026 19:00"):
+ * "verlegt (vorher 19:00 Uhr)" on the same day, else with the old date ("vorher Sa. 07.11., 19:00 Uhr").
+ * "Halle verlegt" parts are kept; anything it can't read is returned as is.
+ */
+export function postponedLabel(m: Pick<Meeting, "date" | "note">): string {
+  const note = m.note ?? "";
+  const old = note.match(/ursprünglicher Termin:\s*\w{2}\.?\s*(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{1,2}:\d{2}))?/);
+  const hall = /Halle verlegt/i.test(note);
+  if (!old) return note || "verlegt";
+  const [, dd, mm, yyyy, time] = old;
+  const sameDay = m.date === `${yyyy}-${mm}-${dd}`;
+  const when = sameDay
+    ? time ? `${time} Uhr` : ""
+    : `${formatDate(`${yyyy}-${mm}-${dd}`).replace(/\.\d{4}$/, ".")}${time ? `, ${time} Uhr` : ""}`;
+  const text = when ? `verlegt (vorher ${when})` : "verlegt";
+  return hall ? `Halle und Termin ${text}` : text;
+}

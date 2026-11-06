@@ -15,7 +15,7 @@ import { renderManifest, renderServiceWorker } from "./render/pwa.ts";
 import { ownPlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
 import { renderSpielplan } from "./render/spielplan.ts";
 import { renderTabelle } from "./render/tabelle.ts";
-import { hasPreview, previewName } from "./render/util.ts";
+import { hasPreview, involvesOwn, previewName, todayInBremen } from "./render/util.ts";
 import { renderIcs, renderVorschau } from "./render/vorschau.ts";
 
 function stubReport(m: Meeting): MatchReport {
@@ -82,6 +82,8 @@ function buildTeam(d: Dataset): number {
 let pages = 0;
 let checkedAt: string | null = null;
 const standings = new Map<string, Standing | undefined>();
+const nextMatches = new Map<string, Meeting | undefined>();
+const today = todayInBremen(new Date());
 for (const team of teams) {
   setTeam(team, teams);
   const d = loadDataset(team);
@@ -91,10 +93,16 @@ for (const team of teams) {
   pages += count;
   checkedAt = d.meta.checkedAt;
   standings.set(team.slug, d.table.find((s) => s.team === team.name));
+  nextMatches.set(
+    team.slug,
+    d.schedule
+      .filter((m) => involvesOwn(m) && !m.result && m.date >= today)
+      .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")))[0],
+  );
 }
 
 setTeam(null, teams);
-writeFileSync(join(DIST, "index.html"), renderChooser(teams, standings, checkedAt));
+writeFileSync(join(DIST, "index.html"), renderChooser(teams, standings, nextMatches, checkedAt));
 
 copyFileSync(join(SRC, "styles.css"), join(DIST, "styles.css"));
 copyFileSync(join(SRC, "favicon.svg"), join(DIST, "favicon.svg"));

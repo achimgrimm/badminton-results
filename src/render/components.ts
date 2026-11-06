@@ -1,6 +1,6 @@
 import type { Hall, Meeting } from "../types.ts";
 import { lineupOf, ownTeam } from "./context.ts";
-import { esc, formatDate, hasPreview, html, involvesOwn, isOwn, opponentOf, outcomeBadge, outcomeFor, previewHref, previewName } from "./util.ts";
+import { esc, formatDate, hasPreview, html, involvesOwn, isOwn, opponentOf, outcomeBadge, outcomeFor, postponedLabel, previewHref, previewName } from "./util.ts";
 
 export function reportHref(root: string, meeting: number): string {
   return `${root}bericht/${meeting}.html`;
@@ -31,7 +31,7 @@ export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {})
   ].filter(Boolean);
 
   const badges = [
-    m.postponed ? `<span class="badge badge--warn" title="${esc(m.note)}">verlegt</span>` : "",
+    m.postponed ? `<span class="badge badge--warn" title="${esc(postponedLabel(m))}">verlegt</span>` : "",
     played ? outcomeBadge(outcomeFor(opts.perspective ?? ownTeam().name, m)) : opts.pending ? `<span class="badge badge--warn">Ergebnis offen</span>` : "",
   ].join("");
 

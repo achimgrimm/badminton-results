@@ -3,7 +3,7 @@ import type { Dataset } from "../data.ts";
 import type { Game, MatchReport, Meeting, Player } from "../types.ts";
 import { hallAddress } from "./components.ts";
 import { layout } from "./layout.ts";
-import { displayName, esc, formatDate, html, isOwn, outcomeBadge, ownOutcome } from "./util.ts";
+import { displayName, esc, formatDate, html, isOwn, outcomeBadge, ownOutcome, postponedLabel } from "./util.ts";
 
 const DISCIPLINES: Record<string, string> = {
   HE: "Herreneinzel",
@@ -88,7 +88,7 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
         ${r.start ? `<dt>Spielzeit</dt><dd>${esc(r.start)}–${esc(r.end ?? "")} Uhr</dd>` : ""}
         ${r.referees.length ? `<dt>Schiedsrichter</dt><dd>${r.referees.map((n) => esc(displayName(n))).join(", ")}</dd>` : ""}
         <dt>Status</dt><dd>${r.approved ? "genehmigt" : `<span class="badge badge--warn">noch nicht genehmigt</span>`}</dd>
-        ${meeting?.postponed ? `<dt>Hinweis</dt><dd>${esc(meeting.note)}</dd>` : ""}
+        ${meeting?.postponed ? `<dt>Hinweis</dt><dd>${esc(postponedLabel(meeting))}</dd>` : ""}
       </dl>
     </div>
     <div class="btn-row">
@@ -100,7 +100,8 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
   return layout({
     title: `${r.home} – ${r.guest}`,
     root: "../",
-    nav: null,
+    nav: "spielplan",
+    back: { href: "../spielplan.html", label: "Spielplan" },
     checkedAt: d.meta.checkedAt,
     sourceUrl: urls.report(d.own, r.meeting),
     meeting: r.meeting,

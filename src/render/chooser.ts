@@ -1,7 +1,14 @@
 import { CLUB_NAME, SEASON_LABEL } from "../config.ts";
-import type { ClubTeam, Standing } from "../types.ts";
+import type { ClubTeam, Meeting, Standing } from "../types.ts";
 import { layout, TEAM_KEY, teamGroups } from "./layout.ts";
-import { esc, html } from "./util.ts";
+import { esc, formatDate, html } from "./util.ts";
+
+/** "Sa, 14.11. · auswärts bei TuS Komet Arsten" for the team's next match. */
+function nextLine(t: ClubTeam, m: Meeting): string {
+  const day = formatDate(m.date).replace(/\.\d{4}$/, ".");
+  const where = m.home === t.name ? `Heim gegen ${m.guest}` : `Auswärts bei ${m.home}`;
+  return `${day}${m.time ? `, ${m.time} Uhr` : ""} · ${where}`;
+}
 
 /** Forwards to the last selected team unless the chooser was asked for explicitly (#auswahl). */
 const FORWARD = `(function () {
@@ -12,7 +19,7 @@ const FORWARD = `(function () {
   if (slug && known) location.replace(slug + "/");
 })();`;
 
-export function renderChooser(teams: ClubTeam[], standings: Map<string, Standing | undefined>, checkedAt: string | null): string {
+export function renderChooser(teams: ClubTeam[], standings: Map<string, Standing | undefined>, nextMatches: Map<string, Meeting | undefined>, checkedAt: string | null): string {
   const body = html`
     <h1>Mannschaft wählen</h1>
     <p class="small muted">Tabellen, Spielpläne, Spielberichte und Spielerstatistiken aller ${esc(CLUB_NAME)}-Mannschaften in der Saison ${esc(SEASON_LABEL)}. Deine Auswahl wird gemerkt.</p>
@@ -20,6 +27,7 @@ export function renderChooser(teams: ClubTeam[], standings: Map<string, Standing
       ([heading, list]) => html`<h2>${heading}</h2>
         ${list.map((t) => {
           const s = standings.get(t.slug);
+          const next = nextMatches.get(t.slug);
           return html`<a class="card team-card" href="${t.slug}/" data-team="${esc(t.slug)}">
             <div class="player-head">
               <span class="player-name">${esc(t.label)}</span>
@@ -29,6 +37,7 @@ export function renderChooser(teams: ClubTeam[], standings: Map<string, Standing
               <span>${esc(t.league)}${t.name !== CLUB_NAME ? ` · als ${esc(t.name)}` : ""}</span>
               ${s ? `<span class="badges"><span class="small">${s.points[0]}:${s.points[1]} Punkte</span></span>` : ""}
             </div>
+            ${next ? `<div class="small next-line">Nächstes Spiel: ${esc(nextLine(t, next))}</div>` : ""}
           </a>`;
         })}`,
     )}

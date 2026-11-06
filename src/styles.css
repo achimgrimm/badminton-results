@@ -156,13 +156,16 @@ a.card.match-card.is-playing:hover { box-shadow: inset 4px 0 0 var(--ot-success)
 .play-wrap > .card { margin: 0; }
 /* The pressed toggle already says "Dabei" */
 .play-wrap .badge--playing { display: none; }
-.play-wrap .match { padding-right: 112px; }
+.play-wrap .match { padding-right: 52px; }
 .play-toggle { display: inline-flex; align-items: center; gap: 6px; font: 600 .875rem/1 var(--ot-font); cursor: pointer; }
 .play-toggle svg { width: 16px; height: 16px; flex: none; opacity: .35; }
 .play-toggle[aria-pressed="true"] svg { opacity: 1; }
-.play-wrap > .play-toggle { position: absolute; right: 12px; bottom: 12px; min-height: 36px; padding: 0 14px;
-  border: 1px solid var(--ot-primary); border-radius: var(--ot-radius-pill); background: var(--ot-bg); color: var(--ot-primary); }
+.play-wrap > .play-toggle { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; padding: 0; justify-content: center;
+  border: 1px solid var(--ot-primary); border-radius: 50%; background: var(--ot-bg); color: var(--ot-primary); }
+.play-wrap > .play-toggle svg { width: 20px; height: 20px; opacity: .5; }
+.play-wrap > .play-toggle span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .play-wrap > .play-toggle:hover { background: var(--ot-bg-alt); }
+.play-wrap > .play-toggle[aria-pressed="true"] svg { opacity: 1; }
 .play-wrap > .play-toggle[aria-pressed="true"] { background: var(--ot-primary); color: var(--ot-on-primary); }
 .play-toggle.btn { font-size: 1rem; }
 .play-toggle.btn-secondary[aria-pressed="true"] { background: var(--ot-primary); color: var(--ot-on-primary); }
@@ -210,6 +213,9 @@ a.card.match-card.is-playing:hover { box-shadow: inset 4px 0 0 var(--ot-success)
 .results tr.zone-up td:first-child::after { content: " ▲"; color: var(--ot-success); font-size: .75rem; }
 .results tr.zone-down td:first-child::after { content: " ▼"; color: var(--ot-error); font-size: .75rem; }
 .results tr.row { cursor: pointer; }
+.results .chev { width: 1.5em; padding-left: 0; padding-right: 8px; text-align: right; color: var(--ot-text-muted); }
+.results .chev::before { content: "›"; display: inline-block; font-size: 1.25rem; line-height: 1; transition: transform .2s var(--ot-ease); }
+.results tr.row[aria-expanded="true"] .chev::before { transform: rotate(90deg); }
 .results tr.detail td { padding-top: 0; font-size: .875rem; color: var(--ot-text-muted); }
 .results tr.detail[hidden] { display: none; }
 .results .wide { display: none; }
@@ -217,14 +223,16 @@ a.card.match-card.is-playing:hover { box-shadow: inset 4px 0 0 var(--ot-success)
   .results .wide { display: table-cell; }
   .results tr.detail { display: none !important; }
   .results tr.row { cursor: default; }
+  .results .chev { display: none; }
 }
 .legend { font-size: .875rem; color: var(--ot-text-muted); margin-top: 8px; }
 
 /* Schedule */
+.filter-bar { position: sticky; top: var(--sticky-top, 112px); z-index: 5; background: var(--ot-bg-alt); margin: 0 -16px; padding: 0 16px; }
 .filter { display: inline-flex; background: var(--ot-bg); border: 1px solid var(--ot-primary); border-radius: var(--ot-radius-pill); overflow: hidden; margin: 8px 0 4px; }
 .filter button { font: 600 .9375rem var(--ot-font); color: var(--ot-primary); background: none; border: 0; padding: 6px 16px; cursor: pointer; }
 .filter button[aria-pressed="true"] { background: var(--ot-primary); color: var(--ot-on-primary); }
-.day { scroll-margin-top: 112px; }
+.day { scroll-margin-top: 176px; }
 .day h2 { font-size: 1rem; color: var(--ot-text-muted); margin: 20px 0 8px; }
 .day h2.is-today { color: var(--ot-primary); }
 .round { margin-top: 32px; padding-top: 8px; border-top: 2px solid var(--ot-border); }
@@ -385,3 +393,24 @@ main > .chrome-hint, .overview > .chrome-hint { margin: 0 0 16px; }
 /* Overview with a chosen player: only their matches, so no "Ich spiele" toggles or "Dabei" badges */
 body[data-me] .overview .play-toggle, body[data-me] .overview .badge--playing { display: none; }
 body[data-me] .overview .play-wrap .match { padding-right: 0; }
+
+/* Übersicht: link under the shortened "Weitere Spiele" */
+.more-all { margin: 4px 0 0; font-weight: 600; }
+.more-all[hidden] { display: none; }
+a.stat { color: inherit; }
+a.stat:hover { text-decoration: none; box-shadow: var(--ot-shadow-hover); }
+
+/* Player page: several games of one Begegnung in one card */
+.game-line + .game-line { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ot-border); }
+
+/* Back link on detail pages */
+.back { margin: 12px 0 0; font-weight: 600; }
+.back + * { margin-top: 12px; }
+
+/* Opponent table (Vorschau): numbers never wrap, discipline chips are tighter */
+.results .num { white-space: nowrap; }
+.players-table .pill-row { gap: 3px; margin: 2px 0 4px; }
+.players-table .pill-row .badge { font-size: .6875rem; padding: 0 6px; }
+
+.team-card .next-line { margin-top: 4px; color: var(--ot-text-strong); }
+@media (max-width: 559px) { .results th, .results td { padding-left: 6px; padding-right: 6px; } .results .chev { padding-left: 0; padding-right: 6px; } }

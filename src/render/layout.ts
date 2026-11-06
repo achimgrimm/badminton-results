@@ -19,6 +19,8 @@ export interface PageOptions {
   noindex?: boolean;
   body: string;
   script?: string;
+  /** Detail pages: link back to the list they belong to, above the content */
+  back?: { href: string; label: string };
   /** Spielbericht pages: the meeting shown, so its "Neu" marker is cleared */
   meeting?: number;
 }
@@ -483,6 +485,18 @@ function footerStatus(checkedAt: string | null): string {
   return parts.length ? `<p>${parts.join(" · ")}</p>` : "";
 }
 
+/** The back link goes through history when the visitor came from that very page, so its scroll position is kept. */
+const BACK_LINK = `(function () {
+  var a = document.querySelector(".back a");
+  if (!a || !document.referrer || history.length < 2) return;
+  try {
+    var ref = new URL(document.referrer);
+    if (ref.origin === location.origin && ref.pathname === a.pathname) {
+      a.addEventListener("click", function (e) { e.preventDefault(); history.back(); });
+    }
+  } catch (e) {}
+})();`;
+
 /** From a stage's root (stage/<name>/) back to the live site's root. */
 const STAGE_TO_LIVE = "../../index.html";
 
@@ -549,6 +563,7 @@ ${STAGE ? html`<div class="stage-banner" role="note">Testversion: <b>${esc(STAGE
   </div>
 </div>
 <main class="container">
+${o.back ? `<p class="back"><a href="${esc(o.back.href)}">← ${esc(o.back.label)}</a></p>` : ""}
 ${o.body}
 </main>
 <footer class="site-footer">
@@ -582,6 +597,7 @@ ${releaseDialog()}
     <button type="button" class="btn btn-secondary install-here" hidden>Trotzdem hier installieren</button>
   </div>
 </dialog>
+${o.back ? `<script>${BACK_LINK}</script>` : ""}
 <script>${THEME_TOGGLE}</script>
 <script>${INSTALL(assets)}</script>
 ${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}

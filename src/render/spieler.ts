@@ -92,7 +92,7 @@ function mePicker(players: Pickable[]): string {
     </dialog>`;
 }
 
-export const quota = (t: Tally) => (t.played ? `${Math.round((t.won / t.played) * 100)} %` : "–");
+export const quota = (t: Tally) => (t.played ? `${Math.round((t.won / t.played) * 100)}\u00a0%` : "–");
 export const record = (t: Tally) => `${t.won}–${t.lost}`;
 const pair = ([a, b]: [number, number]) => `${a}:${b}`;
 
@@ -109,14 +109,12 @@ function tallyRow(label: string, t: Tally, strong = false): string {
   return `<tr><th scope="row">${strong ? `<b>${label}</b>` : label}</th>${cell(String(t.played))}${cell(record(t))}${cell(quota(t))}</tr>`;
 }
 
-function gameLog(g: PlayerGame, root: string): string {
+/** One line of a player's match card: discipline, partner, outcome, opponents and sets. */
+function gameLine(g: PlayerGame): string {
   const sets = g.sets
     .map(([mine, theirs]) => `<span class="${mine > theirs ? "set won" : "set"}">${mine}:${theirs}</span>`)
     .join(`<span class="muted"> · </span>`);
-  return html`<a class="card game-log" href="${reportHref(root, g.meeting)}">
-      <div class="card-meta">
-        <span>${esc(formatDate(g.date))} · ${g.home ? "Heim" : "Auswärts"} gegen ${esc(g.opponentTeam)}</span>
-      </div>
+  return html`<div class="game-line">
       <div class="game-head">
         <span class="badge badge--primary">${esc(g.discipline)}</span>
         ${g.partner ? `<span class="small">mit ${esc(displayName(g.partner))}</span>` : ""}
@@ -124,7 +122,25 @@ function gameLog(g: PlayerGame, root: string): string {
       </div>
       ${g.opponents.length ? `<div class="small muted">gegen ${g.opponents.map((n) => esc(displayName(n))).join(" / ")}</div>` : ""}
       ${sets ? `<div class="sets">${sets}</div>` : ""}
+    </div>`;
+}
+
+/** The player's games of one Begegnung (a player has one or two) as a single card linking to the Spielbericht. */
+function meetingLog(games: PlayerGame[], root: string): string {
+  const g = games[0];
+  return html`<a class="card game-log" href="${reportHref(root, g.meeting)}">
+      <div class="card-meta">
+        <span>${esc(formatDate(g.date))} · ${g.home ? "Heim" : "Auswärts"} gegen ${esc(g.opponentTeam)}</span>
+      </div>
+      ${games.map(gameLine)}
     </a>`;
+}
+
+/** Player games grouped by Begegnung, in the order of the log. */
+function groupByMeeting(log: PlayerGame[]): PlayerGame[][] {
+  const groups = new Map<number, PlayerGame[]>();
+  for (const g of log) groups.set(g.meeting, [...(groups.get(g.meeting) ?? []), g]);
+  return [...groups.values()];
 }
 
 export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
@@ -209,8 +225,8 @@ export function renderSpieler(d: Dataset, { stats: s }: PlayerPage): string {
       : ""}
 
     <h2>Alle Spiele</h2>
-    ${s.log.map((g) => gameLog(g, root))}
+    ${groupByMeeting(s.log).map((games) => meetingLog(games, root))}
   `;
 
-  return layout({ title: displayName(s.name), root, nav: null, checkedAt: d.meta.checkedAt, noindex: true, body });
+  return layout({ title: displayName(s.name), root, nav: "spieler", back: { href: `${root}spieler.html`, label: "Spieler" }, checkedAt: d.meta.checkedAt, noindex: true, body });
 }

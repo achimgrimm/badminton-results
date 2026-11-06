@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Releases the current branch: once its test stage shows exactly this commit, main is
-# fast-forwarded to it and deployed live and the branch is deleted (which removes its stage).
+# fast-forwarded to it (which deploys it live) and the branch is deleted (which removes its stage).
 set -euo pipefail
 
 SITE="https://achimgrimm.github.io/badminton-results"
@@ -28,10 +28,8 @@ git merge-base --is-ancestor origin/main "$sha" \
   || die "main has moved on: rebase $branch on origin/main, push, test the stage again"
 
 echo "Releasing $branch ($short) to main…"
-git push origin "$sha:refs/heads/main"
-# GitHub starts no push run for a commit that was already pushed on another branch, so start
-# the live deploy explicitly.
-gh workflow run update.yml --repo achimgrimm/badminton-results --ref main
-git push origin --delete "$branch"
+# One atomic push: the push run on main then already sees the branch gone, so it deploys live
+# and drops the stage in one go (stage.yml skips its own run for the delete).
+git push --atomic origin "$sha:refs/heads/main" ":refs/heads/$branch"
 echo "Done. Live after the deploy: $SITE/"
 echo "Locally: git switch main && git pull && git branch -d $branch"

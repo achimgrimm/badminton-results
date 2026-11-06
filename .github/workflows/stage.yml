@@ -10,12 +10,22 @@ on:
 
 permissions:
   actions: write
+  contents: read
 
 jobs:
   redeploy:
     if: ${{ github.event_name == 'push' || (github.event.ref_type == 'branch' && !startsWith(github.event.ref, 'dependabot/')) }}
     runs-on: ubuntu-latest
     steps:
-      - run: gh workflow run update.yml --repo "$GITHUB_REPOSITORY" --ref main
+      # A release moves main and deletes the branch in one push; main's push run then already
+      # drops the stage, so a second run would only deploy the same site again.
+      - run: |
+          if [ "$GITHUB_EVENT_NAME" = delete ]; then
+            main=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" -q .sha)
+            busy=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/update.yml/runs?event=push&head_sha=$main" \
+              -q '[.workflow_runs[] | select(.status != "completed")] | length')
+            if [ "$busy" -gt 0 ]; then echo "main's push run already removes this stage"; exit 0; fi
+          fi
+          gh workflow run update.yml --repo "$GITHUB_REPOSITORY" --ref main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

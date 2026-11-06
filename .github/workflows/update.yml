@@ -109,8 +109,13 @@ jobs:
           merge-multiple: true
       - run: ls site/stage 2>/dev/null || echo "no stages"
       - uses: actions/configure-pages@v6
+      # Named per attempt: re-running a failed deploy job would otherwise find the earlier
+      # attempt's "github-pages" artifact too and refuse to deploy.
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+          name: github-pages-${{ github.run_attempt }}
       - id: deploy
         uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}

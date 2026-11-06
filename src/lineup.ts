@@ -1,5 +1,5 @@
 import type { Dataset } from "./data.ts";
-import type { Gender, RosterPlayer } from "./types.ts";
+import type { Gender, MatchReport, RosterPlayer } from "./types.ts";
 import { displayName } from "./render/util.ts";
 
 export type GameKind = "singles" | "doubles" | "mixed";
@@ -135,4 +135,131 @@ export const LINEUP_ISSUES = `function lineupIssues(games, names, genders) {
     if (e.doubles > 1) out.push(name(p) + " spielt " + (e.doubles === 2 ? "zwei" : e.doubles) + " Doppel.");
   });
   return out;
+}`;
+
+/** Each older Spielbericht counts this much less than the next newer one. */
+const RECENCY = 0.75;
+
+/**
+ * Who usually plays each game: per discipline the persons (one, or a pair as sorted ids) who played it for
+ * the team, weighted by recency (newest Spielbericht 1, then ×0.75 per older one), heaviest first.
+ * Person ids are strings, like the values of the editor's selects. Feeds suggestLineup in the browser.
+ */
+export function lineupHistory(d: Dataset): Record<string, [string[], number][]> {
+  const dateOf = (r: MatchReport) => d.schedule.find((m) => m.meeting === r.meeting)?.date ?? r.date ?? "";
+  const own = Object.values(d.reports)
+    .map((r) => ({ r, side: r.home === d.own.name ? ("home" as const) : r.guest === d.own.name ? ("guest" as const) : null }))
+    .filter((x) => x.side && x.r.games.length)
+    .sort((a, b) => dateOf(b.r).localeCompare(dateOf(a.r)) || b.r.meeting - a.r.meeting);
+  const sums = new Map<string, Map<string, number>>();
+  own.forEach(({ r, side }, age) => {
+    for (const g of r.games) {
+      const persons = g[side!].map((p) => p.person).filter((p): p is number => p != null).map(String).sort();
+      if (!persons.length) continue;
+      const entries = sums.get(g.discipline) ?? new Map<string, number>();
+      sums.set(g.discipline, entries);
+      const key = persons.join(" ");
+      entries.set(key, (entries.get(key) ?? 0) + RECENCY ** age);
+    }
+  });
+  return Object.fromEntries(
+    [...sums].map(([discipline, entries]) => [
+      discipline,
+      [...entries]
+        .sort(([ka, a], [kb, b]) => b - a || ka.localeCompare(kb))
+        .map(([key, w]): [string[], number] => [key.split(" "), Math.round(w * 1000) / 1000]),
+    ]),
+  );
+}
+
+/**
+ * Client-side lineup suggestion as JS source (see LINEUP_ISSUES for why a string).
+ * suggestLineup(games, history, genders): games = [{ discipline, kind, need, persons, allowed }] as in
+ * lineupIssues, allowed = the person ids the slot may take (its options); history from lineupHistory.
+ * Returns the persons per game: filled slots are kept, empty ones get (1) the usual pair or player of that
+ * game, then (2) per slot the best player by weight in that game, else ×0.5 in a game of the same kind and
+ * gender rule, else ×0.1 any game. Only players who fit the rules are used (at most 2 games, one per kind,
+ * gender); a slot nobody fits stays empty. Greedy, heaviest first.
+ */
+export const SUGGEST_LINEUP = `function suggestLineup(games, history, genders) {
+  genders = genders || {};
+  var use = {}, all = [], byDiscipline = {};
+  var out = games.map(function (g) {
+    var x = { discipline: g.discipline, kind: g.kind, need: g.need || "", allowed: g.allowed || null,
+      persons: g.persons.map(function (p) { return p || null; }) };
+    byDiscipline[g.discipline] = x;
+    return x;
+  });
+  function usage(p) { return use[p] || (use[p] = { total: 0, singles: 0, doubles: 0, mixed: 0 }); }
+  function add(p, g) { var e = usage(p); e.total++; e[g.kind]++; }
+  function free(g) { return g.persons.filter(function (p) { return !p; }).length; }
+  function put(g, p) { g.persons[g.persons.indexOf(null)] = p; add(p, g); }
+  function canPlay(p, g, partner) {
+    if (g.persons.indexOf(p) >= 0 || p === partner) return false;
+    if (g.allowed && g.allowed.indexOf(p) < 0) return false;
+    var e = usage(p);
+    if (e.total >= 2 || e[g.kind] >= 1) return false;
+    if (g.need && genders[p] && genders[p] !== g.need) return false;
+    if (g.kind === "mixed") {
+      var other = partner || g.persons.filter(Boolean)[0];
+      if (other && genders[p] && genders[other] && genders[p] === genders[other]) return false;
+    }
+    return true;
+  }
+  out.forEach(function (g) {
+    var seen = {};
+    g.persons.forEach(function (p) { if (p && !seen[p]) { seen[p] = 1; add(p, g); } });
+  });
+  Object.keys(history).forEach(function (d) {
+    history[d].forEach(function (e) { e[0].forEach(function (p) { if (all.indexOf(p) < 0) all.push(p); }); });
+  });
+
+  // 1. The usual pair or player of each game, heaviest first.
+  var candidates = [];
+  out.forEach(function (g) {
+    var slots = free(g), set = g.persons.filter(Boolean);
+    if (!slots) return;
+    (history[g.discipline] || []).forEach(function (e) {
+      if (e[0].length !== g.persons.length) return;
+      if (!set.every(function (p) { return e[0].indexOf(p) >= 0; })) return;
+      var rest = e[0].filter(function (p) { return set.indexOf(p) < 0; });
+      if (rest.length === slots) candidates.push({ g: g, persons: rest, w: e[1] });
+    });
+  });
+  candidates.sort(function (a, b) { return b.w - a.w; });
+  candidates.forEach(function (c) {
+    if (free(c.g) !== c.persons.length) return;
+    var ok = c.persons.every(function (p, i) { return canPlay(p, c.g, i ? c.persons[0] : null); });
+    if (ok) c.persons.forEach(function (p) { put(c.g, p); });
+  });
+
+  // 2. Single slots: best fitting player by how much they played this game, a similar one, or any.
+  function weight(d, p) {
+    return (history[d] || []).reduce(function (s, e) { return s + (e[0].indexOf(p) >= 0 ? e[1] : 0); }, 0);
+  }
+  function score(p, g) {
+    var exact = weight(g.discipline, p);
+    if (exact) return exact;
+    var similar = 0, any = 0;
+    Object.keys(history).forEach(function (d) {
+      var w = weight(d, p), o = byDiscipline[d];
+      if (o && d !== g.discipline && o.kind === g.kind && o.need === g.need) similar += w;
+      any += w;
+    });
+    return similar ? similar * 0.5 : any * 0.1;
+  }
+  for (;;) {
+    var best = null;
+    out.forEach(function (g) {
+      if (!free(g)) return;
+      all.forEach(function (p) {
+        if (!canPlay(p, g, null)) return;
+        var s = score(p, g);
+        if (s > 0 && (!best || s > best.s)) best = { g: g, p: p, s: s };
+      });
+    });
+    if (!best) break;
+    put(best.g, best.p);
+  }
+  return out.map(function (g) { return g.persons; });
 }`;

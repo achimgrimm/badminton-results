@@ -1,6 +1,6 @@
 import { SEASON_KEY, storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
-import { disciplines, kind, LINEUP_ISSUES, lineupPlayers, requiredGender, slots } from "../lineup.ts";
+import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
 import { headToHead, lineup, playerStats, teamForm, type PlayerStats, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle } from "./components.ts";
@@ -14,6 +14,7 @@ import { displayName, esc, formatDate, html, isOwn, opponentOf, previewName } fr
  */
 const LINEUP = (key: string) => `(function () {
   ${LINEUP_ISSUES}
+  ${SUGGEST_LINEUP}
   var KEY = "${key}", root = document.getElementById("lineup");
   var rows = Array.prototype.slice.call(root.querySelectorAll(".lineup-row"));
   var box = root.querySelector(".lineup-issues"), names = {}, genders = {}, saved = {};
@@ -121,6 +122,38 @@ const LINEUP = (key: string) => `(function () {
     render();
     otTrack("lineup", { action: "clear" });
   });
+  var suggest = root.querySelector(".lineup-suggest");
+  if (suggest) {
+    var history = {}, suggestTimer = null;
+    try { history = JSON.parse(root.dataset.history || "{}"); } catch (e) {}
+    suggest.addEventListener("click", function () {
+      var input = rows.map(function (r) {
+        var sel = r.querySelectorAll("select");
+        return {
+          discipline: r.dataset.discipline, kind: r.dataset.kind, need: r.dataset.need,
+          persons: Array.prototype.map.call(sel, function (s) { return s.value; }),
+          allowed: Array.prototype.map.call(sel[0].querySelectorAll("option"), function (o) { return o.value; }).filter(Boolean),
+        };
+      });
+      var result = suggestLineup(input, history, genders), filled = 0, open = 0;
+      rows.forEach(function (r, i) {
+        r.querySelectorAll("select").forEach(function (s, j) {
+          var p = result[i][j];
+          if (!s.value && p) { s.value = p; filled++; }
+          if (!s.value) open++;
+        });
+      });
+      otTrack("lineup", { action: "suggest", filled: filled });
+      if (!filled) {
+        suggest.textContent = open ? "Kein passender Spieler" : "Alles besetzt";
+        clearTimeout(suggestTimer);
+        suggestTimer = setTimeout(function () { suggest.textContent = "Vorschlag"; }, 2500);
+        return;
+      }
+      try { localStorage.setItem(KEY, JSON.stringify(read())); } catch (e) {}
+      render();
+    });
+  }
   var btn = root.querySelector(".lineup-share"), label = btn.querySelector("span"), timer = null;
   function flash(text) {
     label.textContent = text;
@@ -228,9 +261,12 @@ function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
   if (!games.length) return "";
   const when = `${formatDate(m.date)}${m.time ? `, ${m.time} Uhr` : ""}`;
   const vs = home ? `Heim gegen ${m.guest}` : `Auswärts bei ${m.home}`;
-  return html`<details class="card lineup-editor" id="lineup">
+  const history = lineupHistory(d);
+  const suggest = Object.keys(history).length > 0;
+  return html`<details class="card lineup-editor" id="lineup"${suggest ? ` data-history="${esc(JSON.stringify(history))}"` : ""}>
       <summary>Aufstellung planen</summary>
       <p class="small muted">Wer spielt welches Spiel? Bei Herren- und Damenspielen siehst Du nur Herren bzw. Damen (aus den nuLiga-Ranglisten); Spieler ohne bekanntes Geschlecht stehen überall. Fehler werden nur angezeigt, gespeichert wird immer. Die Aufstellung bleibt auf diesem Gerät.</p>
+      ${suggest ? `<p class="small muted">„Vorschlag“ füllt freie Plätze mit den Spielern, die diese Spiele bisher meist gespielt haben; neuere Spiele zählen mehr.</p>` : ""}
       ${games.map(
         (g) => html`<div class="lineup-row" data-discipline="${esc(g)}" data-kind="${kind(g)}" data-need="${requiredGender(g) ?? ""}">
           <span class="badge badge--primary">${esc(g)}</span>
@@ -248,8 +284,9 @@ function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
         <div class="lineup-list"></div>
       </dialog>
       <div class="btn-row">
-        <button type="button" class="btn btn-primary lineup-share" data-title="${esc(`Aufstellung · ${m.home} – ${m.guest}`)}" data-when="${esc(when)}" data-vs="${esc(vs)}" data-href="${esc(previewName(m))}.html">${SHARE_BTN_ICON}<span>Aufstellung teilen</span></button>
+        ${suggest ? `<button type="button" class="btn btn-secondary lineup-suggest">Vorschlag</button>` : ""}
         <button type="button" class="btn btn-secondary lineup-clear">Leeren</button>
+        <button type="button" class="btn btn-primary lineup-share" data-title="${esc(`Aufstellung · ${m.home} – ${m.guest}`)}" data-when="${esc(when)}" data-vs="${esc(vs)}" data-href="${esc(previewName(m))}.html">${SHARE_BTN_ICON}<span>Aufstellung teilen</span></button>
       </div>
     </details>`;
 }

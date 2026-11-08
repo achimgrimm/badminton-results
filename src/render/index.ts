@@ -37,7 +37,7 @@ const PERSONAL = `(function () {
     hint.querySelector(".btn").addEventListener("click", function () { otTrack("me-hint", { action: "pick" }); });
   }
   function items(list) { return list ? Array.prototype.slice.call(list.querySelectorAll(".ov-item")) : []; }
-  function mine(item) { var c = item.querySelector(".match-card"); return !!c && c.classList.contains("is-playing"); }
+  function mine(item) { var c = item.querySelector(".match-card"); return !!c && (c.classList.contains("is-playing") || c.classList.contains("is-maybe")); }
   function update() {
     var personal = !!document.body.dataset.me;
     var more = document.querySelector('[data-list="more"]'), upcoming = items(more);

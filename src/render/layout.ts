@@ -1,5 +1,6 @@
 import { CLUB_NAME, REPO_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
+import { PLAYING_STATE } from "../playing.ts";
 import { APP_SHORT_NAME } from "./pwa.ts";
 import { buildVersion, clubTeams, currentTeam, releaseNotes, stylesHref } from "./context.ts";
 import { esc, formatDate, formatTimestamp, html, todayInBremen } from "./util.ts";
@@ -102,43 +103,52 @@ const NEW_RESULTS = (slug: string) => `(function () {
 const meKey = (slug: string) => storageKey(`me-${slug}-${SEASON_KEY}`);
 
 /**
- * "Ich spiele": the user marks own matches they play in. Stored per team and season as a list of
- * previewName keys (stable across postponements and after the result). Every own card with that key
- * gets a "Dabei" badge, toggles show their state, and Spielplan days with a marked match get
- * "has-mine" for the "Meine Spiele" filter. Played matches whose Spielbericht lists the chosen player
- * (data-players, see ME) count as theirs too, tagged or not. Must run before the page script.
+ * "Ich spiele": the user answers yes, maybe or no for own matches. Stored per team and season as an
+ * object previewName -> state (stable across postponements and after the result); unanswered matches
+ * have no entry (see PLAYING_STATE for the format and the migration of the old list). Yes cards get a
+ * "Dabei" badge, maybe cards a "Vielleicht" badge, toggles show their state, and Spielplan days with a
+ * yes or maybe match get "has-mine" for the "Meine Spiele" filter. Played matches whose Spielbericht
+ * lists the chosen player (data-players, see ME) count as yes, answered or not. Must run before the page script.
  */
 const PLAYING = (slug: string) => `(function () {
-  var KEY = "${storageKey(`playing-${slug}-${SEASON_KEY}`)}", mine = [];
-  try { mine = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) {}
-  if (!Array.isArray(mine)) mine = [];
-  function has(k) { return mine.indexOf(k) >= 0; }
+  ${PLAYING_STATE}
+  var KEY = "${storageKey(`playing-${slug}-${SEASON_KEY}`)}", mine = {};
+  var STATUS = { "": "nicht angegeben", yes: "ja", maybe: "vielleicht", no: "nein" };
+  var LABEL = { "": "Ich spiele", yes: "Dabei", maybe: "Vielleicht", no: "Kann nicht" };
+  try { mine = migratePlaying(JSON.parse(localStorage.getItem(KEY) || "[]")); } catch (e) {}
   function me() {
     var m = null;
     try { m = JSON.parse(localStorage.getItem("${meKey(slug)}") || "null"); } catch (e) {}
     return m && m.person ? String(m.person) : null;
   }
+  function badge(card, cls, text) {
+    var b = card.querySelector(".badge--" + cls);
+    if (text && !b) {
+      b = document.createElement("span");
+      b.className = "badge badge--" + cls;
+      b.textContent = text;
+      card.querySelector(".badges").prepend(b);
+    } else if (!text && b) b.remove();
+  }
   function render() {
     var any = false, person = me();
     document.querySelectorAll(".match-card[data-play-key]").forEach(function (card) {
       var played = person && (card.dataset.players || "").split(" ").indexOf(person) >= 0;
-      var on = has(card.dataset.playKey) || !!played, badge = card.querySelector(".badge--playing");
-      card.classList.toggle("is-playing", on);
-      if (on) any = true;
-      if (on && !badge) {
-        badge = document.createElement("span");
-        badge.className = "badge badge--playing";
-        badge.textContent = "Dabei";
-        card.querySelector(".badges").prepend(badge);
-      } else if (!on && badge) badge.remove();
+      var state = played ? "yes" : mine[card.dataset.playKey] || "";
+      card.classList.toggle("is-playing", state === "yes");
+      card.classList.toggle("is-maybe", state === "maybe");
+      if (state === "yes" || state === "maybe") any = true;
+      badge(card, "playing", state === "yes" ? "Dabei" : "");
+      badge(card, "maybe", state === "maybe" ? "Vielleicht" : "");
     });
     document.querySelectorAll(".play-toggle").forEach(function (b) {
-      var on = has(b.dataset.playKey);
-      b.setAttribute("aria-pressed", String(on));
-      b.querySelector("span").textContent = on ? "Dabei" : "Ich spiele";
+      var state = mine[b.dataset.playKey] || "";
+      b.dataset.state = state;
+      b.setAttribute("aria-label", b.dataset.label + " – Status: " + STATUS[state]);
+      b.querySelector("span").textContent = LABEL[state];
     });
     document.querySelectorAll(".day").forEach(function (day) {
-      day.classList.toggle("has-mine", !!day.querySelector(".match-card.is-playing"));
+      day.classList.toggle("has-mine", !!day.querySelector(".match-card.is-playing, .match-card.is-maybe"));
     });
     document.body.classList.toggle("no-playing", !any);
     document.dispatchEvent(new Event("ot-playing"));
@@ -146,11 +156,11 @@ const PLAYING = (slug: string) => `(function () {
   window.otPlayingRender = render;
   document.querySelectorAll(".play-toggle").forEach(function (b) {
     b.addEventListener("click", function () {
-      var k = b.dataset.playKey, on = !has(k);
-      if (on) mine.push(k); else mine = mine.filter(function (x) { return x !== k; });
+      var k = b.dataset.playKey, state = nextPlaying(mine[k]);
+      if (state) mine[k] = state; else delete mine[k];
       try { localStorage.setItem(KEY, JSON.stringify(mine)); } catch (e) {}
       render();
-      otTrack("playing", { on: on });
+      otTrack("playing", { state: state || "none" });
     });
   });
   render();

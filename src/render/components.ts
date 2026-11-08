@@ -75,13 +75,19 @@ function shareData(m: Meeting): string {
 
 export const CHECK = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 
+const ICON_ATTRS = `width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
+const MAYBE_ICON = `<svg class="ico-maybe" ${ICON_ATTRS}><path d="M9 9a3 3 0 1 1 4.5 2.6c-1 .6-1.5 1.1-1.5 2.4"/><path d="M12 18v.01"/></svg>`;
+const NO_ICON = `<svg class="ico-no" ${ICON_ATTRS}><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+
 /**
- * Button that marks an own match as one the user plays in. The client script PLAYING (layout.ts)
- * sets aria-pressed and the label; "card" sits beside a match card, "hero" in a dark box, "page" in plain content.
+ * Button that answers whether the user plays in an own match; each tap cycles through yes, maybe, no
+ * and unanswered. The client script PLAYING (layout.ts) sets data-state, the aria-label and the label;
+ * "card" sits beside a match card, "hero" in a dark box, "page" in plain content.
  */
 export function playToggle(m: Meeting, variant: "card" | "hero" | "page" = "card"): string {
   const cls = variant === "card" ? "play-toggle" : `play-toggle btn ${variant === "hero" ? "btn-on-dark" : "btn-secondary"}`;
-  return `<button type="button" class="${cls}" data-play-key="${esc(previewName(m))}" aria-pressed="false" aria-label="Ich spiele mit: ${esc(m.home)} gegen ${esc(m.guest)}">${CHECK}<span>Ich spiele</span></button>`;
+  const label = `Ich spiele mit: ${m.home} gegen ${m.guest}`;
+  return `<button type="button" class="${cls}" data-play-key="${esc(previewName(m))}" data-state="" data-label="${esc(label)}" aria-label="${esc(label)}">${CHECK.replace("<svg ", '<svg class="ico-yes" ')}${MAYBE_ICON}${NO_ICON}<span>Ich spiele</span></button>`;
 }
 
 /** Stable per-device id of a result: the nuLiga meeting number, else date and teams. */

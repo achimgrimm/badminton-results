@@ -148,32 +148,44 @@ a.card:hover { box-shadow: var(--ot-shadow-hover); text-decoration: none; color:
 .card.match-card.is-new { box-shadow: inset 4px 0 0 var(--ot-primary), var(--ot-shadow); }
 a.card.match-card.is-new:hover { box-shadow: inset 4px 0 0 var(--ot-primary), var(--ot-shadow-hover); }
 .badge--playing { background: var(--ot-success-bg); color: var(--ot-success); }
+.badge--maybe { background: var(--ot-warning-bg); color: var(--ot-warning); }
+.card.match-card.is-maybe { box-shadow: inset 4px 0 0 var(--ot-warning), var(--ot-shadow); }
+a.card.match-card.is-maybe:hover { box-shadow: inset 4px 0 0 var(--ot-warning), var(--ot-shadow-hover); }
 .card.match-card.is-playing { box-shadow: inset 4px 0 0 var(--ot-success), var(--ot-shadow); }
 a.card.match-card.is-playing:hover { box-shadow: inset 4px 0 0 var(--ot-success), var(--ot-shadow-hover); }
 
 /* "Ich spiele" toggle: beside a card it sits over the card's bottom right corner */
 .play-wrap { position: relative; margin: 0 0 12px; }
 .play-wrap > .card { margin: 0; }
-/* The pressed toggle already says "Dabei" */
-.play-wrap .badge--playing { display: none; }
+/* The toggle already says "Dabei" or "Vielleicht" */
+.play-wrap .badge--playing, .play-wrap .badge--maybe { display: none; }
 .play-wrap .match { padding-right: 52px; }
 .play-toggle { display: inline-flex; align-items: center; gap: 6px; font: 600 .875rem/1 var(--ot-font); cursor: pointer; }
 .play-toggle svg { width: 16px; height: 16px; flex: none; opacity: .35; }
-.play-toggle[aria-pressed="true"] svg { opacity: 1; }
+.play-toggle .ico-maybe, .play-toggle .ico-no { display: none; }
+.play-toggle[data-state="maybe"] .ico-yes, .play-toggle[data-state="no"] .ico-yes { display: none; }
+.play-toggle[data-state="maybe"] .ico-maybe, .play-toggle[data-state="no"] .ico-no { display: inline; }
+.play-toggle:not([data-state=""]) svg { opacity: 1; }
 .play-wrap > .play-toggle { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; padding: 0; justify-content: center;
   border: 1px solid var(--ot-primary); border-radius: 50%; background: var(--ot-bg); color: var(--ot-primary); }
 .play-wrap > .play-toggle svg { width: 20px; height: 20px; opacity: .5; }
+.play-wrap > .play-toggle:not([data-state=""]) svg { opacity: 1; }
 .play-wrap > .play-toggle span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .play-wrap > .play-toggle:hover { background: var(--ot-bg-alt); }
-.play-wrap > .play-toggle[aria-pressed="true"] svg { opacity: 1; }
-.play-wrap > .play-toggle[aria-pressed="true"] { background: var(--ot-primary); color: var(--ot-on-primary); }
+.play-wrap > .play-toggle[data-state="yes"] { background: var(--ot-primary); color: var(--ot-on-primary); }
+.play-wrap > .play-toggle[data-state="maybe"] { background: var(--ot-warning-bg); color: var(--ot-warning); border-color: var(--ot-warning); }
+.play-wrap > .play-toggle[data-state="no"] { background: var(--ot-bg-alt); color: var(--ot-text-muted); border-color: var(--ot-text-muted); }
 .play-toggle.btn { font-size: 1rem; }
-.play-toggle.btn-secondary[aria-pressed="true"] { background: var(--ot-primary); color: var(--ot-on-primary); }
+.play-toggle.btn-secondary[data-state="yes"] { background: var(--ot-primary); color: var(--ot-on-primary); }
+.play-toggle.btn-secondary[data-state="maybe"] { background: var(--ot-warning-bg); color: var(--ot-warning); border-color: var(--ot-warning); }
+.play-toggle.btn-secondary[data-state="no"] { color: var(--ot-text-muted); border-color: var(--ot-text-muted); }
 .next .btn-row { margin: 12px 0 0; }
 .next .btn-row .btn-on-dark { margin-top: 0; }
 .next .play-toggle.btn-on-dark { background: transparent; color: #fff; border-color: rgba(255,255,255,.7); }
 .next .play-toggle.btn-on-dark:hover { background: rgba(255,255,255,.12); }
-.next .play-toggle.btn-on-dark[aria-pressed="true"] { background: #fff; color: #0b1e45; border-color: #fff; }
+.next .play-toggle.btn-on-dark[data-state="yes"] { background: #fff; color: #0b1e45; border-color: #fff; }
+.next .play-toggle.btn-on-dark[data-state="maybe"] { background: var(--ot-warning-bg); color: var(--ot-warning); border-color: var(--ot-warning-bg); }
+.next .play-toggle.btn-on-dark[data-state="no"] { background: transparent; color: rgba(255,255,255,.75); border-color: rgba(255,255,255,.4); }
 
 /* Match line: teams stacked, score on the right */
 .match { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; }
@@ -239,7 +251,7 @@ a.card.match-card.is-playing:hover { box-shadow: inset 4px 0 0 var(--ot-success)
 body.only-own .day:not(.has-own) { display: none; }
 body.only-own .card.match-card:not(.is-own) { display: none; }
 body.only-mine .day:not(.has-mine) { display: none; }
-body.only-mine .card.match-card:not(.is-playing), body.only-mine .play-wrap:not(:has(.is-playing)) { display: none; }
+body.only-mine .card.match-card:not(.is-playing):not(.is-maybe), body.only-mine .play-wrap:not(:has(.is-playing, .is-maybe)) { display: none; }
 .mine-empty { display: none; }
 body.only-mine.no-playing .mine-empty { display: block; }
 .share-plan { margin: 12px 0 0; }
@@ -391,7 +403,7 @@ a.card.player-card.is-me:hover { box-shadow: inset 4px 0 0 var(--ot-primary), va
 main > .chrome-hint, .overview > .chrome-hint { margin: 0 0 16px; }
 
 /* Overview with a chosen player: only their matches, so no "Ich spiele" toggles or "Dabei" badges */
-body[data-me] .overview .play-toggle, body[data-me] .overview .badge--playing { display: none; }
+body[data-me] .overview .play-toggle, body[data-me] .overview .badge--playing, body[data-me] .overview .badge--maybe { display: none; }
 body[data-me] .overview .play-wrap .match { padding-right: 0; }
 
 /* Übersicht: link under the shortened "Weitere Spiele" */

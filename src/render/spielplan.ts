@@ -30,12 +30,12 @@ const SCRIPT = `
   function shareButton() {
     var btn = document.querySelector(".share-plan"), label = btn.querySelector("span"), timer = null;
     btn.addEventListener("click", function () {
-      var cards = document.querySelectorAll(".day.upcoming .match-card.is-playing[data-play-when]");
+      var cards = document.querySelectorAll(".day.upcoming .match-card[data-play-when].is-playing, .day.upcoming .match-card[data-play-when].is-maybe");
       // Always visible: with nothing to share it says what to do instead.
-      if (!cards.length) { flash("Erst Spiele mit „Ich spiele“ markieren"); return; }
+      if (!cards.length) { flash("Erst Spiele mit „Ich spiele“ oder „Vielleicht“ markieren"); return; }
       var lines = [btn.dataset.shareTitle];
       cards.forEach(function (c) {
-        lines.push("", c.dataset.playWhen, c.dataset.playVs);
+        lines.push("", c.dataset.playWhen, c.dataset.playVs + (c.classList.contains("is-maybe") ? " (vielleicht)" : ""));
         if (c.getAttribute("href")) lines.push(new URL(c.getAttribute("href"), location.href).href);
       });
       var text = lines.join("\\n");

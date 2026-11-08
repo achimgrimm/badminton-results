@@ -114,6 +114,9 @@ main.container { padding-bottom: 32px; }
 .menu-item--danger, .menu-item--danger:hover { color: var(--ot-error); }
 .menu-account { margin: 4px 12px 6px; }
 .menu-account b { color: var(--ot-text-strong); }
+.claim-row { border-top: 1px solid var(--ot-border); padding: 12px 0 4px; }
+.claim-row p { margin: 0 0 8px; }
+.claim-row .btn-row { margin-bottom: 8px; }
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
@@ -377,13 +380,17 @@ dialog { overscroll-behavior: contain; }
 .release-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 .new-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 /* "Wer bist Du?": the chosen player (see ME in layout.ts) */
+/* "Wer bist Du?": looks like the next-game box (.next); the light bulb on the left opens the storage note. */
+.me-card { display: flex; align-items: center; gap: 16px; }
+.me-card[hidden] { display: none; }
+.me-card .me-body { flex: 1; min-width: 0; }
 .me-card p { margin: 0 0 8px; }
-.me-card .btn-row { margin: 8px 0; }
+.hint-btn { flex: none; width: 56px; height: 56px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+            border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #ffd479; cursor: pointer; }
+.hint-btn:hover, .hint-btn[aria-expanded="true"] { background: rgba(255,255,255,.22); }
+.hint-btn svg { width: 36px; height: 36px; }
+.me-card .me-hint { margin: 8px 0 0; opacity: .85; }
 .me-card .small { margin: 0; }
-.me-some .btn-row:has(> .me-link[hidden]) { display: none; }
-.me-card .me-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .25em; }
-.link-button { font: inherit; color: var(--ot-primary); background: none; border: 0; padding: 0; cursor: pointer; }
-.link-button:hover { color: var(--ot-primary-light); text-decoration: underline; }
 .team-list .me-option { display: flex; width: 100%; padding: 10px 12px; border: 0; border-radius: var(--ot-radius); background: none;
   color: var(--ot-text-strong); font: inherit; text-align: left; cursor: pointer; }
 .team-list .me-option:hover { background: var(--ot-bg-alt); }

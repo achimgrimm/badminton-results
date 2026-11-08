@@ -43,11 +43,7 @@ export function formatTimestamp(iso: string): string {
   }) + " Uhr";
 }
 
-/** "Böse, Frank" -> "Frank Böse" */
-export function displayName(name: string): string {
-  const m = name.match(/^([^,]+),\s*(.+)$/);
-  return m ? `${m[2]} ${m[1]}` : name;
-}
+export { displayName } from "../names.ts";
 
 export const isOwn = (team: string) => team === ownTeam().name;
 export const involvesOwn = (m: Meeting) => isOwn(m.home) || isOwn(m.guest);

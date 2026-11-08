@@ -2,7 +2,7 @@ import { CLUB_NAME, ONLINE, REPO_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKe
 import type { ClubTeam } from "../types.ts";
 import { PLAYING_STATE } from "../playing.ts";
 import { APP_SHORT_NAME } from "./pwa.ts";
-import { buildVersion, clubTeams, currentTeam, onlineHref, releaseNotes, stylesHref } from "./context.ts";
+import { buildVersion, clubTeams, currentTeam, onlineHref, releaseNotes, rosterEntries, stylesHref } from "./context.ts";
 import { esc, formatDate, formatTimestamp, html, todayInBremen } from "./util.ts";
 
 export type NavKey = "index" | "tabelle" | "spielplan" | "spieler" | null;
@@ -172,7 +172,7 @@ const PLAYING = (slug: string) => `(function () {
  * Every element with the chosen data-person gets "is-me", its card "has-me". The Spieler page's
  * player list (alphabetical) starts with the chosen player.
  */
-const ME = (slug: string) => `(function () {
+const ME = (slug: string, root: string) => `(function () {
   var KEY = "${meKey(slug)}", me = null;
   try { me = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!me || typeof me !== "object" || !me.person) me = null;
@@ -184,7 +184,13 @@ const ME = (slug: string) => `(function () {
     render();
     if (window.otPlayingRender) window.otPlayingRender();
     otTrack("me", { action: me ? "set" : "clear", via: via });
+    // A pick made here is passed to the account (online.js) when signed in; the account's own changes aren't sent back.
+    if (via !== "account" && window.otMeChanged) window.otMeChanged(me);
   }
+  var pickItem = document.getElementById("menu-pick"), menuClear = document.getElementById("menu-clear"), menuStats = document.getElementById("menu-stats");
+  if (menuClear) menuClear.addEventListener("click", function () { save(null, "menu"); });
+  // online.js reads and sets the pick through this, for the account's claim of the player.
+  window.otMe = { team: "${slug}", season: "${SEASON_KEY}", root: "${root}", get: function () { return me; }, set: function (next) { save(next, "account"); } };
   function render() {
     var id = me ? String(me.person) : "";
     if (id) document.body.dataset.me = id; else delete document.body.dataset.me;
@@ -207,33 +213,49 @@ const ME = (slug: string) => `(function () {
     if (dlg) dlg.querySelectorAll(".me-option").forEach(function (o) {
       if (o.dataset.person === id) o.setAttribute("aria-current", "true"); else o.removeAttribute("aria-current");
     });
-    if (card) {
-      card.querySelector(".me-none").hidden = !!me;
-      card.querySelector(".me-some").hidden = !me;
-      if (me) {
-        var opt = dlg && dlg.querySelector('.me-option[data-person="' + id + '"]'), link = card.querySelector(".me-link");
-        var name = opt ? opt.querySelector(".team-label").textContent : me.name;
-        card.querySelectorAll(".me-name").forEach(function (el) { el.textContent = name; });
-        link.hidden = !(opt && opt.dataset.href);
-        if (opt && opt.dataset.href) link.href = opt.dataset.href;
+    // Changing the player means "Ich bin nicht …" first, then choosing again.
+    if (pickItem) pickItem.hidden = !!me;
+    // A pick made on a player page or stored earlier may lack the player page link; the list knows it.
+    if (me && !me.href && dlg) {
+      var known = dlg.querySelector('.me-option[data-person="' + id + '"]');
+      if (known && known.dataset.href) {
+        me.href = known.dataset.href;
+        try { localStorage.setItem(KEY, JSON.stringify(me)); } catch (e) {}
       }
+    }
+    // The hint box is only for visitors without a chosen player; the rest is done from the menu.
+    if (card) card.hidden = !!me;
+    if (menuClear) {
+      menuClear.hidden = !me;
+      if (me) menuClear.querySelector("span").textContent = "Ich bin nicht " + me.name.replace(/^([^,]+),\s*(.+)$/, "$2 $1");
+    }
+    if (menuStats) {
+      menuStats.hidden = !(me && me.href);
+      if (me && me.href) menuStats.href = new URL("${root}" + me.href, location.href).href;
     }
   }
   document.querySelectorAll(".me-toggle").forEach(function (b) {
     b.addEventListener("click", function () {
-      save(me && String(me.person) === b.dataset.person ? null : { person: Number(b.dataset.person), name: b.dataset.name }, "page");
+      save(me && String(me.person) === b.dataset.person ? null : { person: Number(b.dataset.person), name: b.dataset.name, href: b.dataset.href }, "page");
     });
   });
   if (card && dlg) {
-    card.querySelectorAll(".me-pick").forEach(function (b) { b.addEventListener("click", function () { dlg.showModal(); }); });
-    card.querySelector(".me-clear").addEventListener("click", function () { save(null, "list"); });
+    var hintBtn = card.querySelector(".hint-btn"), hint = card.querySelector(".me-hint");
+    hintBtn.addEventListener("click", function () {
+      hint.hidden = !hint.hidden;
+      hintBtn.setAttribute("aria-expanded", String(!hint.hidden));
+    });
     dlg.querySelector(".dialog-close").addEventListener("click", function () { dlg.close(); });
     dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
     dlg.querySelectorAll(".me-option").forEach(function (o) {
-      o.addEventListener("click", function () { dlg.close(); save({ person: Number(o.dataset.person), name: o.dataset.name }, "list"); });
+      o.addEventListener("click", function () { dlg.close(); save({ person: Number(o.dataset.person), name: o.dataset.name, href: o.dataset.href }, "list"); });
     });
-    // The overview's "Wer bist Du?" hint links here to open the list right away.
-    if (location.hash === "#wer-bist-du" && !me) dlg.showModal();
+    // The menu item and the overview's "Wer bist Du?" hint link here to open the list right away.
+    if (location.hash === "#wer-bist-du") {
+      dlg.showModal();
+      try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+    }
+    if (pickItem) pickItem.addEventListener("click", function (e) { e.preventDefault(); dlg.showModal(); });
   }
   render();
 })();`;
@@ -326,13 +348,21 @@ const MENU = `(function () {
 const MENU_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`;
 
 /** The menu: account (filled by online.js), app actions, notes and privacy. Item ids are used by the page scripts. */
-function menuDialog(assets: string): string {
+function menuDialog(assets: string, root: string | null): string {
   return html`<dialog class="team-dialog menu-dialog" id="menu-dialog" aria-labelledby="menu-h">
   <div class="dialog-head">
     <h2 id="menu-h">Menü</h2>
     <button type="button" class="dialog-close" aria-label="Schließen">×</button>
   </div>
-  ${ONLINE ? `<div class="menu-section" id="account"></div>` : ""}
+  ${ONLINE || root != null
+    ? html`<div class="menu-section" id="menu-user">
+    ${ONLINE ? `<div id="account-who"></div>` : ""}
+    ${root != null ? `<a class="menu-item" id="menu-pick" href="${root}spieler.html#wer-bist-du" data-menu-close>${PERSON_ICON}<span>Name wählen</span></a>
+    <a class="menu-item" id="menu-stats" href="#" data-menu-close hidden>${STATS_ICON}<span>Meine Statistik</span></a>
+    <button type="button" class="menu-item" id="menu-clear" data-menu-close hidden>${CLEAR_ICON}<span></span></button>` : ""}
+    ${ONLINE ? `<div id="account-actions"></div>` : ""}
+  </div>`
+    : ""}
   <div class="menu-section">
     <button type="button" class="menu-item" id="install-btn" data-menu-close hidden>${INSTALL_ICON}<span>App installieren</span></button>
     <button type="button" class="menu-item" id="share-btn" hidden>${SHARE_BTN_ICON}<span>App teilen</span></button>
@@ -488,6 +518,9 @@ const SUN = `<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="curre
 const CHEVRON = `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
 
 const RELEASE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.4 5 5.6.8-4 3.9.9 5.6-4.9-2.6-4.9 2.6.9-5.6-4-3.9 5.6-.8z"/></svg>`;
+const PERSON_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>`;
+const STATS_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>`;
+const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="4"/><path d="M2 21a8 8 0 0 1 12.5-6.6M17 14l5 5M22 14l-5 5"/></svg>`;
 const LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
 
 /** Filled and opened by NEW_RESULTS when results appeared since the last visit. */
@@ -620,7 +653,8 @@ ${o.body}
 </footer>
 ${team ? teamDialog(team, assets) : ""}
 ${team ? NEW_DIALOG : ""}
-${menuDialog(assets)}
+${menuDialog(assets, team ? o.root : null)}
+${ONLINE && team ? `<script type="application/json" id="me-roster">${JSON.stringify(rosterEntries()).replace(/</g, "\\u003c")}</script>` : ""}
 ${releaseDialog()}
 <dialog class="install-help" id="install-help" aria-labelledby="install-help-h">
   <h2 id="install-help-h">App installieren</h2>
@@ -649,7 +683,7 @@ ${o.back ? `<script>${BACK_LINK}</script>` : ""}
 ${ONLINE ? `<script src="${assets}${onlineHref()}" data-callback="${assets}auth-callback.html" defer></script>` : ""}
 <script>${INSTALL(assets)}</script>
 ${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}
-${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${PLAYING(team.slug)}${ME(team.slug)}</script>` : ""}
+${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${PLAYING(team.slug)}${ME(team.slug, o.root)}</script>` : ""}
 ${o.script ? `<script>${o.script}</script>` : ""}
 </body>
 </html>

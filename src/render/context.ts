@@ -28,6 +28,19 @@ export function setLineups(l: Map<number, number[]>): void {
 }
 export const lineupOf = (meeting: number | null): number[] => (meeting != null ? (lineups.get(meeting) ?? []) : []);
 
+/** The current team's pickable players, embedded in every team page for matching the account's name. */
+export interface RosterEntry {
+  person: number;
+  name: string;
+  /** Player page, relative to the team folder */
+  href: string | null;
+}
+let roster: RosterEntry[] = [];
+export function setRoster(r: RosterEntry[]): void {
+  roster = r;
+}
+export const rosterEntries = (): RosterEntry[] => roster;
+
 /** The git commit the site is built from; null when git isn't available. */
 export interface BuildVersion {
   sha: string;

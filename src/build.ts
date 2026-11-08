@@ -10,12 +10,12 @@ import { renderBericht } from "./render/bericht.ts";
 import { renderDatenschutz } from "./render/datenschutz.ts";
 import { renderAuthCallback } from "./render/auth-callback.ts";
 import { renderChooser } from "./render/chooser.ts";
-import { setLineups, setOnlineHref, setReleases, setStylesHref, setTeam, setVersion, stylesHref, type BuildVersion } from "./render/context.ts";
+import { setLineups, setOnlineHref, setRoster, setReleases, setStylesHref, setTeam, setVersion, stylesHref, type BuildVersion } from "./render/context.ts";
 import { loadReleases } from "./releases.ts";
 import { ownLineups } from "./lineup.ts";
 import { renderIndex } from "./render/index.ts";
 import { renderManifest, renderServiceWorker } from "./render/pwa.ts";
-import { ownPlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
+import { ownPlayers, pickablePlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
 import { renderSpielplan } from "./render/spielplan.ts";
 import { renderTabelle } from "./render/tabelle.ts";
 import { hasPreview, involvesOwn, previewName, todayInBremen } from "./render/util.ts";
@@ -74,6 +74,8 @@ if (ONLINE) setOnlineHref(buildOnlineBundle(DIST));
 /** Renders one team's pages into dist/<slug>/; returns the page count. */
 function buildTeam(d: Dataset): number {
   setLineups(ownLineups(d));
+  const players = ownPlayers(d);
+  setRoster(pickablePlayers(d, players).map((p) => ({ person: p.person, name: p.name, href: p.href })));
   const dir = join(DIST, d.own.slug);
   for (const sub of ["bericht", "vorschau", "spieler"]) mkdirSync(join(dir, sub), { recursive: true });
   const write = (file: string, content: string) => writeFileSync(join(dir, file), content);
@@ -81,7 +83,6 @@ function buildTeam(d: Dataset): number {
   write("index.html", renderIndex(d, now));
   write("tabelle.html", renderTabelle(d));
   write("spielplan.html", renderSpielplan(d, now));
-  const players = ownPlayers(d);
   const link = playerLinker(players, "../");
   for (const r of Object.values(d.reports)) {
     write(`bericht/${r.meeting}.html`, renderBericht(d, r, d.schedule.find((m) => m.meeting === r.meeting), link));

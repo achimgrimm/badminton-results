@@ -57,6 +57,9 @@ export function pickablePlayers(d: Dataset, pages: PlayerPage[]): Pickable[] {
   return [...all.values()].sort(byName);
 }
 
+/** Light bulb: the "Wer bist Du?" box's icon, which also opens the note about how the choice is stored. */
+const BULB_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2V16h5v-.1c0-.9.5-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg>`;
+
 /** "Wer bist Du?" card and the dialog with the names to pick from (see ME in layout.ts). */
 function mePicker(players: Pickable[]): string {
   if (!players.length) return "";
@@ -68,18 +71,13 @@ function mePicker(players: Pickable[]): string {
     ["Stammspieler", players.filter((p) => p.role === "team")],
     ["Ersatzspieler", players.filter((p) => p.role !== "team")],
   ];
-  return html`<section class="card me-card" id="me-card">
-      <div class="me-none">
-        <p><b>Wer bist Du?</b> Wähle Deinen Namen, dann hebt die App Deine Spiele hervor.</p>
-        <div class="btn-row"><button type="button" class="btn btn-primary me-pick">Namen wählen</button></div>
+  return html`<section class="next me-card" id="me-card">
+      <button type="button" class="hint-btn" aria-label="Hinweis zur Speicherung" aria-expanded="false" aria-controls="me-hint">${BULB_ICON}</button>
+      <div class="me-body">
+        <h2>Wer bist Du?</h2>
+        <p>Wähle Deinen Namen über das Menü oben rechts, dann hebt die App Deine Spiele hervor.</p>
+        <p class="small me-hint" id="me-hint" hidden>Ohne Anmeldung bleibt Deine Auswahl auf diesem Gerät. Angemeldet wird sie mit Deinem Konto gespeichert und, sobald ein Mannschaftsführer sie bestätigt hat, auf allen Deinen Geräten übernommen.</p>
       </div>
-      <div class="me-some" hidden>
-        <p class="me-who"><span>Du bist <b class="me-name"></b>.</span> <button type="button" class="link-button me-clear">Ich bin nicht <span class="me-name"></span></button></p>
-        <div class="btn-row">
-          <a class="btn btn-primary me-link" href="#" hidden>Meine Statistik</a>
-        </div>
-      </div>
-      <p class="small muted">Wird nur auf diesem Gerät gespeichert.</p>
     </section>
     <dialog class="team-dialog me-dialog" id="me-dialog" aria-labelledby="me-dialog-h">
       <div class="dialog-head">
@@ -167,7 +165,7 @@ export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
   return layout({ title: "Spieler", root: "", nav: "spieler", checkedAt: d.meta.checkedAt, noindex: true, body });
 }
 
-export function renderSpieler(d: Dataset, { stats: s }: PlayerPage): string {
+export function renderSpieler(d: Dataset, { stats: s, slug }: PlayerPage): string {
   const root = "../";
   const singles = s.disciplines.filter((x) => !isDoubles(x.discipline));
   const doubles = s.disciplines.filter((x) => isDoubles(x.discipline));
@@ -177,7 +175,7 @@ export function renderSpieler(d: Dataset, { stats: s }: PlayerPage): string {
     <h1${s.person != null ? ` data-person="${s.person}"` : ""}>${esc(displayName(s.name))}</h1>
     ${gender ? `<p class="small muted">${GENDER_LABEL[gender]}</p>` : ""}
     ${s.person != null
-      ? html`<div class="btn-row"><button type="button" class="btn btn-secondary me-toggle" data-person="${s.person}" data-name="${esc(s.name)}" aria-pressed="false">${CHECK}<span>Das bin ich</span></button></div>`
+      ? html`<div class="btn-row"><button type="button" class="btn btn-secondary me-toggle" data-person="${s.person}" data-name="${esc(s.name)}" data-href="spieler/${esc(slug)}.html" aria-pressed="false">${CHECK}<span>Das bin ich</span></button></div>`
       : ""}
     <div class="stats">
       <div class="stat"><span class="stat-value">${s.played}</span><span class="stat-label">Spiele</span></div>

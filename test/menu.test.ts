@@ -23,12 +23,25 @@ test("the menu holds install, share, theme, release notes and privacy", () => {
   const { menu } = page();
   for (const id of ["install-btn", "share-btn", "theme-toggle", "release-link"]) assert.ok(menu.includes(`id="${id}"`), id);
   assert.ok(menu.includes("datenschutz.html"));
-  assert.equal(menu.includes('id="account"'), ONLINE);
+  assert.equal(menu.includes('id="account-who"') && menu.includes('id="account-actions"'), ONLINE);
 });
 
 test("the footer keeps Datenschutz but no longer the release link or the account", () => {
   const { footer } = page();
   assert.ok(footer.includes("datenschutz.html"));
   assert.ok(!footer.includes("release-link"));
-  assert.ok(!footer.includes('id="account"'));
+  assert.ok(!footer.includes("account-who") && !footer.includes("account-actions"));
+});
+
+test("team pages offer the player pick in the menu, other pages do not", async () => {
+  const { layout } = await import("../src/render/layout.ts");
+  const team = { slug: "aktive-2", label: "Aktive II", name: "OT Bremen II", league: "Liga", championship: "x", group: 1, teamtable: 1 };
+  const render = () => layout({ title: "t", root: "", nav: "index", checkedAt: null, body: "" });
+  setTeam(team as never, [team as never]);
+  const withTeam = render();
+  assert.ok(withTeam.includes('id="menu-pick"'));
+  assert.ok(withTeam.includes('href="spieler.html#wer-bist-du"'));
+  assert.ok(withTeam.includes('id="menu-stats"') && withTeam.includes('id="menu-clear"'));
+  setTeam(null, []);
+  assert.ok(!page().menu.includes("menu-pick"));
 });

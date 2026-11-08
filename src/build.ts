@@ -8,6 +8,7 @@ import { DATA_DIR, loadClubTeams, loadClubs, loadDataset, paths, type Dataset } 
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
 import { renderDatenschutz } from "./render/datenschutz.ts";
+import { renderAuthCallback } from "./render/auth-callback.ts";
 import { renderChooser } from "./render/chooser.ts";
 import { setLineups, setOnlineHref, setReleases, setStylesHref, setTeam, setVersion, stylesHref, type BuildVersion } from "./render/context.ts";
 import { loadReleases } from "./releases.ts";
@@ -124,6 +125,7 @@ setTeam(null, teams);
 writeFileSync(join(DIST, "index.html"), renderChooser(teams, standings, nextMatches, checkedAt));
 
 writeFileSync(join(DIST, "datenschutz.html"), renderDatenschutz(checkedAt));
+if (ONLINE) writeFileSync(join(DIST, "auth-callback.html"), renderAuthCallback());
 
 copyFileSync(join(SRC, "styles.css"), join(DIST, "styles.css"));
 copyFileSync(join(SRC, "favicon.svg"), join(DIST, "favicon.svg"));

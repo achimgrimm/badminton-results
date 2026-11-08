@@ -18,6 +18,12 @@ const track = (name: string, data?: Record<string, string>) => {
   try { otTrack(name, data); } catch { /* tracking is optional */ }
 };
 
+/** The callback page's URL, from the script tag (relative to the page, so it works under /stage/<name>/). */
+const callback = (() => {
+  const attr = document.currentScript?.getAttribute("data-callback");
+  return attr ? new URL(attr, location.href).href : location.origin + location.pathname;
+})();
+
 let session: Session | null = null;
 const listeners = new Set<(s: Session | null) => void>();
 
@@ -25,11 +31,9 @@ export const Online = {
   get session() { return session; },
   signIn: async () => {
     track("login", { provider: "google" });
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      // Back to this very page (also works under /stage/<name>/).
-      options: { redirectTo: location.origin + location.pathname },
-    });
+    // The callback page sends the visitor back to this page afterwards.
+    try { sessionStorage.setItem("auth-return", location.href); } catch { /* falls back to the site root */ }
+    await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: callback } });
   },
   signOut: async () => {
     track("logout");

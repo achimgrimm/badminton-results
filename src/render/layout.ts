@@ -610,7 +610,7 @@ ${releaseDialog()}
 </dialog>
 ${o.back ? `<script>${BACK_LINK}</script>` : ""}
 <script>${THEME_TOGGLE}</script>
-${ONLINE ? `<script src="${assets}${onlineHref()}" defer></script>` : ""}
+${ONLINE ? `<script src="${assets}${onlineHref()}" data-callback="${assets}auth-callback.html" defer></script>` : ""}
 <script>${INSTALL(assets)}</script>
 ${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}
 ${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${PLAYING(team.slug)}${ME(team.slug)}</script>` : ""}

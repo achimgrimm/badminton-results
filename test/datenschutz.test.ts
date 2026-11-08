@@ -17,3 +17,11 @@ test("every page links the privacy page", () => {
   setTeam(null, []);
   assert.ok(renderDatenschutz(null).includes('href="datenschutz.html"'));
 });
+
+test("the auth callback page goes back to the stored page", async () => {
+  const { renderAuthCallback } = await import("../src/render/auth-callback.ts");
+  setTeam(null, []);
+  const page = renderAuthCallback();
+  assert.ok(page.includes("auth-return"));
+  assert.ok(page.includes('content="noindex"'));
+});

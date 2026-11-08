@@ -5,8 +5,8 @@ name: Migrate database
 # Needs the repository secrets SUPABASE_ACCESS_TOKEN (account access token) and SUPABASE_DB_PASSWORD.
 on:
   push:
-    branches: [main]
-    paths: ["supabase/**"]
+    branches: [main, feature/online-backend] # TEMP: first migration from the branch
+    paths: ["supabase/**", ".github/workflows/migrate.yml"]
   workflow_dispatch:
 
 permissions:

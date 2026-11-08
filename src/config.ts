@@ -76,6 +76,15 @@ export const UMAMI_WEBSITE_ID: string = "3063f1a3-eff3-4074-9e54-08f13cd3b50d";
 /** Only the live site is counted, not local previews. */
 export const UMAMI_DOMAIN = "achimgrimm.github.io";
 
+/**
+ * Supabase (EU, Frankfurt): shared data and sign-in. The publishable key is public by design;
+ * access is enforced by row-level security. An empty URL or key turns all online features off.
+ */
+export const SUPABASE_PROJECT_ID = "jfsjjkfrhkaothradjiy";
+export const SUPABASE_URL: string = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
+export const SUPABASE_ANON_KEY: string = "sb_publishable_C1miwWvIufN93GrVHZPPwA_KMteGNua";
+export const ONLINE = SUPABASE_URL !== "" && SUPABASE_ANON_KEY !== "";
+
 /** Branch name → stage folder name: lowercase, every run of other characters becomes "-". */
 export function stageName(branch: string): string {
   return branch.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");

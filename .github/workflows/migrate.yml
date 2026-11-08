@@ -1,0 +1,32 @@
+name: Migrate database
+
+# Applies supabase/migrations/ to the Supabase project when main changes them. Branches and test
+# stages never run this: there is only one database, and it belongs to the live site.
+# Needs the repository secrets SUPABASE_ACCESS_TOKEN (account access token) and SUPABASE_DB_PASSWORD.
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_ID: jfsjjkfrhkaothradjiy
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase link --project-ref "$PROJECT_ID"
+      - run: supabase db push

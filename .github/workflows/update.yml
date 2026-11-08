@@ -70,6 +70,10 @@ jobs:
             data-
       - run: npm run scrape
       - run: npm run build
+      # Keeps the free Supabase project awake; a failure must not stop the site update.
+      - if: ${{ matrix.site.stage == '' }}
+        continue-on-error: true
+        run: npx tsx scripts/keepalive.ts
       # Only reached when scrape and build succeeded, so bad data is never cached.
       - uses: actions/cache/save@v6
         with:

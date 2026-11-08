@@ -51,6 +51,13 @@ export function setStylesHref(href: string): void {
 }
 export const stylesHref = (): string => styles;
 
+/** The online bundle's URL with a content hash, for the same reason as the stylesheet's. */
+let online = "online.js";
+export function setOnlineHref(href: string): void {
+  online = href;
+}
+export const onlineHref = (): string => online;
+
 /** Release notes from release-notes/, newest first. */
 let releases: Release[] = [];
 export function setReleases(r: Release[]): void {

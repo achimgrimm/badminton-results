@@ -1,8 +1,8 @@
-import { CLUB_NAME, REPO_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
+import { CLUB_NAME, ONLINE, REPO_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
 import { PLAYING_STATE } from "../playing.ts";
 import { APP_SHORT_NAME } from "./pwa.ts";
-import { buildVersion, clubTeams, currentTeam, releaseNotes, stylesHref } from "./context.ts";
+import { buildVersion, clubTeams, currentTeam, onlineHref, releaseNotes, stylesHref } from "./context.ts";
 import { esc, formatDate, formatTimestamp, html, todayInBremen } from "./util.ts";
 
 export type NavKey = "index" | "tabelle" | "spielplan" | "spieler" | null;
@@ -581,6 +581,7 @@ ${o.body}
     <p>Inoffizielle Ansicht. Daten: <a href="${esc(o.sourceUrl ?? (team ? urls.groupPage(team) : urls.clubTeams()))}">nuLiga</a> / Bremer Badminton-Verband.</p>
     ${TRACKING ? `<p>Anonyme Nutzungsstatistik mit Umami, ohne Cookies und ohne persönliche Daten.</p>` : ""}
     ${footerStatus(o.checkedAt)}
+    <p><a href="${assets}datenschutz.html">Datenschutz</a>${ONLINE ? ` · <span id="account"></span>` : ""}</p>
   </div>
 </footer>
 ${team ? teamDialog(team, assets) : ""}
@@ -609,6 +610,7 @@ ${releaseDialog()}
 </dialog>
 ${o.back ? `<script>${BACK_LINK}</script>` : ""}
 <script>${THEME_TOGGLE}</script>
+${ONLINE ? `<script src="${assets}${onlineHref()}" defer></script>` : ""}
 <script>${INSTALL(assets)}</script>
 ${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}
 ${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${PLAYING(team.slug)}${ME(team.slug)}</script>` : ""}

@@ -2,12 +2,14 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { STAGE } from "./config.ts";
+import { buildSync } from "esbuild";
+import { ONLINE, STAGE, SUPABASE_ANON_KEY, SUPABASE_URL, storageKey } from "./config.ts";
 import { DATA_DIR, loadClubTeams, loadClubs, loadDataset, paths, type Dataset } from "./data.ts";
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
+import { renderDatenschutz } from "./render/datenschutz.ts";
 import { renderChooser } from "./render/chooser.ts";
-import { setLineups, setReleases, setStylesHref, setTeam, setVersion, stylesHref, type BuildVersion } from "./render/context.ts";
+import { setLineups, setOnlineHref, setReleases, setStylesHref, setTeam, setVersion, stylesHref, type BuildVersion } from "./render/context.ts";
 import { loadReleases } from "./releases.ts";
 import { ownLineups } from "./lineup.ts";
 import { renderIndex } from "./render/index.ts";
@@ -44,12 +46,29 @@ setVersion(gitVersion());
 setStylesHref(`styles.css?v=${createHash("sha256").update(readFileSync(join(SRC, "styles.css"))).digest("hex").slice(0, 10)}`);
 setReleases(loadReleases(new URL("../release-notes/", import.meta.url).pathname));
 
+/** Bundles supabase-js and the sign-in script into one file; returns its hashed URL. */
+function buildOnlineBundle(outDir: string): string {
+  const out = buildSync({
+    entryPoints: [join(SRC, "client", "online.ts")],
+    bundle: true, minify: true, format: "iife", target: "es2020", write: false,
+    define: {
+      SUPABASE_URL: JSON.stringify(SUPABASE_URL),
+      SUPABASE_ANON_KEY: JSON.stringify(SUPABASE_ANON_KEY),
+      STORAGE_KEY: JSON.stringify(storageKey("auth")),
+    },
+  }).outputFiles[0];
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, "online.js"), out.contents);
+  return `online.js?v=${createHash("sha256").update(out.contents).digest("hex").slice(0, 10)}`;
+}
+
 const teams = loadClubTeams();
 if (teams.length === 0) throw new Error("no data – run `npm run scrape` first");
 const now = new Date();
 
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(join(DIST, "icons"), { recursive: true });
+if (ONLINE) setOnlineHref(buildOnlineBundle(DIST));
 
 /** Renders one team's pages into dist/<slug>/; returns the page count. */
 function buildTeam(d: Dataset): number {
@@ -103,6 +122,8 @@ for (const team of teams) {
 
 setTeam(null, teams);
 writeFileSync(join(DIST, "index.html"), renderChooser(teams, standings, nextMatches, checkedAt));
+
+writeFileSync(join(DIST, "datenschutz.html"), renderDatenschutz(checkedAt));
 
 copyFileSync(join(SRC, "styles.css"), join(DIST, "styles.css"));
 copyFileSync(join(SRC, "favicon.svg"), join(DIST, "favicon.svg"));

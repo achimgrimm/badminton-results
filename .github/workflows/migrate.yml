@@ -6,8 +6,8 @@ name: Migrate database
 # host is IPv6 only and GitHub runners can't reach it) including the database password.
 on:
   push:
-    branches: [main]
-    paths: ["supabase/**"]
+    branches: [main, feature/online-backend] # TEMP: RBAC migration from the branch
+    paths: ["supabase/**", ".github/workflows/migrate.yml"]
   workflow_dispatch:
 
 permissions:

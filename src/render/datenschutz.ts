@@ -30,10 +30,10 @@ export function renderDatenschutz(checkedAt: string | null): string {
     ${ONLINE
       ? html`<h2>Anmeldung mit Google</h2>
     <p>Die Anmeldung ist freiwillig. Alle bisherigen Funktionen der App gehen auch ohne Anmeldung. Wenn Du Dich mit Google anmeldest, erhalten wir von Google nur diese Angaben über Deinen Account: eine Account-Kennung, Deine E-Mail-Adresse und Deinen Namen (Berechtigungen „openid“, „email“ und „profile“). Dein Google-Passwort sehen wir nie.</p>
-    <p>Wir verwenden diese Daten ausschließlich, um Dich anzumelden, Dein Konto wiederzuerkennen und zu entscheiden, ob Du als Mannschaftsführer gemeinsame Daten wie Aufstellungen ändern darfst. Sie werden nicht für Werbung genutzt, nicht verkauft und nicht an Dritte weitergegeben. Die Nutzung der von Google erhaltenen Daten entspricht der Google API Services User Data Policy, einschließlich der Anforderungen zur eingeschränkten Nutzung.</p>
+    <p>Wir verwenden diese Daten ausschließlich, um Dich anzumelden, Dein Konto wiederzuerkennen und zu entscheiden, ob Du mit Deiner Rolle (Mitglied, Mannschaftsführer oder Administrator) gemeinsame Daten wie Aufstellungen ändern darfst. Sie werden nicht für Werbung genutzt, nicht verkauft und nicht an Dritte weitergegeben. Die Nutzung der von Google erhaltenen Daten entspricht der Google API Services User Data Policy, einschließlich der Anforderungen zur eingeschränkten Nutzung.</p>
 
     <h2>Gespeicherte Daten im Konto</h2>
-    <p>In unserer Datenbank gespeichert werden: Account-Kennung, E-Mail-Adresse, Name, Anmeldezeitpunkte, ein Profil mit Anzeigename und, falls Du als Mannschaftsführer freigegeben bist, für welche Mannschaft. Später kommen Daten hinzu, die Du in der App für andere teilst (z. B. Aufstellungen oder Erinnerungen); dann steht es in dieser Erklärung.</p>
+    <p>In unserer Datenbank gespeichert werden: Account-Kennung, E-Mail-Adresse, Name, Anmeldezeitpunkte, ein Profil mit Anzeigename und Deine Rolle (jedes Konto ist zunächst „Mitglied“, ein Administrator kann Dich zum Mannschaftsführer oder Administrator machen). Später kommen Daten hinzu, die Du in der App für andere teilst (z. B. Aufstellungen oder Erinnerungen); dann steht es in dieser Erklärung.</p>
     <p>Die Datenbank wird von Supabase betrieben, Projekt ${esc(SUPABASE_PROJECT_ID)}, Serverstandort EU (Frankfurt). Mit Supabase besteht ein Auftragsverarbeitungsverhältnis. Die Anmeldung läuft über Google (Google Ireland Ltd.).</p>
 
     <h2>Speicherdauer und Konto löschen</h2>

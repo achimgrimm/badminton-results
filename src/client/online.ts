@@ -25,10 +25,15 @@ const callback = (() => {
 })();
 
 let session: Session | null = null;
+/** The permissions of the signed-in user's roles (RBAC, see supabase/migrations); empty when signed out. */
+let permissions: ReadonlySet<string> = new Set();
 const listeners = new Set<(s: Session | null) => void>();
 
 export const Online = {
   get session() { return session; },
+  get permissions() { return permissions; },
+  /** Whether the signed-in user may do this, e.g. can("lineup.write"). The server enforces it again. */
+  can: (permission: string) => permissions.has(permission),
   signIn: async () => {
     track("login", { provider: "google" });
     // The callback page sends the visitor back to this page afterwards.
@@ -75,13 +80,25 @@ function renderAccount(): void {
   }));
 }
 
-supabase.auth.onAuthStateChange((_event, s) => {
+let applied = 0;
+/** Takes over a session change: shows the account, loads its permissions, then tells the listeners. */
+function apply(s: Session | null): void {
+  const run = ++applied;
   session = s;
+  permissions = new Set();
   renderAccount();
-  listeners.forEach((fn) => fn(session));
-});
-supabase.auth.getSession().then(({ data }) => {
-  session = data.session;
-  renderAccount();
-  listeners.forEach((fn) => fn(session));
-});
+  const done = () => {
+    if (run === applied) listeners.forEach((fn) => fn(session));
+  };
+  if (!s) return done();
+  // Not awaited inside the auth callback: supabase-js would deadlock on its own lock.
+  void Promise.resolve(supabase.rpc("my_permissions"))
+    .then(({ data }) => {
+      if (run === applied) permissions = new Set(Array.isArray(data) ? (data as string[]) : []);
+    })
+    .catch(() => { /* no permissions known: the app treats the user as having none */ })
+    .finally(done);
+}
+
+// Fires once with the stored session and again on every sign-in, sign-out and token refresh.
+supabase.auth.onAuthStateChange((_event, s) => apply(s));

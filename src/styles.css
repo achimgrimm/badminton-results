@@ -100,7 +100,20 @@ main.container { padding-bottom: 32px; }
 .header-btn:hover { background: rgba(255,255,255,.15); }
 .header-btn svg { width: 20px; height: 20px; }
 .header-btn[hidden] { display: none; }
-.install-btn, .share-btn { padding: 0 14px 0 10px; }
+/* The header menu: a dialog panel at the top right (base look from .team-dialog) */
+.menu-dialog { margin: 56px 8px auto auto; width: min(92vw, 320px); padding: 8px 12px 12px; }
+.menu-dialog .dialog-head { padding: 0 0 0 8px; }
+.menu-dialog h2 { font-size: 1.125rem; }
+.menu-section { border-top: 1px solid var(--ot-border); padding: 6px 0; }
+.menu-section:empty { display: none; }
+.menu-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 12px; border: 0; border-radius: var(--ot-radius);
+             background: none; color: var(--ot-text-strong); font: 600 1rem var(--ot-font); text-align: left; text-decoration: none; cursor: pointer; }
+.menu-item:hover { background: var(--ot-bg-alt); color: var(--ot-text-strong); text-decoration: none; }
+.menu-item svg { flex: none; width: 20px; height: 20px; }
+.menu-item[hidden] { display: none; }
+.menu-item--danger, .menu-item--danger:hover { color: var(--ot-error); }
+.menu-account { margin: 4px 12px 6px; }
+.menu-account b { color: var(--ot-text-strong); }
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }

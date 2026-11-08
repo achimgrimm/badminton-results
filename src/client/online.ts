@@ -72,37 +72,49 @@ export const Online = {
 };
 (window as unknown as { Online: typeof Online }).Online = Online;
 
-/** The footer's account line, rendered by the layout as an empty #account element. */
+/** The menu's account section, rendered by the layout as an empty #account element. */
 function renderAccount(): void {
   const el = document.getElementById("account");
   if (!el) return;
   el.textContent = "";
-  const link = (text: string, onClick: () => void) => {
-    const a = document.createElement("a");
-    a.href = "#";
-    a.textContent = text;
-    a.addEventListener("click", (e) => { e.preventDefault(); onClick(); });
-    return a;
+  // Items that open a prompt or a page close the menu first (data-menu-close, see MENU in layout.ts).
+  const item = (text: string, onClick: () => void, danger = false) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = danger ? "menu-item menu-item--danger" : "menu-item";
+    b.dataset.menuClose = "";
+    b.textContent = text;
+    b.addEventListener("click", onClick);
+    return b;
   };
   if (!session) {
-    el.append(link("Mit Google anmelden", () => void Online.signIn()));
+    el.append(item("Mit Google anmelden", () => void Online.signIn()));
     return;
   }
   // The name comes from the database; the Google name only fills in until it is loaded or if it is missing.
   const meta = session.user.user_metadata as Record<string, unknown>;
   const name = displayName ?? String(meta.full_name ?? meta.name ?? session.user.email ?? "Konto");
   const role = roleLabel(roles);
-  el.append(`Angemeldet als ${name}${role ? ` (${role})` : ""} · `,
-    link("Name ändern", () => {
+  const who = document.createElement("p");
+  who.className = "menu-account small muted";
+  const strong = document.createElement("b");
+  strong.textContent = name;
+  who.append(strong);
+  if (role) who.append(document.createElement("br"), role);
+  el.append(
+    who,
+    item("Name ändern", () => {
       const input = prompt(`Dein Name in der App (höchstens ${MAX_NAME_LENGTH} Zeichen):`, name);
       if (input === null) return;
       if (!cleanDisplayName(input)) { alert(`Bitte gib einen Namen mit 1 bis ${MAX_NAME_LENGTH} Zeichen ein.`); return; }
       Online.setDisplayName(input).catch(() => alert("Der Name konnte nicht gespeichert werden. Bitte versuche es später noch einmal."));
     }),
-    " · ", link("Abmelden", () => void Online.signOut()), " · ", link("Konto löschen", () => {
+    item("Abmelden", () => void Online.signOut()),
+    item("Konto löschen", () => {
       if (!confirm("Konto und alle gespeicherten Daten endgültig löschen?")) return;
       Online.deleteAccount().catch(() => alert("Das Konto konnte nicht gelöscht werden. Bitte versuche es später noch einmal."));
-    }));
+    }, true),
+  );
 }
 
 let applied = 0;

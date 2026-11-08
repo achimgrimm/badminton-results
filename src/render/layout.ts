@@ -266,7 +266,7 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
   dlg.querySelectorAll(".dialog-close, .btn").forEach(function (b) { b.addEventListener("click", done); });
   dlg.addEventListener("click", function (e) { if (e.target === dlg) done(); });
   dlg.addEventListener("close", function () { try { localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} });
-  document.getElementById("release-link").addEventListener("click", function (e) { e.preventDefault(); show(arts, "footer"); });
+  document.getElementById("release-link").addEventListener("click", function (e) { e.preventDefault(); show(arts, "menu"); });
   if (!${auto}) return;
   if (!seen && !known) { try { localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} return; }
   var fresh = arts.filter(function (a) { return !seen || a.dataset.release > seen; });
@@ -308,6 +308,41 @@ const TEAM_SWITCH = `(function () {
   dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
 })();`;
 
+/**
+ * The header menu: a dialog at the top right. Items marked data-menu-close close it first (capture
+ * phase, so before their own handlers run), so help dialogs, release notes and prompts never open
+ * on top of it. The theme and share items stay open: their change is visible in the menu itself.
+ */
+const MENU = `(function () {
+  var btn = document.getElementById("menu-btn"), dlg = document.getElementById("menu-dialog");
+  btn.addEventListener("click", function () { dlg.showModal(); otTrack("menu"); });
+  dlg.querySelector(".dialog-close").addEventListener("click", function () { dlg.close(); });
+  dlg.addEventListener("click", function (e) {
+    if (e.target === dlg) dlg.close();
+    else if (e.target.closest("[data-menu-close]")) dlg.close();
+  }, true);
+})();`;
+
+const MENU_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`;
+
+/** The menu: account (filled by online.js), app actions, notes and privacy. Item ids are used by the page scripts. */
+function menuDialog(assets: string): string {
+  return html`<dialog class="team-dialog menu-dialog" id="menu-dialog" aria-labelledby="menu-h">
+  <div class="dialog-head">
+    <h2 id="menu-h">Menü</h2>
+    <button type="button" class="dialog-close" aria-label="Schließen">×</button>
+  </div>
+  ${ONLINE ? `<div class="menu-section" id="account"></div>` : ""}
+  <div class="menu-section">
+    <button type="button" class="menu-item" id="install-btn" data-menu-close hidden>${INSTALL_ICON}<span>App installieren</span></button>
+    <button type="button" class="menu-item" id="share-btn" hidden>${SHARE_BTN_ICON}<span>App teilen</span></button>
+    <button type="button" class="menu-item theme-toggle" id="theme-toggle">${MOON}${SUN}<span>Dunkles Design</span></button>
+    ${releaseNotes().length ? `<a class="menu-item" href="#" id="release-link" data-menu-close>${RELEASE_ICON}<span>Was ist neu?</span></a>` : ""}
+    <a class="menu-item" href="${assets}datenschutz.html">${LOCK_ICON}<span>Datenschutz</span></a>
+  </div>
+</dialog>`;
+}
+
 /** Youth teams after the adult ones, each in club order. */
 export function teamGroups(teams: ClubTeam[]): [string, ClubTeam[]][] {
   const youth = (t: ClubTeam) => /jugend|schüler|schueler|mini/i.test(t.label);
@@ -348,8 +383,7 @@ const THEME_TOGGLE = `(function () {
   var root = document.documentElement, btn = document.getElementById("theme-toggle");
   function label() {
     var dark = root.dataset.theme === "dark";
-    btn.setAttribute("aria-label", dark ? "Helles Design einschalten" : "Dunkles Design einschalten");
-    btn.title = btn.getAttribute("aria-label");
+    btn.querySelector("span").textContent = dark ? "Helles Design" : "Dunkles Design";
     document.querySelector('meta[name="theme-color"]').content = dark ? "#0b1e45" : "#0a409f";
   }
   btn.addEventListener("click", function () {
@@ -422,7 +456,7 @@ const INSTALL = (root: string) => `(function () {
     function copied(text) {
       label.textContent = text;
       clearTimeout(timer);
-      timer = setTimeout(function () { label.textContent = "Teilen"; }, 2000);
+      timer = setTimeout(function () { label.textContent = "App teilen"; }, 2000);
     }
     sb.hidden = false;
     sb.addEventListener("click", function () {
@@ -452,6 +486,9 @@ const MOON = `<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="cur
 const SUN = `<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
 
 const CHEVRON = `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
+
+const RELEASE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.4 5 5.6.8-4 3.9.9 5.6-4.9-2.6-4.9 2.6.9-5.6-4-3.9 5.6-.8z"/></svg>`;
+const LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
 
 /** Filled and opened by NEW_RESULTS when results appeared since the last visit. */
 const NEW_DIALOG = html`<dialog class="team-dialog new-dialog" id="new-dialog" aria-labelledby="new-dialog-h">
@@ -491,7 +528,6 @@ function footerStatus(checkedAt: string | null): string {
     checkedAt ? `Stand: ${esc(formatTimestamp(checkedAt))}` : "",
     v ? `Version <a href="${REPO_URL}/commit/${esc(v.sha)}">${esc(v.sha.slice(0, 7))}</a> vom ${todayInBremen(new Date(v.date)).split("-").reverse().join(".")}` : "",
   ].filter(Boolean);
-  if (releaseNotes().length) parts.push(`<a href="#" id="release-link">Was ist neu?</a>`);
   return parts.length ? `<p>${parts.join(" · ")}</p>` : "";
 }
 
@@ -550,9 +586,7 @@ ${STAGE ? html`<div class="stage-banner" role="note">Testversion: <b>${esc(STAGE
     <img class="club-logo" src="${assets}club-logo.png" alt="TSV Osterholz-Tenever" width="40" height="40">
     ${brand}
     <div class="header-actions">
-      <button type="button" class="header-btn install-btn" id="install-btn" aria-label="App installieren" title="App installieren" hidden>${INSTALL_ICON}<span>App</span></button>
-      <button type="button" class="header-btn share-btn" id="share-btn" aria-label="App teilen" title="App teilen" hidden>${SHARE_BTN_ICON}<span>Teilen</span></button>
-      <button type="button" class="header-btn theme-toggle" id="theme-toggle" aria-label="Dunkles Design einschalten">${MOON}${SUN}</button>
+      <button type="button" class="header-btn menu-btn" id="menu-btn" aria-haspopup="dialog" aria-label="Menü" title="Menü">${MENU_ICON}</button>
     </div>
   </div>
   ${team
@@ -581,11 +615,12 @@ ${o.body}
     <p>Inoffizielle Ansicht. Daten: <a href="${esc(o.sourceUrl ?? (team ? urls.groupPage(team) : urls.clubTeams()))}">nuLiga</a> / Bremer Badminton-Verband.</p>
     ${TRACKING ? `<p>Anonyme Nutzungsstatistik mit Umami, ohne Cookies und ohne persönliche Daten.</p>` : ""}
     ${footerStatus(o.checkedAt)}
-    <p><a href="${assets}datenschutz.html">Datenschutz</a>${ONLINE ? ` · <span id="account"></span>` : ""}</p>
+    <p><a href="${assets}datenschutz.html">Datenschutz</a></p>
   </div>
 </footer>
 ${team ? teamDialog(team, assets) : ""}
 ${team ? NEW_DIALOG : ""}
+${menuDialog(assets)}
 ${releaseDialog()}
 <dialog class="install-help" id="install-help" aria-labelledby="install-help-h">
   <h2 id="install-help-h">App installieren</h2>
@@ -609,6 +644,7 @@ ${releaseDialog()}
   </div>
 </dialog>
 ${o.back ? `<script>${BACK_LINK}</script>` : ""}
+<script>${MENU}</script>
 <script>${THEME_TOGGLE}</script>
 ${ONLINE ? `<script src="${assets}${onlineHref()}" data-callback="${assets}auth-callback.html" defer></script>` : ""}
 <script>${INSTALL(assets)}</script>

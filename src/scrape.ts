@@ -1,16 +1,18 @@
-import { rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { urls, type PoolRound } from "./config.ts";
-import { DATA_DIR, loadClubTeams, loadHalls, loadReports, paths, writeJson } from "./data.ts";
-import { fetchHtml } from "./fetch.ts";
+import { CLUB_REGIONS, urls, type PoolRound } from "./config.ts";
+import { DATA_DIR, loadClubTeams, loadHalls, loadReports, paths, readJson, writeJson } from "./data.ts";
+import { fetchBinary, fetchHtml, fetchHtmlWithCookie } from "./fetch.ts";
+import { logoExtension } from "./logos.ts";
 import { leagueName, parseClubTeams, teamSlug } from "./parse/club.ts";
+import { parseClubLogo, parseClubSearch } from "./parse/clubs.ts";
 import { parseReport, reportAvailable } from "./parse/report.ts";
 import { parseSchedule } from "./parse/schedule.ts";
 import { parseTable } from "./parse/table.ts";
 import { parsePools } from "./parse/pools.ts";
 import { parseCourt, parseTeam } from "./parse/team.ts";
 import { poolTypes, teamRoster, type Pools } from "./roster.ts";
-import type { ClubTeam, Meeting } from "./types.ts";
+import type { Club, ClubTeam, Meeting } from "./types.ts";
 
 const started = Date.now();
 const log = (msg: string) => console.log(`[${((Date.now() - started) / 1000).toFixed(1).padStart(5)}s] ${msg}`);
@@ -114,6 +116,46 @@ for (const location of newLocations) {
   log(`  hall ${location}: ${halls[location].name}`);
 }
 if (writeJson(paths.halls, halls)) changed.push("halls");
+
+// Club logos for the match pages. The club lists are cheap; each club's page and logo are fetched once
+// (logo null = none). A failure here only costs the logos, never the rest of the scrape.
+try {
+  const known = new Map(readJson<Club[]>(paths.clubs, []).map((c) => [c.id, c]));
+  const clubs: Club[] = [];
+  for (const region of CLUB_REGIONS) {
+    for (const row of parseClubSearch(await fetchHtml(urls.clubSearch(region)))) {
+      if (!clubs.some((c) => c.id === row.id)) clubs.push({ ...row, logo: known.get(row.id)?.logo });
+    }
+  }
+  if (clubs.length === 0) throw new Error("club list parsed empty");
+  mkdirSync(join(DATA_DIR, paths.logos), { recursive: true });
+  let fetched = 0;
+  for (const club of clubs) {
+    if (club.logo === null || (club.logo && existsSync(join(DATA_DIR, paths.logos, club.logo)))) continue;
+    try {
+      const page = await fetchHtmlWithCookie(urls.clubInfo(club.id));
+      const src = parseClubLogo(page.html);
+      if (!src) {
+        club.logo = null; // the club has no logo
+      } else {
+        const image = await fetchBinary(src, page.cookie);
+        const ext = logoExtension(image.type);
+        if (!ext || image.data.length === 0) throw new Error(`logo is not an image (${image.type || "no type"}, ${image.data.length} bytes)`);
+        club.logo = `${club.id}.${ext}`;
+        writeFileSync(join(DATA_DIR, paths.logos, club.logo), image.data);
+      }
+      fetched++;
+      log(`  logo ${club.name}: ${club.logo ?? "none"}`);
+    } catch (err) {
+      club.logo = undefined;
+      console.warn(`logo ${club.name}: ${(err as Error).message}`);
+    }
+  }
+  log(`clubs: ${clubs.length} listed, ${clubs.filter((c) => c.logo).length} with a logo, ${fetched} looked up`);
+  if (writeJson(paths.clubs, clubs)) changed.push("clubs");
+} catch (err) {
+  console.warn(`club logos skipped: ${(err as Error).message}`);
+}
 
 // meta.json changes on every run, so it is not counted as a change.
 writeJson(paths.meta, { checkedAt: new Date().toISOString() });

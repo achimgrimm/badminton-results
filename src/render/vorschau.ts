@@ -3,7 +3,7 @@ import type { Dataset } from "../data.ts";
 import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
 import { headToHead, lineup, playerStats, teamForm, type PlayerStats, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
-import { hallAddress, matchCard, playToggle } from "./components.ts";
+import { hallAddress, matchCard, playToggle, teamLogo } from "./components.ts";
 import { layout, SHARE_BTN_ICON } from "./layout.ts";
 import { disciplinePills, quota, record } from "./spieler.ts";
 import { displayName, esc, formatDate, html, isOwn, opponentOf, postponedLabel, previewName } from "./util.ts";
@@ -310,7 +310,7 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
     <section class="next">
       <h2>Vorschau · ${home ? "Heimspiel" : "Auswärtsspiel"}</h2>
       <div class="when">${esc(formatDate(m.date, true))}${m.time ? `, ${esc(m.time)} Uhr` : ""}</div>
-      <div class="vs">${home ? `<b>Heim</b> gegen ${esc(opponent)}` : `<b>Auswärts</b> bei ${esc(opponent)}`}</div>
+      <div class="vs">${home ? "<b>Heim</b> gegen" : "<b>Auswärts</b> bei"} ${teamLogo(d.clubs, opponent, "../../")}${esc(opponent)}</div>
       ${m.postponed ? `<p class="small"><span class="badge">${esc(postponedLabel(m))}</span></p>` : ""}
       <div class="btn-row">${playToggle(m, "hero")}</div>
     </section>
@@ -329,7 +329,7 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
       </div>
     </div>
 
-    <h2>Gegner: ${esc(opponent)}</h2>
+    <h2>Gegner: ${teamLogo(d.clubs, opponent, "../../")}${esc(opponent)}</h2>
     ${standing
       ? html`<div class="stats">
           <div class="stat"><span class="stat-value">${standing.rank}.</span><span class="stat-label">Platz</span></div>

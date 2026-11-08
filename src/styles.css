@@ -109,6 +109,11 @@ main.container { padding-bottom: 32px; }
 .brand-team { font-weight: 700; font-size: 1.25rem; }
 .brand-league { font-size: .875rem; opacity: .85; }
 .club-logo { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #fff; padding: 2px; box-sizing: border-box; }
+/* Club logo beside a team name on the match pages; logos are often transparent, so they sit on white */
+.club-mark { flex: none; width: 32px; height: 32px; object-fit: contain; border-radius: 6px; background: #fff; padding: 2px; box-sizing: border-box; vertical-align: middle; margin-right: 6px; }
+.match .club-mark { width: 24px; height: 24px; margin-right: 8px; }
+.club-mark--none { display: inline-block; background: none; padding: 0; }
+.report-head .team .club-mark { display: block; margin: 0 auto 6px; width: 40px; height: 40px; }
 .header-inner .brand { flex: 1; min-width: 0; }
 .brand-btn { font: inherit; background: none; border: 0; padding: 4px 8px; margin: -4px -8px; border-radius: var(--ot-radius); text-align: left; cursor: pointer; }
 .brand-btn:hover { background: rgba(255,255,255,.12); }

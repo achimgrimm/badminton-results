@@ -7,6 +7,7 @@ import { normalizeDiscipline, parseReport, reportAvailable } from "../src/parse/
 import { leagueName, parseClubTeams, teamSlug } from "../src/parse/club.ts";
 import { parseCourt, parseTeam } from "../src/parse/team.ts";
 import { parsePools } from "../src/parse/pools.ts";
+import { parseClubLogo, parseClubSearch } from "../src/parse/clubs.ts";
 
 const fixture = (name: string) => readFileSync(new URL(`fixtures/${name}`, import.meta.url), "utf8");
 
@@ -134,4 +135,20 @@ test("club pools", () => {
   const reserve = rows.find((r) => r.name === "Grimm, Achim")!;
   assert.deepEqual(reserve, { rank: 24, team: null, name: "Grimm, Achim", person: 1541141 });
   assert.deepEqual(parsePools(fixture("club-pools-empty.html")), []);
+});
+
+test("club search lists the clubs with their ids", () => {
+  const clubs = parseClubSearch(fixture("club-search.html"));
+  assert.equal(clubs.length, 18);
+  assert.deepEqual(clubs.find((c) => c.name === "SV Weyhe"), { id: 11470, name: "SV Weyhe" });
+  assert.equal(clubs.find((c) => c.id === 11473)?.name, "TSV Osterholz-Tenever");
+});
+
+test("club page logo", () => {
+  assert.equal(
+    parseClubLogo(fixture("club-info.html")),
+    "https://brbv-badminton.liga.nu/cgi-bin/WebObjects/nuLigaBADDE.woa/wr?wodata=-8236409040307075805",
+  );
+  // The federation logo and the spacer are not club logos.
+  assert.equal(parseClubLogo('<img src="/images/brbv-logo.png"><img src="/img/spacer.gif?nlv=1">'), null);
 });

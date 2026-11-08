@@ -102,3 +102,11 @@ export interface RosterPlayer {
   /** Only for players on a Herren or Damen roster list; unknown for the mixed youth lists and report-only players */
   gender?: Gender;
 }
+
+/** A club of the federation, for the logo on match pages. */
+export interface Club {
+  id: number;
+  name: string;
+  /** File name in data/logos/; null when the club has no logo, absent until looked up. */
+  logo?: string | null;
+}

@@ -1,9 +1,16 @@
-import type { Hall, Meeting } from "../types.ts";
+import { logoPath } from "../logos.ts";
+import type { Club, Hall, Meeting } from "../types.ts";
 import { lineupOf, ownTeam } from "./context.ts";
 import { esc, formatDate, hasPreview, html, involvesOwn, isOwn, opponentOf, outcomeBadge, outcomeFor, postponedLabel, previewHref, previewName } from "./util.ts";
 
 export function reportHref(root: string, meeting: number): string {
   return `${root}bericht/${meeting}.html`;
+}
+
+/** The club logo for a team (root: path to the site root, where the shared assets live), decorative as the name is always next to it; empty when there is none. */
+export function teamLogo(clubs: Club[], team: string, root: string): string {
+  const path = logoPath(team, clubs);
+  return path ? `<img class="club-mark" src="${root}${path}" alt="" width="32" height="32" loading="lazy">` : "";
 }
 
 export function hallLabel(m: Meeting): string {
@@ -17,6 +24,8 @@ export interface MatchCardOptions {
   perspective?: string;
   /** Own matches without a result get an "Ich spiele" toggle beside the card (see PLAYING in layout.ts). */
   toggle?: boolean;
+  /** Clubs with their logos; given, each team name gets its club's logo (the Spielplan). */
+  clubs?: Club[];
 }
 
 /** A meeting as a card: teams stacked, score or time on the right. */
@@ -35,7 +44,10 @@ export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {})
     played ? outcomeBadge(outcomeFor(opts.perspective ?? ownTeam().name, m)) : opts.pending ? `<span class="badge badge--warn">Ergebnis offen</span>` : "",
   ].join("");
 
-  const team = (name: string) => `<span class="team${isOwn(name) ? " is-own" : ""}">${esc(name)}</span>`;
+  // Teams without a logo get an empty slot, so the names of both teams stay aligned.
+  const logo = (name: string) =>
+    opts.clubs ? teamLogo(opts.clubs, name, `${root}../`) || `<span class="club-mark club-mark--none" aria-hidden="true"></span>` : "";
+  const team = (name: string) => `<span class="team${isOwn(name) ? " is-own" : ""}">${logo(name)}${esc(name)}</span>`;
   const body = played
     ? html`<div class="match">
         ${team(m.home)}<span class="score${h < g ? " lost" : ""}">${h}</span>

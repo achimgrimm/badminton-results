@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STAGE } from "./config.ts";
-import { loadClubTeams, loadDataset, type Dataset } from "./data.ts";
+import { DATA_DIR, loadClubTeams, loadClubs, loadDataset, paths, type Dataset } from "./data.ts";
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
 import { renderChooser } from "./render/chooser.ts";
@@ -110,6 +110,10 @@ copyFileSync(join(SRC, "icons", "club-logo.png"), join(DIST, "club-logo.png"));
 for (const icon of ["icon-192.png", "icon-512.png", "apple-touch-icon.png"]) {
   copyFileSync(join(SRC, "icons", icon), join(DIST, "icons", icon));
 }
+// Club logos of the match pages (downloaded by the scrape; clubs without one just show no logo).
+const clubs = loadClubs().filter((c) => c.logo);
+if (clubs.length) mkdirSync(join(DIST, "logos"), { recursive: true });
+for (const c of clubs) copyFileSync(join(DATA_DIR, paths.logos, c.logo!), join(DIST, "logos", c.logo!));
 writeFileSync(join(DIST, "manifest.webmanifest"), renderManifest());
 writeFileSync(join(DIST, "sw.js"), renderServiceWorker(now.getTime().toString(36), stylesHref()));
 writeFileSync(join(DIST, ".nojekyll"), "");

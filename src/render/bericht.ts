@@ -1,7 +1,7 @@
 import { urls } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import type { Game, MatchReport, Meeting, Player } from "../types.ts";
-import { hallAddress } from "./components.ts";
+import { hallAddress, teamLogo } from "./components.ts";
 import { layout } from "./layout.ts";
 import { displayName, esc, formatDate, html, isOwn, outcomeBadge, ownOutcome, postponedLabel } from "./util.ts";
 
@@ -66,9 +66,9 @@ export function renderBericht(d: Dataset, r: MatchReport, meeting: Meeting | und
     <section class="card report-head">
       <div class="card-meta" style="justify-content:center">${date ? esc(formatDate(date, true)) : ""}${r.time ? `, ${esc(r.time)} Uhr` : ""}</div>
       <div class="teams">
-        <div class="team${isOwn(r.home) ? " is-own" : ""}">${esc(r.home)}</div>
+        <div class="team${isOwn(r.home) ? " is-own" : ""}">${teamLogo(d.clubs, r.home, "../../")}${esc(r.home)}</div>
         <div class="big">${h}:${g}</div>
-        <div class="team${isOwn(r.guest) ? " is-own" : ""}">${esc(r.guest)}</div>
+        <div class="team${isOwn(r.guest) ? " is-own" : ""}">${teamLogo(d.clubs, r.guest, "../../")}${esc(r.guest)}</div>
       </div>
       <div class="totals num">
         ${t.sets ? `<span>Sätze ${t.sets[0]}:${t.sets[1]}</span>` : ""}

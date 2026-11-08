@@ -93,7 +93,7 @@ export function renderSpielplan(d: Dataset, now: Date): string {
     const cls = ["day", meetings.some(involvesOwn) && "has-own", date >= today && "upcoming"].filter(Boolean).join(" ");
     return html`<section class="${cls}">
         <h2${date === today ? ' class="is-today"' : ""}>${esc(formatDate(date, true))}${date === today ? " · Heute" : ""}</h2>
-        ${meetings.map((m) => matchCard(m, "", { pending: !m.result && m.date < today, toggle: true }))}
+        ${meetings.map((m) => matchCard(m, "", { pending: !m.result && m.date < today, toggle: true, clubs: d.clubs }))}
       </section>`;
   });
 

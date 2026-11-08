@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ClubTeam, Hall, MatchReport, Meeting, RosterPlayer, Standing, TeamInfo } from "./types.ts";
+import type { Club, ClubTeam, Hall, MatchReport, Meeting, RosterPlayer, Standing, TeamInfo } from "./types.ts";
 
 export const DATA_DIR = new URL("../data/", import.meta.url).pathname;
 
@@ -8,6 +8,9 @@ export const DATA_DIR = new URL("../data/", import.meta.url).pathname;
 export const paths = {
   club: "club.json",
   halls: "halls.json",
+  clubs: "clubs.json",
+  /** Folder of the downloaded club logos */
+  logos: "logos",
   meta: "meta.json",
   table: (group: number) => `groups/${group}/table.json`,
   schedule: (group: number) => `groups/${group}/schedule.json`,
@@ -33,6 +36,8 @@ export interface Dataset {
   schedule: Meeting[];
   team: TeamInfo;
   halls: Record<string, Hall>;
+  /** Clubs of the federation; the ones with a logo file on disk have `logo` set */
+  clubs: Club[];
   reports: Record<string, MatchReport>;
   /** Players from nuLiga's club roster who can play for the team (Stammspieler and reserves) */
   roster: RosterPlayer[];
@@ -61,6 +66,13 @@ export function loadHalls(): Record<string, Hall> {
   return readJson<Record<string, Hall>>(paths.halls, {});
 }
 
+/** The clubs; a logo whose file is missing counts as none, so pages never link a broken image. */
+export function loadClubs(): Club[] {
+  return readJson<Club[]>(paths.clubs, []).map((c) =>
+    c.logo && !existsSync(join(DATA_DIR, paths.logos, c.logo)) ? { ...c, logo: null } : c,
+  );
+}
+
 export function loadReports(group: number): Record<string, MatchReport> {
   const dir = join(DATA_DIR, paths.reports(group));
   const reports: Record<string, MatchReport> = {};
@@ -81,6 +93,7 @@ export function loadDataset(own: ClubTeam): Dataset {
     schedule: readJson<Meeting[]>(paths.schedule(own.group), []),
     team: readJson<TeamInfo>(paths.team(own.slug), { title: "", icalUrl: null, webcalUrl: null, pdfUrl: null, halls: [] }),
     halls: loadHalls(),
+    clubs: loadClubs(),
     reports: loadReports(own.group),
     roster: readJson<RosterPlayer[]>(paths.roster(own.slug), []),
   };

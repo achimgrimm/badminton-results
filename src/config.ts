@@ -42,6 +42,16 @@ export interface Group {
 const groupQuery = (g: Group) =>
   new URLSearchParams({ championship: g.championship, group: String(g.group) }).toString();
 
+/** Regions of the federation whose clubs get a logo on the match pages (opponents come from both). */
+export interface ClubRegion {
+  name: string;
+  pattern: string;
+}
+export const CLUB_REGIONS: ClubRegion[] = [
+  { name: "KV Bremen", pattern: "DE.NO.09.01" },
+  { name: "KV Bremerhaven", pattern: "DE.NO.09.02" },
+];
+
 export const urls = {
   clubTeams: () => `${WA}/clubTeams?club=${CLUB}`,
   table: (g: Group) => `${WA}/groupPage?displayTyp=gesamt&displayDetail=table&${groupQuery(g)}`,
@@ -52,6 +62,11 @@ export const urls = {
   /** Club roster for an age class; round "vorrunde" or "rueckrunde". */
   pools: (contestType: string, round: PoolRound) =>
     `${WA}/clubPools?${new URLSearchParams({ displayTyp: round, club: String(CLUB), contestType, seasonName: SEASON_LABEL })}`,
+  /** The clubs of a region (KV Bremen, KV Bremerhaven), each linking to its club page. */
+  clubSearch: (region: ClubRegion) =>
+    `${WA}/clubSearch?${new URLSearchParams({ searchPattern: region.pattern, federation: "BrBV", regionName: region.name, federations: "BrBV" })}`,
+  /** A club's page, which shows its logo. */
+  clubInfo: (club: number) => `${WA}/clubInfoDisplay?club=${club}`,
   court: (location: number) => `${WA}/courtInfo?federation=BrBV&location=${location}`,
 };
 

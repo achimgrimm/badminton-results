@@ -29,4 +29,4 @@ jobs:
         with:
           version: latest
       - run: supabase link --project-ref "$PROJECT_ID"
-      - run: supabase db push
+      - run: supabase db push --linked

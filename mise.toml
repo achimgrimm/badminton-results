@@ -43,3 +43,23 @@ run = ["npm run scrape", "npm run build"]
 [tasks.release]
 description = "Release the current branch: check its test stage, fast-forward main, delete the branch"
 run = "scripts/release.sh"
+
+[tasks."db:migrate"]
+description = "Start the local Postgres (docker compose) and apply new supabase/migrations"
+run = "scripts/db-migrate.sh"
+
+[tasks."db:reset"]
+description = "Recreate the local Postgres from scratch and apply all migrations"
+run = "scripts/db-migrate.sh --reset"
+
+[tasks."db:psql"]
+description = "Open psql on the local Postgres"
+run = "scripts/db-migrate.sh --psql"
+
+[tasks."db:down"]
+description = "Stop the local Postgres (data is kept)"
+run = "docker compose down || docker-compose down"
+
+[tasks."db:admin"]
+description = "Create a local user with this email (if missing) and make it admin: mise run db:admin me@example.org"
+run = "scripts/db-admin.sh"

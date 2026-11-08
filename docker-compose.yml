@@ -1,0 +1,23 @@
+# Local Postgres for developing and testing the SQL migrations in supabase/migrations/.
+# Only the database: no sign-in or REST API, the app itself still talks to the hosted project.
+# Start with `mise run db:up`, apply migrations with `mise run db:migrate` (scripts/db-migrate.sh).
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: badminton
+    ports:
+      # 54329 stays clear of the Supabase CLI's local stack (54322).
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d badminton"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  db-data:

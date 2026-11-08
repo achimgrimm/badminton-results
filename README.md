@@ -25,6 +25,20 @@ npm run serve    # preview dist/ locally
 npm test         # parser tests against test/fixtures
 ```
 
+## Local database
+
+`docker-compose.yml` starts a plain Postgres 17 (port 54329, user and password `postgres`, database `badminton`) for developing the SQL in `supabase/migrations/`. It has no sign-in or REST API; the app itself still talks to the hosted Supabase project. `supabase/local/bootstrap.sql` fakes the few Supabase parts the migrations use (`anon`/`authenticated` roles, `auth.users`, `auth.uid()`).
+
+```sh
+mise run db:migrate   # start the database and apply new migrations (scripts/db-migrate.sh)
+mise run db:reset     # recreate it from scratch and apply everything
+mise run db:psql      # open psql
+mise run db:down      # stop it, data is kept
+mise run db:admin me@example.org   # create that user locally (if missing) and make it admin
+```
+
+Applied files are recorded in `local_migrations.applied`, so running it again only applies new ones; each file runs in one transaction. To test a policy as a user: `set role authenticated; set request.jwt.claim.sub = '<user uuid>';`. The script works with `docker compose` or the old `docker-compose`.
+
 ## How it works
 
 - `src/scrape.ts` reads the club's team list from nuLiga on every run, so new teams or a new season need no code change. For each league it fetches the table and schedule (at most 1 request/s), plus a Spielbericht only when it is new or not yet approved; leagues with two OT teams (Jugend, Jugend II) are fetched once. Each hall address is fetched once. Data lives in `data/groups/<group>/` and `data/teams/<slug>.json`.

@@ -2,7 +2,8 @@ name: Migrate database
 
 # Applies supabase/migrations/ to the Supabase project when main changes them. Branches and test
 # stages never run this: there is only one database, and it belongs to the live site.
-# Needs the repository secrets SUPABASE_ACCESS_TOKEN (account access token) and SUPABASE_DB_PASSWORD.
+# Needs the repository secret SUPABASE_DB_URL: the Session pooler connection string (IPv4; the direct
+# host is IPv6 only and GitHub runners can't reach it) including the database password.
 on:
   push:
     branches: [main, feature/online-backend] # TEMP: first migration from the branch
@@ -20,13 +21,10 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      PROJECT_ID: jfsjjkfrhkaothradjiy
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - uses: actions/checkout@v7
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase link --project-ref "$PROJECT_ID"
-      - run: supabase db push --remote
+      - run: supabase db push --db-url "$SUPABASE_DB_URL"

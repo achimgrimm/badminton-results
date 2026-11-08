@@ -76,7 +76,7 @@ jobs:
           path: data
           key: data-${{ matrix.site.name }}-${{ github.run_id }}
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: site-${{ matrix.site.name }}
           # A stage build writes to dist/stage/<name>/, so its artifact already holds that path.
@@ -95,13 +95,13 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       # Downloaded by name: a missing live build fails here, and nothing is deployed.
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: site-live
           path: site
       # Stage artifacts contain stage/<name>/, so merging them into site/ puts each in place.
       # Without any stage there is nothing to download; that must not stop the live deploy.
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: site-stage-*

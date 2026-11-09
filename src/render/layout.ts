@@ -173,7 +173,7 @@ const PLAYING = (slug: string) => `(function () {
  * player list (alphabetical) starts with the chosen player.
  */
 const ME = (slug: string, root: string) => `(function () {
-  var KEY = "${meKey(slug)}", me = null;
+  var KEY = "${meKey(slug)}", me = null, locked = false;
   try { me = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!me || typeof me !== "object" || !me.person) me = null;
   var card = document.getElementById("me-card"), dlg = document.getElementById("me-dialog");
@@ -190,7 +190,8 @@ const ME = (slug: string, root: string) => `(function () {
   var pickItem = document.getElementById("menu-pick"), menuClear = document.getElementById("menu-clear"), menuStats = document.getElementById("menu-stats");
   if (menuClear) menuClear.addEventListener("click", function () { save(null, "menu"); });
   // online.js reads and sets the pick through this, for the account's claim of the player.
-  window.otMe = { team: "${slug}", season: "${SEASON_KEY}", root: "${root}", get: function () { return me; }, set: function (next) { save(next, "account"); } };
+  // lock(true): the account's approved player can't be cleared here (no "Ich bin nicht …", no toggle off); it can still be replaced.
+  window.otMe = { team: "${slug}", season: "${SEASON_KEY}", root: "${root}", get: function () { return me; }, set: function (next) { save(next, "account"); }, lock: function (on) { if (locked !== !!on) { locked = !!on; render(); } } };
   function render() {
     var id = me ? String(me.person) : "";
     if (id) document.body.dataset.me = id; else delete document.body.dataset.me;
@@ -226,7 +227,7 @@ const ME = (slug: string, root: string) => `(function () {
     // The hint box is only for visitors without a chosen player; the rest is done from the menu.
     if (card) card.hidden = !!me;
     if (menuClear) {
-      menuClear.hidden = !me;
+      menuClear.hidden = !me || locked;
       if (me) menuClear.querySelector("span").textContent = "Ich bin nicht " + me.name.replace(/^([^,]+),\s*(.+)$/, "$2 $1");
     }
     if (menuStats) {
@@ -236,6 +237,7 @@ const ME = (slug: string, root: string) => `(function () {
   }
   document.querySelectorAll(".me-toggle").forEach(function (b) {
     b.addEventListener("click", function () {
+      if (locked && me && String(me.person) === b.dataset.person) return;
       save(me && String(me.person) === b.dataset.person ? null : { person: Number(b.dataset.person), name: b.dataset.name, href: b.dataset.href }, "page");
     });
   });

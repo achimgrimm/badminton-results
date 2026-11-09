@@ -100,6 +100,9 @@ main.container { padding-bottom: 32px; }
 .header-btn:hover { background: rgba(255,255,255,.15); }
 .header-btn svg { width: 20px; height: 20px; }
 .header-btn[hidden] { display: none; }
+.menu-btn { position: relative; }
+.menu-btn[data-count]::after { content: attr(data-count); position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--ot-error); color: #fff; font-size: .75rem; font-weight: 700; line-height: 18px; text-align: center; }
+.menu-count { margin-left: auto; }
 /* The header menu: a dialog panel at the top right (base look from .team-dialog) */
 .menu-dialog { margin: 56px 8px auto auto; width: min(92vw, 320px); padding: 8px 12px 12px; }
 .menu-dialog .dialog-head { padding: 0 0 0 8px; }
@@ -149,6 +152,9 @@ main.container { padding-bottom: 32px; }
 .btn-primary:hover { background: var(--ot-primary-hover); color: var(--ot-on-primary); box-shadow: var(--ot-shadow-hover); text-decoration: none; }
 .btn-secondary { background: var(--ot-bg); color: var(--ot-primary); border-color: var(--ot-primary); }
 .btn-secondary:hover { background: var(--ot-primary); color: var(--ot-on-primary); text-decoration: none; }
+.btn-danger { background: var(--ot-error); color: #fff; border-color: var(--ot-error); }
+.btn-danger:hover { filter: brightness(.9); text-decoration: none; }
+.confirm-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 
 /* Cards */

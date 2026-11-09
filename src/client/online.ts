@@ -42,7 +42,7 @@ let pending: PendingClaim[] = [];
 const claimKey = (team: string, season: string) => `${team}|${season}`;
 
 /** The page's "Wer bist Du?" state (ME script in layout.ts); undefined on pages without a team. */
-interface MeApi { team: string; season: string; root: string; get(): (Pick & { href?: string }) | null; set(next: Pick | null): void }
+interface MeApi { team: string; season: string; root: string; get(): (Pick & { href?: string }) | null; set(next: Pick | null): void; lock?(on: boolean): void }
 const meApi = () => (window as unknown as { otMe?: MeApi }).otMe;
 const listeners = new Set<(s: Session | null) => void>();
 
@@ -87,10 +87,17 @@ export const Online = {
 const GOOGLE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/></svg>`;
 
 const SIGN_OUT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>`;
+const HELP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`;
 
 /** The menu's user section: #account-who and #account-actions are rendered empty by the layout. */
 function renderAccount(): void {
+  // A count on the header's menu button tells approvers that claims wait for them.
+  const menuBtn = document.getElementById("menu-btn");
+  if (menuBtn) {
+    if (pending.length) menuBtn.dataset.count = String(pending.length); else delete menuBtn.dataset.count;
+    menuBtn.setAttribute("aria-label", pending.length ? `Menü, ${pending.length} offene Anfragen` : "Menü");
+  }
   const whoEl = document.getElementById("account-who"), el = document.getElementById("account-actions");
   if (!whoEl || !el) return;
   whoEl.textContent = "";
@@ -110,6 +117,9 @@ function renderAccount(): void {
   };
   const me = meApi();
   const pick = me?.get() ?? null;
+  // An approved player can't be cleared on the device ("Ich bin nicht …"), only replaced by another pick.
+  const approved = me && session ? claims.get(claimKey(me.team, me.season)) : undefined;
+  me?.lock?.(!!pick && approved?.status === "approved" && approved.person === pick.person);
   /** The name line, same look signed in or out: the chosen player, linked to the player page when known. */
   const nameLine = (text: string) => {
     const strong = document.createElement("b");
@@ -151,13 +161,44 @@ function renderAccount(): void {
   const who = block(pick ? nameLine(shownName(pick.name)) : nameLine(accountName), ...lines);
   whoEl.append(who);
   el.append(
-    ...(pending.length ? [item(`Anfragen prüfen (${pending.length})`, () => openApprovals())] : []),
+    ...(pending.length ? [(() => {
+      const b = item("Anfragen prüfen", () => openApprovals(), false, HELP_ICON);
+      b.append(Object.assign(document.createElement("span"), { className: "badge badge--new menu-count", textContent: String(pending.length) }));
+      return b;
+    })()] : []),
     item("Abmelden", () => void Online.signOut(), false, SIGN_OUT_ICON),
     item("Konto löschen", () => {
-      if (!confirm("Konto und alle gespeicherten Daten endgültig löschen?")) return;
-      Online.deleteAccount().catch(() => alert("Das Konto konnte nicht gelöscht werden. Bitte versuche es später noch einmal."));
+      void confirmDeleteAccount().then((yes) => {
+        if (yes) Online.deleteAccount().catch(() => alert("Das Konto konnte nicht gelöscht werden. Bitte versuche es später noch einmal."));
+      });
     }, true, TRASH_ICON),
   );
+}
+
+/** Asks, in a dialog, before the account and its data are deleted for good. Resolves true only on "Konto löschen". */
+function confirmDeleteAccount(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const dlg = document.createElement("dialog");
+    dlg.className = "team-dialog confirm-dialog";
+    dlg.setAttribute("aria-labelledby", "delete-h");
+    const h = Object.assign(document.createElement("h2"), { id: "delete-h", textContent: "Konto löschen?" });
+    const p = Object.assign(document.createElement("p"), {
+      textContent: "Dein Konto und alle damit gespeicherten Daten (Profil, Rolle, gewählter Spieler) werden sofort und endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
+    });
+    const row = document.createElement("div");
+    row.className = "btn-row";
+    const cancel = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-secondary", textContent: "Abbrechen" });
+    const yes = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-danger", textContent: "Konto löschen" });
+    cancel.addEventListener("click", () => dlg.close("cancel"));
+    yes.addEventListener("click", () => dlg.close("delete"));
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close("cancel"); });
+    dlg.addEventListener("close", () => { dlg.remove(); resolve(dlg.returnValue === "delete"); });
+    row.append(cancel, yes);
+    dlg.append(h, p, row);
+    document.body.append(dlg);
+    dlg.showModal();
+    cancel.focus();
+  });
 }
 
 /** Small per-device notes next to the session, per team and season (never sent anywhere). */

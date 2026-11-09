@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildSync } from "esbuild";
-import { ONLINE, STAGE, SUPABASE_ANON_KEY, SUPABASE_URL, storageKey } from "./config.ts";
+import { ONLINE, STAGE, STORAGE_NAMES, STORAGE_PREFIXES, SUPABASE_ANON_KEY, SUPABASE_URL, storageKey } from "./config.ts";
 import { DATA_DIR, loadClubTeams, loadClubs, loadDataset, paths, type Dataset } from "./data.ts";
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
@@ -56,6 +56,7 @@ function buildOnlineBundle(outDir: string): string {
       SUPABASE_URL: JSON.stringify(SUPABASE_URL),
       SUPABASE_ANON_KEY: JSON.stringify(SUPABASE_ANON_KEY),
       STORAGE_KEY: JSON.stringify(storageKey("auth")),
+      OWN_KEYS: JSON.stringify({ names: STORAGE_NAMES.map(storageKey), prefixes: STORAGE_PREFIXES.map(storageKey) }),
     },
   }).outputFiles[0];
   mkdirSync(outDir, { recursive: true });

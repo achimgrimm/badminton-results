@@ -1,9 +1,31 @@
-import { CLUB_NAME, ONLINE, SUPABASE_PROJECT_ID } from "../config.ts";
+import { CLUB_NAME, ONLINE, STORAGE_NAMES, STORAGE_PREFIXES, SUPABASE_PROJECT_ID, storageKey } from "../config.ts";
 import { layout } from "./layout.ts";
 import { esc, html } from "./util.ts";
 
 /** Contact and responsible party: a private person, not the club. */
 export const PRIVACY_CONTACT = "achim.grimm@posteo.de";
+
+/** The "Lokale Daten löschen" button: removes this build's localStorage keys (see STORAGE_NAMES) after a dialog. */
+const CLEAR_LOCAL = () => `(function () {
+  var names = ${JSON.stringify(STORAGE_NAMES.map(storageKey))}, prefixes = ${JSON.stringify(STORAGE_PREFIXES.map(storageKey))};
+  var btn = document.getElementById("clear-local"), dlg = document.getElementById("clear-local-dialog"), done = document.getElementById("clear-local-done");
+  if (!btn || !dlg) return;
+  function owned(k) { return names.indexOf(k) >= 0 || prefixes.some(function (p) { return k.indexOf(p) === 0; }); }
+  btn.addEventListener("click", function () { dlg.showModal(); });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+  dlg.querySelector('[value="cancel"]').addEventListener("click", function () { dlg.close(); });
+  dlg.querySelector('[value="clear"]').addEventListener("click", function () {
+    var n = 0;
+    try {
+      Object.keys(localStorage).filter(owned).forEach(function (k) { localStorage.removeItem(k); n++; });
+      sessionStorage.removeItem("auth-return");
+    } catch (e) {}
+    dlg.close();
+    done.textContent = n ? "Fertig: " + n + " gespeicherte Einstellungen gelöscht." : "Es waren keine lokalen Daten gespeichert.";
+    done.hidden = false;
+    otTrack("clear-local-data", { count: String(n) });
+  });
+})();`;
 
 /** Privacy policy. The sign-in sections only appear when the online features are configured. */
 export function renderDatenschutz(checkedAt: string | null): string {
@@ -16,7 +38,17 @@ export function renderDatenschutz(checkedAt: string | null): string {
     <p>Verantwortlich für diese Website ist Achim Grimm als Privatperson. Kontakt für alle Fragen zum Datenschutz: ${mail}.</p>
 
     <h2>Was auf Deinem Gerät bleibt</h2>
-    <p>Die App merkt sich Einstellungen auf Deinem Gerät (im lokalen Speicher des Browsers): Deine Mannschaft, das Design, welche Spiele Du markiert hast („Ich spiele“), wer Du bist, geplante Aufstellungen und welche Neuigkeiten Du schon gesehen hast. Diese Daten verlassen Dein Gerät nicht${ONLINE ? ", solange Du Dich nicht anmeldest und nichts anderes dabei steht" : ""}. Du kannst sie jederzeit löschen, indem Du die Website-Daten in Deinem Browser löschst.</p>
+    <p>Die App merkt sich Einstellungen auf Deinem Gerät (im lokalen Speicher des Browsers): Deine Mannschaft, das Design, welche Spiele Du markiert hast („Ich spiele“), wer Du bist, geplante Aufstellungen und welche Neuigkeiten Du schon gesehen hast. Diese Daten verlassen Dein Gerät nicht${ONLINE ? ", solange Du Dich nicht anmeldest und nichts anderes dabei steht" : ""}. Du kannst sie jederzeit löschen, indem Du die Website-Daten in Deinem Browser löschst oder hier die lokalen Daten dieser App entfernst${ONLINE ? " (Du wirst dabei auf diesem Gerät auch abgemeldet, Dein Konto bleibt bestehen)" : ""}.</p>
+    <p><button type="button" class="btn btn-secondary" id="clear-local">Lokale Daten dieser App löschen</button></p>
+    <p class="small muted" id="clear-local-done" role="status" hidden></p>
+    <dialog class="team-dialog confirm-dialog" id="clear-local-dialog" aria-labelledby="clear-local-h">
+      <h2 id="clear-local-h">Lokale Daten löschen?</h2>
+      <p>Mannschaft, Design, markierte Spiele, gewählter Spieler, geplante Aufstellungen und gesehene Neuigkeiten werden auf diesem Gerät gelöscht.${ONLINE ? " Du wirst auf diesem Gerät abgemeldet; Dein Konto und was darin gespeichert ist bleiben bestehen." : ""}</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" value="cancel">Abbrechen</button>
+        <button type="button" class="btn btn-danger" value="clear">Löschen</button>
+      </div>
+    </dialog>
 
     <h2>Spielergebnisse und Namen</h2>
     <p>Ergebnisse, Tabellen, Spielberichte und Spielernamen stammen aus dem öffentlich zugänglichen Angebot des Bremer Badminton-Verbands auf nuLiga. Die Seite zeigt sie nur an und speichert keine weiteren Daten über die genannten Personen. Wenn Du nicht möchtest, dass Dein Name hier erscheint, wende Dich an den Verband oder an ${mail}.</p>
@@ -43,5 +75,5 @@ export function renderDatenschutz(checkedAt: string | null): string {
     <h2>Deine Rechte</h2>
     <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Du kannst Dich außerdem bei der Landesbeauftragten für Datenschutz und Informationsfreiheit der Freien Hansestadt Bremen beschweren. Schreib dazu an ${mail}.</p>
   `;
-  return layout({ title: "Datenschutz", root: "", assets: "", nav: null, checkedAt, body });
+  return layout({ title: "Datenschutz", root: "", assets: "", nav: null, checkedAt, body, script: CLEAR_LOCAL() });
 }

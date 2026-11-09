@@ -11,6 +11,8 @@ import { reconcile, type Pick } from "../claims.ts";
 declare const SUPABASE_URL: string;
 declare const SUPABASE_ANON_KEY: string;
 declare const STORAGE_KEY: string;
+/** This build's localStorage names and prefixes (STORAGE_NAMES/STORAGE_PREFIXES in config.ts, with the stage prefix). */
+declare const OWN_KEYS: { names: string[]; prefixes: string[] };
 declare function otTrack(name: string, data?: Record<string, string>): void;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -166,7 +168,7 @@ function renderAccount(): void {
       b.append(Object.assign(document.createElement("span"), { className: "badge badge--new menu-count", textContent: String(pending.length) }));
       return b;
     })()] : []),
-    item("Abmelden", () => void Online.signOut(), false, SIGN_OUT_ICON),
+    item("Abmelden", () => void Online.signOut().then(offerClearLocalData), false, SIGN_OUT_ICON),
     item("Konto löschen", () => {
       void confirmDeleteAccount().then((yes) => {
         if (yes) Online.deleteAccount().catch(() => alert("Das Konto konnte nicht gelöscht werden. Bitte versuche es später noch einmal."));
@@ -175,30 +177,51 @@ function renderAccount(): void {
   );
 }
 
-/** Asks, in a dialog, before the account and its data are deleted for good. Resolves true only on "Konto löschen". */
-function confirmDeleteAccount(): Promise<boolean> {
+/** A small confirmation dialog; resolves true only on the confirm button, false on cancel, Escape or a click outside. */
+function ask(o: { title: string; text: string; cancel: string; ok: string; danger?: boolean }): Promise<boolean> {
   return new Promise((resolve) => {
     const dlg = document.createElement("dialog");
     dlg.className = "team-dialog confirm-dialog";
-    dlg.setAttribute("aria-labelledby", "delete-h");
-    const h = Object.assign(document.createElement("h2"), { id: "delete-h", textContent: "Konto löschen?" });
-    const p = Object.assign(document.createElement("p"), {
-      textContent: "Dein Konto und alle damit gespeicherten Daten (Profil, Rolle, gewählter Spieler) werden sofort und endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
-    });
+    dlg.setAttribute("aria-labelledby", "ask-h");
+    const h = Object.assign(document.createElement("h2"), { id: "ask-h", textContent: o.title });
+    const p = Object.assign(document.createElement("p"), { textContent: o.text });
     const row = document.createElement("div");
     row.className = "btn-row";
-    const cancel = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-secondary", textContent: "Abbrechen" });
-    const yes = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-danger", textContent: "Konto löschen" });
+    const cancel = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-secondary", textContent: o.cancel });
+    const ok = Object.assign(document.createElement("button"), { type: "button", className: o.danger ? "btn btn-danger" : "btn btn-primary", textContent: o.ok });
     cancel.addEventListener("click", () => dlg.close("cancel"));
-    yes.addEventListener("click", () => dlg.close("delete"));
+    ok.addEventListener("click", () => dlg.close("ok"));
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close("cancel"); });
-    dlg.addEventListener("close", () => { dlg.remove(); resolve(dlg.returnValue === "delete"); });
-    row.append(cancel, yes);
+    dlg.addEventListener("close", () => { dlg.remove(); resolve(dlg.returnValue === "ok"); });
+    row.append(cancel, ok);
     dlg.append(h, p, row);
     document.body.append(dlg);
     dlg.showModal();
     cancel.focus();
   });
+}
+
+const confirmDeleteAccount = () => ask({
+  title: "Konto löschen?",
+  text: "Dein Konto und alle damit gespeicherten Daten (Profil, Rolle, gewählter Spieler) werden sofort und endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
+  cancel: "Abbrechen", ok: "Konto löschen", danger: true,
+});
+
+/** After signing out: offers to also remove what the app keeps on this device (useful on a shared one), then reloads. */
+async function offerClearLocalData(): Promise<void> {
+  const yes = await ask({
+    title: "Lokale Daten löschen?",
+    text: "Du bist abgemeldet. Sollen auch die Einstellungen auf diesem Gerät gelöscht werden (Mannschaft, Design, markierte Spiele, geplante Aufstellungen)? Auf einem geteilten Gerät ist das sinnvoll.",
+    cancel: "Behalten", ok: "Löschen", danger: true,
+  });
+  if (!yes) return;
+  try {
+    Object.keys(localStorage)
+      .filter((k) => OWN_KEYS.names.includes(k) || OWN_KEYS.prefixes.some((p) => k.startsWith(p)))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch { /* optional */ }
+  track("clear-local-data", { via: "logout" });
+  location.reload();
 }
 
 /** Small per-device notes next to the session, per team and season (never sent anywhere). */

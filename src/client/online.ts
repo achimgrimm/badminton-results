@@ -232,7 +232,8 @@ async function loadPending(run: number): Promise<void> {
 async function saveClaim(team: string, season: string, pick: Pick | null, status: "pending" | "approved" = "pending"): Promise<void> {
   if (!session) return;
   const uid = session.user.id;
-  await supabase.from("player_claims").delete().eq("user_id", uid).eq("team_slug", team).eq("season", season);
+  const del = await supabase.from("player_claims").delete().eq("user_id", uid).eq("team_slug", team).eq("season", season);
+  if (del.error) console.error("player_claims delete failed", del.error);
   claims.delete(claimKey(team, season));
   if (pick) {
     const { data, error } = await supabase.from("player_claims")
@@ -242,6 +243,9 @@ async function saveClaim(team: string, season: string, pick: Pick | null, status
       if (error.code === "23505") {
         writeNote(note("attempt", team, season), `taken:${pick.person}`);
         alert("Dieser Spieler ist schon mit einem anderen Konto verknüpft. Die Auswahl gilt nur auf diesem Gerät.");
+      } else {
+        // e.g. the table is missing (migration not applied) or a policy refused the row; the pick stays on this device.
+        console.error("player_claims insert failed", error);
       }
     } else {
       claims.set(claimKey(team, season), data as ClaimRow);

@@ -89,6 +89,7 @@ export const Online = {
 const GOOGLE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/></svg>`;
 
 const SIGN_OUT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>`;
+const VERIFIED_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12.5 2.8 2.8L16 9.5"/></svg>`;
 const HELP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`;
 
@@ -156,11 +157,22 @@ function renderAccount(): void {
   if (role) lines.push(role);
   if (me) {
     const claim = claims.get(claimKey(me.team, me.season));
-    const status = pick && claim?.person === pick.person ? (claim.status === "approved" ? "bestätigt" : "wartet auf Bestätigung") : "";
+    // A confirmed player is shown by the check mark next to the name, so only the waiting state needs words.
+    const waiting = pick && claim?.person === pick.person && claim.status !== "approved";
     if (!pick) lines.push("Kein Spieler gewählt");
-    else if (status) lines.push(`Spieler ${status}`);
+    else if (waiting) lines.push("Spieler wartet auf Bestätigung");
   }
   const who = block(pick ? nameLine(shownName(pick.name)) : nameLine(accountName), ...lines);
+  // A check mark next to the name tells that the chosen player is confirmed.
+  if (pick && approved?.status === "approved" && approved.person === pick.person) {
+    const mark = document.createElement("span");
+    mark.className = "verified";
+    mark.title = "Spieler bestätigt";
+    mark.setAttribute("role", "img");
+    mark.setAttribute("aria-label", "Spieler bestätigt");
+    mark.insertAdjacentHTML("afterbegin", VERIFIED_ICON); // a constant SVG, never user input
+    who.firstElementChild?.after(" ", mark);
+  }
   whoEl.append(who);
   el.append(
     ...(pending.length ? [(() => {

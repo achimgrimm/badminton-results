@@ -117,6 +117,8 @@ main.container { padding-bottom: 32px; }
 .menu-item--danger, .menu-item--danger:hover { color: var(--ot-error); }
 .menu-account { margin: 4px 12px 6px; }
 .menu-account b { color: var(--ot-text-strong); }
+.menu-account .verified { display: inline-flex; vertical-align: -3px; color: var(--ot-success); }
+.menu-account .verified svg { width: 16px; height: 16px; }
 .claim-row { border-top: 1px solid var(--ot-border); padding: 12px 0 4px; }
 .claim-row p { margin: 0 0 8px; }
 .claim-row .btn-row { margin-bottom: 8px; }

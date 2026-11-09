@@ -37,7 +37,7 @@ let roles: readonly string[] = [];
 interface ClaimRow { id: string; user_id: string; team_slug: string; season: string; person: number; player_name: string; status: "pending" | "approved" }
 let claims = new Map<string, ClaimRow>();
 /** For approvers (permission player.link): the claims waiting for a decision, with the claimer's display name. */
-interface PendingClaim extends ClaimRow { who: string }
+interface PendingClaim extends ClaimRow { who: string; email: string }
 let pending: PendingClaim[] = [];
 const claimKey = (team: string, season: string) => `${team}|${season}`;
 
@@ -222,10 +222,13 @@ async function loadPending(run: number): Promise<void> {
   const { data } = await supabase.from("player_claims").select("*").eq("status", "pending").order("created_at");
   const rows = (data ?? []) as ClaimRow[];
   const ids = [...new Set(rows.map((r) => r.user_id))];
-  const names = ids.length ? (await supabase.from("profiles").select("id, display_name").in("id", ids)).data ?? [] : [];
+  const [names, mails] = ids.length
+    ? await Promise.all([supabase.from("profiles").select("id, display_name").in("id", ids), supabase.rpc("pending_claim_emails")])
+    : [null, null];
   if (run !== applied) return;
-  const byId = new Map((names as { id: string; display_name: string | null }[]).map((n) => [n.id, n.display_name]));
-  pending = rows.filter((r) => r.user_id !== session?.user.id).map((r) => ({ ...r, who: byId.get(r.user_id) ?? "Unbekannt" }));
+  const byId = new Map(((names?.data ?? []) as { id: string; display_name: string | null }[]).map((n) => [n.id, n.display_name]));
+  const emailById = new Map(((mails?.data ?? []) as { user_id: string; email: string | null }[]).map((m) => [m.user_id, m.email ?? ""]));
+  pending = rows.filter((r) => r.user_id !== session?.user.id).map((r) => ({ ...r, who: byId.get(r.user_id) ?? "Unbekannt", email: emailById.get(r.user_id) ?? "" }));
 }
 
 /** Replaces the account's claim for this team and season. A taken player keeps the device pick only. */
@@ -319,6 +322,7 @@ function openApprovals(): void {
       row.className = "claim-row";
       const text = document.createElement("p");
       text.append(Object.assign(document.createElement("b"), { textContent: c.who }), ` möchte ${rosterName(c)} (${teamLabel(c.team_slug)}) sein.`);
+      if (c.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: c.email }));
       const buttons = document.createElement("div");
       buttons.className = "btn-row";
       const decide = (approve: boolean) => async () => {

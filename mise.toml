@@ -43,3 +43,7 @@ run = ["npm run scrape", "npm run build"]
 [tasks.release]
 description = "Release the current branch: check its test stage, fast-forward main, delete the branch"
 run = "scripts/release.sh"
+
+[tasks."db:migrate"]
+description = "Apply supabase/migrations to the shared Supabase DB by running the migrate workflow on the current (pushed) branch"
+run = "scripts/db-migrate.sh"

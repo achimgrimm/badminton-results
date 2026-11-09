@@ -59,7 +59,7 @@ Also check `git diff main -- supabase/migrations` shows only new files, no edits
 The workflow `.github/workflows/migrate.yml` runs on pushes to `main` that touch `supabase/**`, and manually (`workflow_dispatch`). Branch pushes and stage deploys do **not** run it. To migrate from a branch:
 
 1. Commit and push the branch, so the migration file is in the repo.
-2. Run the workflow on that branch (it uses the repository secret `SUPABASE_DB_URL`, so no password is needed locally):
+2. Run `mise run db:migrate` (`scripts/db-migrate.sh`): it checks that the branch is pushed, starts the workflow on it and waits for the result. It uses the repository secret `SUPABASE_DB_URL`, so no password is needed locally. By hand, the same is:
    ```sh
    gh workflow run migrate.yml --ref <branch>
    gh run watch "$(gh run list --workflow=migrate.yml --branch <branch> --limit 1 --json databaseId -q '.[0].databaseId')"

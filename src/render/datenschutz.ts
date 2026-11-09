@@ -61,7 +61,7 @@ export function renderDatenschutz(checkedAt: string | null): string {
 
     ${ONLINE
       ? html`<h2>Anmeldung mit Google</h2>
-    <p>Die Anmeldung ist freiwillig. Alle bisherigen Funktionen der App gehen auch ohne Anmeldung. Wenn Du Dich mit Google anmeldest, erhalten wir von Google nur diese Angaben über Deinen Account: eine Account-Kennung, Deine E-Mail-Adresse und Deinen Namen (Berechtigungen „openid“, „email“ und „profile“). Dein Google-Passwort sehen wir nie.</p>
+    <p>Die Anmeldung ist freiwillig. Alle bisherigen Funktionen der App gehen auch ohne Anmeldung. Wenn Du Dich mit Google anmeldest, erhalten wir von Google nur diese Angaben über Deinen Account: eine Account-Kennung, Deine E-Mail-Adresse, Deinen Namen und die Adresse Deines Profilbilds (Berechtigungen „openid“, „email“ und „profile“). Dein Google-Passwort sehen wir nie. Dein Profilbild zeigt die App im Menü an; es wird dafür direkt von Google geladen (dabei sieht Google Deine IP-Adresse) und von uns nicht kopiert oder weitergegeben.</p>
     <p>Wir verwenden diese Daten ausschließlich, um Dich anzumelden, Dein Konto wiederzuerkennen und zu entscheiden, ob Du mit Deiner Rolle (Mitglied, Mannschaftsführer oder Administrator) gemeinsame Daten wie Aufstellungen ändern darfst. Sie werden nicht für Werbung genutzt, nicht verkauft und nicht an Dritte weitergegeben. Die Nutzung der von Google erhaltenen Daten entspricht der Google API Services User Data Policy, einschließlich der Anforderungen zur eingeschränkten Nutzung.</p>
 
     <h2>Gespeicherte Daten im Konto</h2>

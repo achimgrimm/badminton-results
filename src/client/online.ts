@@ -93,6 +93,24 @@ const VERIFIED_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const HELP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`;
 
+/** A round avatar: the initials of the name, covered by the picture when it is an https URL that loads. */
+function avatar(name: string, url: unknown): HTMLElement {
+  const box = document.createElement("span");
+  box.className = "avatar";
+  box.setAttribute("aria-hidden", "true");
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+  box.textContent = initials || "?";
+  if (typeof url === "string" && url.startsWith("https://")) {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.referrerPolicy = "no-referrer";
+    img.addEventListener("error", () => img.remove());
+    img.src = url;
+    box.append(img);
+  }
+  return box;
+}
+
 /** The menu's user section: #account-who and #account-actions are rendered empty by the layout. */
 function renderAccount(): void {
   // A count on the header's menu button tells approvers that claims wait for them.
@@ -173,7 +191,11 @@ function renderAccount(): void {
     mark.insertAdjacentHTML("afterbegin", VERIFIED_ICON); // a constant SVG, never user input
     who.firstElementChild?.after(" ", mark);
   }
-  whoEl.append(who);
+  // The Google profile picture (user_metadata) next to the name; initials until it loads or when it can't.
+  const row = document.createElement("div");
+  row.className = "menu-who";
+  row.append(avatar(accountName, meta.avatar_url ?? meta.picture), who);
+  whoEl.append(row);
   el.append(
     ...(pending.length ? [(() => {
       const b = item("Anfragen prüfen", () => openApprovals(), false, HELP_ICON);

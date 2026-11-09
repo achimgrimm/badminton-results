@@ -115,6 +115,10 @@ main.container { padding-bottom: 32px; }
 .menu-item svg { flex: none; width: 20px; height: 20px; }
 .menu-item[hidden] { display: none; }
 .menu-item--danger, .menu-item--danger:hover { color: var(--ot-error); }
+.menu-who { display: flex; align-items: center; gap: 12px; margin: 4px 12px 6px; }
+.menu-who .menu-account { margin: 0; }
+.avatar { position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--ot-bg-alt); color: var(--ot-text-muted); font-weight: 700; font-size: .875rem; }
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .menu-account { margin: 4px 12px 6px; }
 .menu-account b { color: var(--ot-text-strong); }
 .menu-account .verified { display: inline-flex; vertical-align: -3px; color: var(--ot-success); }

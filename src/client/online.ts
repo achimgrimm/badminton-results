@@ -62,6 +62,13 @@ export const Online = {
   },
   signOut: async () => {
     track("logout");
+    // The pick belongs to the account: signing out clears it (and the sign-in notes, so the next login matches afresh).
+    const me = meApi();
+    if (me) {
+      writeNote(note("attempt", me.team, me.season), null);
+      writeNote(note("automatch", me.team, me.season), null);
+      me.set(null);
+    }
     await supabase.auth.signOut();
   },
   /** Deletes the account and all its data on the server. */

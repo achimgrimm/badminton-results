@@ -24,13 +24,15 @@ const RECENT_DAYS = 14;
  */
 const PERSONAL = `(function () {
   var MORE_LIMIT = ${MORE_LIMIT};
-  var hint = document.getElementById("me-hint");
+  var hint = document.getElementById("me-hint"), hintHidden = null, dismissed = null;
   if (hint) {
-    var dismissed = null;
     try { dismissed = localStorage.getItem("${ME_HINT_KEY}"); } catch (e) {}
-    hint.hidden = !!document.body.dataset.me || !!dismissed;
+    // Re-evaluated in update(): after sign-in the account's player is adopted asynchronously.
+    hintHidden = function () { return !!document.body.dataset.me || !!dismissed; };
+    hint.hidden = hintHidden();
     hint.querySelector(".dialog-close").addEventListener("click", function () {
       hint.hidden = true;
+      dismissed = "1";
       try { localStorage.setItem("${ME_HINT_KEY}", "1"); } catch (e) {}
       otTrack("me-hint", { action: "dismiss" });
     });
@@ -40,6 +42,7 @@ const PERSONAL = `(function () {
   function mine(item) { var c = item.querySelector(".match-card"); return !!c && (c.classList.contains("is-playing") || c.classList.contains("is-maybe")); }
   function update() {
     var personal = !!document.body.dataset.me;
+    if (hint) hint.hidden = hintHidden();
     var more = document.querySelector('[data-list="more"]'), upcoming = items(more);
     var shown = personal ? upcoming.filter(mine) : upcoming, first = shown[0];
     document.querySelectorAll(".next[data-index]").forEach(function (h) {

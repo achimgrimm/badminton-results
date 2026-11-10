@@ -7,6 +7,7 @@ import { createClient, type Session } from "@supabase/supabase-js";
 import { roleLabel } from "../roles.ts";
 import { displayName as shownName, matchPlayer } from "../names.ts";
 import { reconcile, type Pick } from "../claims.ts";
+import { createSync } from "./sync.ts";
 
 declare const SUPABASE_URL: string;
 declare const SUPABASE_ANON_KEY: string;
@@ -48,6 +49,24 @@ interface MeApi { team: string; season: string; root: string; get(): (Pick & { h
 const meApi = () => (window as unknown as { otMe?: MeApi }).otMe;
 const listeners = new Set<(s: Session | null) => void>();
 
+/** The account's answers to the games ("Ich spiele") kept in line with the device; see src/client/sync.ts. */
+const sync = createSync({
+  supabase,
+  prefix: STORAGE_KEY.slice(0, -"auth".length),
+  authKey: STORAGE_KEY,
+  choose: async () => (await decideDialog({
+    title: "Cloud oder lokal?",
+    text: "Dein Konto hat schon Antworten zu Spielen, und auf diesem Gerät sind andere gespeichert. Welche sollen gelten? Die anderen werden überschrieben.",
+    buttons: [{ label: "Daten vom Konto", value: "cloud", primary: true }, { label: "Daten von diesem Gerät", value: "local" }],
+  })) === "local" ? "local" : "cloud",
+});
+const syncNow = () => void sync.sync(session?.user.id ?? null);
+let syncTimer: ReturnType<typeof setTimeout> | undefined;
+// An answer given on this page, the connection coming back and returning to the tab all trigger a sync.
+document.addEventListener("ot-answers", () => { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 400); });
+window.addEventListener("online", syncNow);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
+
 export const Online = {
   get session() { return session; },
   get permissions() { return permissions; },
@@ -65,10 +84,11 @@ export const Online = {
   signOut: async () => {
     track("logout");
     // The pick belongs to the account: signing out clears it (and the sign-in notes, so the next login matches afresh).
+    // Answers given offline are sent first (best effort), so they are on the account when signing in elsewhere.
+    await sync.sync(session?.user.id ?? null).catch(() => {});
     const me = meApi();
     if (me) {
       writeNote(note("attempt", me.team, me.season), null);
-      writeNote(note("automatch", me.team, me.season), null);
       me.set(null);
     }
     await supabase.auth.signOut();
@@ -205,7 +225,7 @@ function renderAccount(): void {
     item("Abmelden", () => void Online.signOut().then(offerClearLocalData), false, SIGN_OUT_ICON),
     item("Konto löschen", () => {
       void confirmDeleteAccount().then((yes) => {
-        if (yes) Online.deleteAccount().catch(() => alert("Das Konto konnte nicht gelöscht werden. Bitte versuche es später noch einmal."));
+        if (yes) Online.deleteAccount().then(offerClearLocalData).catch(() => alert("Das Konto konnte nicht gelöscht werden. Bitte versuche es später noch einmal."));
       });
     }, true, TRASH_ICON),
   );
@@ -235,9 +255,32 @@ function ask(o: { title: string; text: string; cancel: string; ok: string; dange
   });
 }
 
+/** A dialog that can only be left with one of its buttons (no Escape, no click outside); resolves with the button's value. */
+function decideDialog(o: { title: string; text: string; body?: HTMLElement; buttons: { label: string; value: string; primary?: boolean }[] }): Promise<string> {
+  return new Promise((resolve) => {
+    const dlg = document.createElement("dialog");
+    dlg.className = "team-dialog confirm-dialog";
+    dlg.setAttribute("aria-labelledby", "decide-h");
+    dlg.addEventListener("cancel", (e) => e.preventDefault());
+    const h = Object.assign(document.createElement("h2"), { id: "decide-h", textContent: o.title });
+    const p = Object.assign(document.createElement("p"), { textContent: o.text });
+    const row = document.createElement("div");
+    row.className = "btn-row";
+    for (const b of o.buttons) {
+      const btn = Object.assign(document.createElement("button"), { type: "button", className: b.primary ? "btn btn-primary" : "btn btn-secondary", textContent: b.label });
+      btn.addEventListener("click", () => dlg.close(b.value));
+      row.append(btn);
+    }
+    dlg.addEventListener("close", () => { dlg.remove(); resolve(dlg.returnValue); });
+    dlg.append(h, p, ...(o.body ? [o.body] : []), row);
+    document.body.append(dlg);
+    dlg.showModal();
+  });
+}
+
 const confirmDeleteAccount = () => ask({
   title: "Konto löschen?",
-  text: "Dein Konto und alle damit gespeicherten Daten (Profil, Rolle, gewählter Spieler) werden sofort und endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
+  text: "Dein Konto und alle damit gespeicherten Daten (Profil, Rolle, gewählter Spieler, Antworten zu Spielen) werden sofort und endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
   cancel: "Abbrechen", ok: "Konto löschen", danger: true,
 });
 
@@ -259,7 +302,7 @@ async function offerClearLocalData(): Promise<void> {
 }
 
 /** Small per-device notes next to the session, per team and season (never sent anywhere). */
-const note = (kind: "attempt" | "automatch", team: string, season: string) => `${STORAGE_KEY}-${kind}-${team}-${season}`;
+const note = (kind: "attempt", team: string, season: string) => `${STORAGE_KEY}-${kind}-${team}-${season}`;
 const readNote = (key: string): string | null => { try { return localStorage.getItem(key); } catch { return null; } };
 const writeNote = (key: string, value: string | null) => {
   try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* optional */ }
@@ -293,25 +336,42 @@ async function loadClaims(s: Session, run: number): Promise<void> {
     writeNote(note("attempt", me.team, me.season), null);
     me.set(null);
     alert(`Deine Anfrage für ${shownName(result.pick.name)} wurde nicht bestätigt. Die Auswahl wurde zurückgesetzt.`);
-  } else if (!local && !server) await autoMatch(me, s, canApprove);
+  } else if (!local && !server) await confirmPlayer(me, s, canApprove, run);
 }
 
 /**
- * Sign-in without a chosen player: the account's name is looked up in the team's roster. It is tried
- * on every load until it finds the player; once one was picked this way it never happens again for
- * this device, team and season, so a pick the user clears later stays cleared.
+ * Sign-in without a chosen player: the account has to say who it is. The Google name is looked up in
+ * the team's roster and preselected; the user confirms it or picks another. The pick becomes a normal
+ * claim, so it still needs approval. The dialog can only be left by choosing or by signing out.
  */
-async function autoMatch(me: MeApi, s: Session, canApprove: boolean): Promise<void> {
-  const key = note("automatch", me.team, me.season);
-  if (readNote(key)) return;
+async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: number): Promise<void> {
+  const roster = pageRoster();
+  if (!roster.length) return;
   const meta = s.user.user_metadata as Record<string, unknown>;
-  const accountName = String(meta.full_name ?? meta.name ?? "");
-  const hit = matchPlayer(accountName, pageRoster());
-  if (!hit) return;
-  writeNote(key, "1");
-  const pick = { person: hit.person, name: hit.name, ...(hit.href ? { href: hit.href } : {}) };
+  const hit = matchPlayer(String(meta.full_name ?? meta.name ?? ""), roster);
+  const select = document.createElement("select");
+  select.className = "select";
+  select.setAttribute("aria-label", "Spieler");
+  for (const r of [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de"))) {
+    const o = Object.assign(document.createElement("option"), { value: String(r.person), textContent: shownName(r.name) });
+    if (hit?.person === r.person) o.selected = true;
+    select.append(o);
+  }
+  if (!hit) select.insertBefore(Object.assign(document.createElement("option"), { value: "", textContent: "Bitte wählen …", selected: true, disabled: true }), select.firstChild);
+  const body = document.createElement("p");
+  body.append(select);
+  const answer = await decideDialog({
+    title: "Wer bist Du?",
+    text: hit ? "Ist das Dein Name in der Mannschaft? Wähle Deinen Spieler aus." : "Wähle Deinen Spieler aus der Mannschaft.",
+    body,
+    buttons: [{ label: "Abmelden", value: "signout" }, { label: "Bestätigen", value: "ok", primary: true }],
+  });
+  if (answer === "signout") { await Online.signOut(); return; }
+  const chosen = roster.find((r) => String(r.person) === select.value);
+  if (!chosen || run !== applied) return;
+  const pick = { person: chosen.person, name: chosen.name, ...(chosen.href ? { href: chosen.href } : {}) };
   me.set(pick);
-  track("claim", { action: "automatch" });
+  track("claim", { action: hit && hit.person === chosen.person ? "automatch" : "pick" });
   await saveClaim(me.team, me.season, pick, canApprove ? "approved" : "pending");
 }
 
@@ -474,6 +534,7 @@ function apply(s: Session | null): void {
     displayName = (profile.data as { display_name: string | null } | null)?.display_name ?? null;
     roles = Array.isArray(userRoles.data) ? (userRoles.data as { role: string }[]).map((r) => r.role) : [];
     await loadClaims(s, run);
+    if (run === applied) syncNow();
   };
   // On failure the footer falls back to the Google name and the user counts as having no permissions.
   void load().catch(() => {}).finally(done);

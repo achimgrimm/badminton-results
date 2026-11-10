@@ -107,7 +107,7 @@ export function storageKey(name: string): string {
  * Exact names, and name prefixes for the per-team and per-season ones (and the auth session's extras).
  */
 export const STORAGE_NAMES = ["theme", "chromeHintDismissed", "team", "releaseSeen", "meHintDismissed", "spielplan-filter", "auth"];
-export const STORAGE_PREFIXES = ["seen-", "me-", "playing-", "lineup-", "auth-"];
+export const STORAGE_PREFIXES = ["seen-", "me-", "playing-", "answers-", "lineup-", "auth-"];
 /** Whether a localStorage key belongs to this build (live site or its stage). */
 export function ownsStorageKey(key: string): boolean {
   return STORAGE_NAMES.some((n) => key === storageKey(n)) || STORAGE_PREFIXES.some((p) => key.startsWith(storageKey(p)));

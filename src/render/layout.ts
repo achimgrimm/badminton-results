@@ -112,10 +112,13 @@ const meKey = (slug: string) => storageKey(`me-${slug}-${SEASON_KEY}`);
  */
 const PLAYING = (slug: string) => `(function () {
   ${PLAYING_STATE}
-  var KEY = "${storageKey(`playing-${slug}-${SEASON_KEY}`)}", mine = {};
+  var KEY = "${storageKey(`playing-${slug}-${SEASON_KEY}`)}", AT = "${storageKey(`answers-at-${slug}-${SEASON_KEY}`)}", mine = {};
   var STATUS = { "": "nicht angegeben", yes: "ja", maybe: "vielleicht", no: "nein" };
   var LABEL = { "": "Ich spiele", yes: "Dabei", maybe: "Vielleicht", no: "Kann nicht" };
-  try { mine = migratePlaying(JSON.parse(localStorage.getItem(KEY) || "[]")); } catch (e) {}
+  function load() {
+    try { mine = migratePlaying(JSON.parse(localStorage.getItem(KEY) || "[]")); } catch (e) { mine = {}; }
+  }
+  load();
   function me() {
     var m = null;
     try { m = JSON.parse(localStorage.getItem("${meKey(slug)}") || "null"); } catch (e) {}
@@ -153,13 +156,21 @@ const PLAYING = (slug: string) => `(function () {
     document.body.classList.toggle("no-playing", !any);
     document.dispatchEvent(new Event("ot-playing"));
   }
-  window.otPlayingRender = render;
+  // online.js reloads the answers from storage after it merged the account's (see src/client/sync.ts).
+  window.otPlayingRender = function () { load(); render(); };
   document.querySelectorAll(".play-toggle").forEach(function (b) {
     b.addEventListener("click", function () {
       var k = b.dataset.playKey, state = nextPlaying(mine[k]);
       if (state) mine[k] = state; else delete mine[k];
       try { localStorage.setItem(KEY, JSON.stringify(mine)); } catch (e) {}
+      // The time of each change, so that the newest answer wins when signed in (sync.ts); a cleared answer keeps its time.
+      try {
+        var at = JSON.parse(localStorage.getItem(AT) || "{}");
+        at[k] = Date.now();
+        localStorage.setItem(AT, JSON.stringify(at));
+      } catch (e) {}
       render();
+      document.dispatchEvent(new Event("ot-answers"));
       otTrack("playing", { state: state || "none" });
     });
   });

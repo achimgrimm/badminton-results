@@ -15,6 +15,7 @@ declare const STORAGE_KEY: string;
 /** This build's localStorage names and prefixes (STORAGE_NAMES/STORAGE_PREFIXES in config.ts, with the stage prefix). */
 declare const OWN_KEYS: { names: string[]; prefixes: string[] };
 declare function otTrack(name: string, data?: Record<string, string>): void;
+declare function otIdentify(extra?: Record<string, string>): void;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { storageKey: STORAGE_KEY, flowType: "pkce", detectSessionInUrl: true, persistSession: true, autoRefreshToken: true },
@@ -559,4 +560,7 @@ function apply(s: Session | null): void {
 }
 
 // Fires once with the stored session and again on every sign-in, sign-out and token refresh.
-supabase.auth.onAuthStateChange((_event, s) => apply(s));
+supabase.auth.onAuthStateChange((_event, s) => {
+  try { otIdentify({ storage: s ? "cloud" : "local" }); } catch { /* tracking is optional */ }
+  apply(s);
+});

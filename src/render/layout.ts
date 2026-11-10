@@ -38,7 +38,7 @@ const HINT_KEY = storageKey("chromeHintDismissed");
 export const TEAM_KEY = storageKey("team");
 
 /** Team pages remember themselves, so the chooser can forward there next time. */
-const REMEMBER = (slug: string) => `try { localStorage.setItem("${TEAM_KEY}", "${slug}"); } catch (e) {}`;
+const REMEMBER = (slug: string) => `try { localStorage.setItem("${TEAM_KEY}", "${slug}"); } catch (e) {} otIdentify();`;
 
 /** A result counts as new for this long after the device first saw it. */
 const NEW_FOR_MS = 24 * 60 * 60 * 1000;
@@ -197,6 +197,7 @@ const ME = (slug: string, root: string) => `(function () {
     render();
     if (window.otPlayingRender) window.otPlayingRender();
     otTrack("me", { action: me ? "set" : "clear", via: via });
+    otIdentify();
     // A pick made here is passed to the account (online.js) when signed in; the account's own changes aren't sent back.
     if (via !== "account" && window.otMeChanged) window.otMeChanged(me);
   }
@@ -409,6 +410,25 @@ const THEME_INIT = `(function () {
  * or when it is blocked.
  */
 const ANALYTICS = `function otTrack(name, data) { if (window.umami) umami.track(name, data); }
+// Session properties: what kind of user this is. One line per attribute in PROPS; otIdentify() sends
+// them all (again) whenever something changed. extra overrides probes, e.g. online.js sets storage.
+var otExtra = {};
+var otProps = {
+  app: function () { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true ? "app" : "browser"; },
+  team: function () { return localStorage.getItem("${TEAM_KEY}") ? "yes" : "no"; },
+  player: function () {
+    for (var i = 0; i < localStorage.length; i++) if (localStorage.key(i).indexOf("${storageKey("me-")}") === 0) return "yes";
+    return "no";
+  },
+  storage: function () { return "local"; }
+};
+function otIdentify(extra) {
+  if (extra) for (var k in extra) otExtra[k] = extra[k];
+  if (!window.umami || !umami.identify) return;
+  var data = {};
+  for (var key in otProps) { try { data[key] = otExtra[key] || otProps[key](); } catch (e) {} }
+  umami.identify(data);
+}
 (function () {
   var s = document.createElement("script");
   var app = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -417,12 +437,13 @@ const ANALYTICS = `function otTrack(name, data) { if (window.umami) umami.track(
   s.dataset.websiteId = "${UMAMI_WEBSITE_ID}";
   s.dataset.domains = "${UMAMI_DOMAIN}";
   s.dataset.tag = app ? "app" : "browser";
+  s.onload = function () { otIdentify(); };
   document.head.appendChild(s);
 })();`;
 /** Stages share the live hostname, so Umami's domain filter wouldn't keep them out: no tracking there. */
 const TRACKING = UMAMI_WEBSITE_ID !== "" && !STAGE;
 /** Stub when tracking is off, so the other scripts can call otTrack() unconditionally. */
-const NO_ANALYTICS = `function otTrack() {}`;
+const NO_ANALYTICS = `function otTrack() {}\nfunction otIdentify() {}`;
 
 const THEME_TOGGLE = `(function () {
   var root = document.documentElement, btn = document.getElementById("theme-toggle");
@@ -661,7 +682,7 @@ ${o.body}
 <footer class="site-footer">
   <div class="container">
     <p>Inoffizielle Ansicht. Daten: <a href="${esc(o.sourceUrl ?? (team ? urls.groupPage(team) : urls.clubTeams()))}">nuLiga</a> / Bremer Badminton-Verband.</p>
-    ${TRACKING ? `<p>Anonyme Nutzungsstatistik mit Umami, ohne Cookies und ohne persönliche Daten.</p>` : ""}
+    ${TRACKING ? `<p>Anonyme Nutzungsstatistik mit Umami, ohne Cookies und ohne persönliche Daten. Erfasst wird auch, ob die App installiert ist, ob ein Team und ein Spieler gewählt sind und ob Angaben lokal oder im Konto liegen (nur Ja/Nein, keine Namen).</p>` : ""}
     ${footerStatus(o.checkedAt)}
     <p><a href="${assets}datenschutz.html">Datenschutz</a></p>
   </div>

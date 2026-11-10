@@ -45,3 +45,10 @@ test("team pages offer the player pick in the menu, other pages do not", async (
   setTeam(null, []);
   assert.ok(!page().menu.includes("menu-pick"));
 });
+
+test("analytics sends the session properties and the stub can identify", async () => {
+  const { renderDatenschutz: render } = await import("../src/render/datenschutz.ts");
+  setTeam(null, []);
+  const html = render(null);
+  assert.ok(html.includes("function otIdentify("));
+});

@@ -54,7 +54,7 @@ export function renderDatenschutz(checkedAt: string | null): string {
     <p>Ergebnisse, Tabellen, Spielberichte und Spielernamen stammen aus dem öffentlich zugänglichen Angebot des Bremer Badminton-Verbands auf nuLiga. Die Seite zeigt sie nur an und speichert keine weiteren Daten über die genannten Personen. Wenn Du nicht möchtest, dass Dein Name hier erscheint, wende Dich an den Verband oder an ${mail}.</p>
 
     <h2>Nutzungsstatistik</h2>
-    <p>Wir zählen Seitenaufrufe und einzelne Aktionen (z. B. „Design gewechselt“) mit Umami Cloud. Das geschieht ohne Cookies, ohne Speicherung Deiner IP-Adresse und ohne persönliche Daten, Du wirst nicht über Seiten oder Geräte hinweg wiedererkannt.</p>
+    <p>Wir zählen Seitenaufrufe und einzelne Aktionen (z. B. „Design gewechselt“) mit Umami Cloud. Das geschieht ohne Cookies, ohne Speicherung Deiner IP-Adresse und ohne persönliche Daten. Dazu gehört auch, ob die App installiert ist, ob ein Team und ein Spieler gewählt sind und ob Deine Angaben nur auf dem Gerät oder in Deinem Konto liegen (nur Ja/Nein, keine Namen). Du wirst nicht über Seiten oder Geräte hinweg wiedererkannt.</p>
 
     <h2>Schriftarten und Hosting</h2>
     <p>Die Seite liegt bei GitHub Pages (GitHub Inc.). Die Schriftart Source Sans wird von Google Fonts geladen; dabei sieht der Anbieter Deine IP-Adresse. Beim Aufruf der Seite verarbeiten diese Dienste technisch notwendige Verbindungsdaten.</p>

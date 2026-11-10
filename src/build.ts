@@ -131,6 +131,8 @@ if (ONLINE) writeFileSync(join(DIST, "auth-callback.html"), renderAuthCallback()
 
 copyFileSync(join(SRC, "styles.css"), join(DIST, "styles.css"));
 copyFileSync(join(SRC, "favicon.svg"), join(DIST, "favicon.svg"));
+// Google Search Console ownership proof (needed for the OAuth app branding); keep it published.
+copyFileSync(join(SRC, "google49559f935a48ddad.html"), join(DIST, "google49559f935a48ddad.html"));
 copyFileSync(join(SRC, "icons", "club-logo.png"), join(DIST, "club-logo.png"));
 for (const icon of ["icon-192.png", "icon-512.png", "apple-touch-icon.png"]) {
   copyFileSync(join(SRC, "icons", icon), join(DIST, "icons", icon));

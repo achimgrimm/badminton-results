@@ -190,6 +190,8 @@ const ME = (slug: string, root: string) => `(function () {
   var card = document.getElementById("me-card"), dlg = document.getElementById("me-dialog");
   var list = document.getElementById("player-list"), order = list ? Array.prototype.slice.call(list.children) : [];
   function save(next, via) {
+    // Signed in (online.js), clearing the player instead asks for the new one; the pick stays until then.
+    if (!next && via !== "account" && window.otClearMe && window.otClearMe()) return;
     me = next;
     try { if (me) localStorage.setItem(KEY, JSON.stringify(me)); else localStorage.removeItem(KEY); } catch (e) {}
     render();

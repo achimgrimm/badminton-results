@@ -160,6 +160,7 @@ main.container { padding-bottom: 32px; }
 .btn-secondary:hover { background: var(--ot-primary); color: var(--ot-on-primary); text-decoration: none; }
 .btn-danger { background: var(--ot-error); color: #fff; border-color: var(--ot-error); }
 .btn-danger:hover { filter: brightness(.9); text-decoration: none; }
+.confirm-dialog .select { width: 100%; font: inherit; padding: 8px; color: var(--ot-text); background: var(--ot-bg); border: 1px solid var(--ot-border); border-radius: var(--ot-radius); }
 .confirm-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 

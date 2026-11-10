@@ -344,36 +344,54 @@ async function loadClaims(s: Session, run: number): Promise<void> {
  * the team's roster and preselected; the user confirms it or picks another. The pick becomes a normal
  * claim, so it still needs approval. The dialog can only be left by choosing or by signing out.
  */
-async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: number): Promise<void> {
+async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: number, replacing = false): Promise<void> {
   const roster = pageRoster();
   if (!roster.length) return;
+  // The page's own list of players would sit behind this dialog; this one replaces it.
+  (document.getElementById("me-dialog") as HTMLDialogElement | null)?.close();
   const meta = s.user.user_metadata as Record<string, unknown>;
-  const hit = matchPlayer(String(meta.full_name ?? meta.name ?? ""), roster);
+  const hit = replacing ? null : matchPlayer(String(meta.full_name ?? meta.name ?? ""), roster);
+  const current = me.get()?.person;
   const select = document.createElement("select");
   select.className = "select";
   select.setAttribute("aria-label", "Spieler");
+  select.append(Object.assign(document.createElement("option"), { value: "", textContent: "Bitte wählen …", selected: !hit, disabled: true }));
   for (const r of [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de"))) {
-    const o = Object.assign(document.createElement("option"), { value: String(r.person), textContent: shownName(r.name) });
-    if (hit?.person === r.person) o.selected = true;
-    select.append(o);
+    if (replacing && r.person === current) continue;
+    select.append(Object.assign(document.createElement("option"), { value: String(r.person), textContent: shownName(r.name), selected: hit?.person === r.person }));
   }
-  if (!hit) select.insertBefore(Object.assign(document.createElement("option"), { value: "", textContent: "Bitte wählen …", selected: true, disabled: true }), select.firstChild);
   const body = document.createElement("p");
   body.append(select);
-  const answer = await decideDialog({
-    title: "Wer bist Du?",
-    text: hit ? "Ist das Dein Name in der Mannschaft? Wähle Deinen Spieler aus." : "Wähle Deinen Spieler aus der Mannschaft.",
-    body,
-    buttons: [{ label: "Abmelden", value: "signout" }, { label: "Bestätigen", value: "ok", primary: true }],
-  });
-  if (answer === "signout") { await Online.signOut(); return; }
-  const chosen = roster.find((r) => String(r.person) === select.value);
-  if (!chosen || run !== applied) return;
+  let chosen: (typeof roster)[number] | undefined;
+  while (!chosen) {
+    // Signed in there is always a player: the dialog is left by choosing one, or by signing out (when replacing: by cancelling, which changes nothing).
+    const answer = await decideDialog({
+      title: replacing ? "Neuen Spieler wählen" : "Wer bist Du?",
+      text: replacing ? "Wähle den Spieler, der Du stattdessen bist. Erst damit wird die Auswahl geändert." : hit ? "Ist das Dein Name in der Mannschaft? Wähle Deinen Spieler aus." : "Wähle Deinen Spieler aus der Mannschaft.",
+      body,
+      buttons: [{ label: replacing ? "Abbrechen" : "Abmelden", value: "leave" }, { label: "Bestätigen", value: "ok", primary: true }],
+    });
+    if (answer === "leave") {
+      if (!replacing) await Online.signOut();
+      return;
+    }
+    chosen = roster.find((r) => String(r.person) === select.value);
+  }
+  if (run !== applied) return;
   const pick = { person: chosen.person, name: chosen.name, ...(chosen.href ? { href: chosen.href } : {}) };
   me.set(pick);
-  track("claim", { action: hit && hit.person === chosen.person ? "automatch" : "pick" });
+  track("claim", { action: replacing ? "pick" : hit && hit.person === chosen.person ? "automatch" : "pick" });
   await saveClaim(me.team, me.season, pick, canApprove ? "approved" : "pending");
 }
+
+// Signed in, "Ich bin nicht …" and toggling the player off can't leave the device without a player (ME script):
+// they ask for the new one right away, and nothing changes until one is confirmed.
+(window as unknown as { otClearMe: () => boolean }).otClearMe = () => {
+  const me = meApi();
+  if (!session || !me || !me.get() || !pageRoster().length) return false;
+  void confirmPlayer(me, session, permissions.has("player.link"), applied, true);
+  return true;
+};
 
 async function loadPending(run: number): Promise<void> {
   if (!permissions.has("player.link")) { pending = []; return; }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ONLINE } from "../src/config.ts";
-import { PRIVACY_CONTACT, renderDatenschutz } from "../src/render/datenschutz.ts";
+import { ONLINE, PRIVACY_CONTACT } from "../src/config.ts";
+import { renderDatenschutz } from "../src/render/datenschutz.ts";
 import { setTeam } from "../src/render/context.ts";
 
 test("privacy page names the contact and, when online, the Google data and account deletion", () => {

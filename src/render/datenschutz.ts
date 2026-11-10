@@ -1,9 +1,6 @@
-import { CLUB_NAME, ONLINE, STORAGE_NAMES, STORAGE_PREFIXES, SUPABASE_PROJECT_ID, storageKey } from "../config.ts";
+import { CLUB_NAME, ONLINE, PRIVACY_CONTACT, STORAGE_NAMES, STORAGE_PREFIXES, SUPABASE_PROJECT_ID, storageKey } from "../config.ts";
 import { layout } from "./layout.ts";
 import { esc, html } from "./util.ts";
-
-/** Contact and responsible party: a private person, not the club. */
-export const PRIVACY_CONTACT = "achim.grimm@posteo.de";
 
 /** The "Lokale Daten löschen" button: removes this build's localStorage keys (see STORAGE_NAMES) after a dialog. */
 const CLEAR_LOCAL = () => `(function () {

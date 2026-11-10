@@ -1,4 +1,4 @@
-import { CLUB_NAME, ONLINE, REPO_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
+import { CLUB_NAME, ONLINE, PRIVACY_CONTACT, REPO_URL, SIGNAL_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
 import { PLAYING_STATE } from "../playing.ts";
 import { APP_SHORT_NAME } from "./pwa.ts";
@@ -358,6 +358,8 @@ const MENU = `(function () {
   dlg.addEventListener("click", function (e) {
     if (e.target === dlg) dlg.close();
     else if (e.target.closest("[data-menu-close]")) dlg.close();
+    var t = e.target.closest("[data-track]");
+    if (t) otTrack(t.getAttribute("data-track"));
   }, true);
 })();`;
 
@@ -385,6 +387,11 @@ function menuDialog(assets: string, root: string | null): string {
     <button type="button" class="menu-item theme-toggle" id="theme-toggle">${MOON}${SUN}<span>Dunkles Design</span></button>
     ${releaseNotes().length ? `<a class="menu-item" href="#" id="release-link" data-menu-close>${RELEASE_ICON}<span>Was ist neu?</span></a>` : ""}
     <a class="menu-item" href="${assets}datenschutz.html">${LOCK_ICON}<span>Datenschutz</span></a>
+  </div>
+  <div class="menu-section" id="menu-feedback">
+    <p class="menu-who">Feedback / Ideen</p>
+    <a class="menu-item" href="${esc(SIGNAL_URL)}" target="_blank" rel="noopener" data-menu-close data-track="feedback-signal">${SIGNAL_ICON}<span>Per Signal schreiben</span></a>
+    <a class="menu-item" href="mailto:${esc(PRIVACY_CONTACT)}?subject=${encodeURIComponent("Feedback OT Badminton")}" data-menu-close data-track="feedback-mail">${MAIL_ICON}<span>Per E-Mail schreiben</span></a>
   </div>
 </dialog>`;
 }
@@ -557,7 +564,9 @@ const RELEASE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const PERSON_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>`;
 const STATS_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>`;
 const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="4"/><path d="M2 21a8 8 0 0 1 12.5-6.6M17 14l5 5M22 14l-5 5"/></svg>`;
-const LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
+const SIGNAL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5A8 8 0 1 1 21 12z"/></svg>`;
+const MAIL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`;
+const LOCK_ICON =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
 
 /** Filled and opened by NEW_RESULTS when results appeared since the last visit. */
 const NEW_DIALOG = html`<dialog class="team-dialog new-dialog" id="new-dialog" aria-labelledby="new-dialog-h">

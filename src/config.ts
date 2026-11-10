@@ -11,6 +11,10 @@ export const SEASON_LABEL = "2026/27";
 export const SEASON_KEY = SEASON_LABEL.replace(/[^0-9a-z]+/gi, "-");
 /** The footer links the build's commit here. */
 export const REPO_URL = "https://github.com/achimgrimm/badminton-results";
+/** Contact and responsible party: a private person, not the club. Also the feedback address in the menu. */
+export const PRIVACY_CONTACT = "achim.grimm@posteo.de";
+/** Signal link by username, so no phone number is shown. */
+export const SIGNAL_URL = "https://signal.me/#eu/HRCOVfliEPfG-i-1iEbBuupYMejMDMctInrHmK7DjdVx0gDxhdJJloccmhexAIst";
 
 export type PoolRound = "vorrunde" | "rueckrunde";
 

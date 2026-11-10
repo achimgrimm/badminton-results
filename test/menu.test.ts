@@ -52,3 +52,12 @@ test("analytics sends the session properties and the stub can identify", async (
   const html = render(null);
   assert.ok(html.includes("function otIdentify("));
 });
+
+test("the menu offers feedback by Signal and e-mail, without a phone number", async () => {
+  const { PRIVACY_CONTACT, SIGNAL_URL } = await import("../src/config.ts");
+  const { menu } = page();
+  assert.ok(menu.includes("Feedback / Ideen"));
+  assert.ok(menu.includes(`href="${SIGNAL_URL}"`) && menu.includes('target="_blank"'));
+  assert.ok(menu.includes(`href="mailto:${PRIVACY_CONTACT}?subject=`));
+  assert.ok(!menu.includes("tel:") && !/\+\d{6,}/.test(menu));
+});

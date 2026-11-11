@@ -27,7 +27,7 @@ test("lineup from a single report", () => {
   assert.equal(l.length, 8);
   assert.deepEqual(l.map((d) => d.discipline), ["1.HD", "2.HD", "DD", "1.HE", "2.HE", "DE", "3.HE", "GD"]);
   const he1 = l.find((d) => d.discipline === "1.HE")!;
-  assert.deepEqual(he1.entries, [{ players: ["Mahnke, Elmar"], played: 1, won: 0, lost: 1 }]);
+  assert.deepEqual(he1.entries, [{ players: ["Mahnke, Elmar"], persons: [1337091], played: 1, won: 0, lost: 1 }]);
   const he2 = l.find((d) => d.discipline === "2.HE")!;
   assert.equal(he2.entries[0].won, 1);
   assert.deepEqual(lineup([report], "Unknown"), []);
@@ -44,8 +44,8 @@ test("lineup counts across reports and sorts by appearances", () => {
 
   const he1 = lineup([report, second, third], WALLE).find((d) => d.discipline === "1.HE")!;
   assert.deepEqual(he1.entries, [
-    { players: ["Mahnke, Elmar"], played: 2, won: 0, lost: 2 },
-    { players: ["Neu, Nora"], played: 1, won: 0, lost: 1 },
+    { players: ["Mahnke, Elmar"], persons: [1337091], played: 2, won: 0, lost: 2 },
+    { players: ["Neu, Nora"], persons: [null], played: 1, won: 0, lost: 1 },
   ]);
 });
 

@@ -1,11 +1,11 @@
 import { SEASON_KEY, storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
-import { headToHead, lineup, playerStats, teamForm, type PlayerStats, type Tally } from "../stats.ts";
+import { headToHead, lineup, teamForm, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle, teamLogo } from "./components.ts";
 import { layout, SHARE_BTN_ICON } from "./layout.ts";
-import { disciplinePills, quota, record } from "./spieler.ts";
+import { opponentDir, playerCard, type PlayerPage } from "./spieler.ts";
 import { displayName, esc, formatDate, html, isOwn, opponentOf, postponedLabel, previewName } from "./util.ts";
 
 /**
@@ -223,28 +223,6 @@ export function renderIcs(d: Dataset, m: Meeting, now: Date): string {
     .join("\r\n");
 }
 
-/** One row per opposing player: appearances, record, sets, disciplines, usual partner. */
-function opponentRow(s: PlayerStats, own: string): string {
-  const vsUs = s.log.filter((g) => g.opponentTeam === own);
-  const usTally: Tally = {
-    played: vsUs.length,
-    won: vsUs.filter((g) => g.outcome === "win").length,
-    lost: vsUs.filter((g) => g.outcome === "loss").length,
-  };
-  const partner = s.partners[0];
-  return html`<tr>
-      <td>
-        <span class="player-name">${esc(displayName(s.name))}</span>
-        ${disciplinePills(s)}
-        ${partner ? `<span class="small muted">meist mit ${esc(displayName(partner.name))}</span>` : ""}
-        ${vsUs.length ? `<span class="small vs-us">gegen uns: ${record(usTally)}</span>` : ""}
-      </td>
-      <td class="num">${s.played}</td>
-      <td class="num"><b>${record(s)}</b><br><span class="small muted">${quota(s)}</span></td>
-      <td class="num">${s.sets[0]}:${s.sets[1]}</td>
-    </tr>`;
-}
-
 /** "Aufstellung planen": who plays which game; collapsed until used (see LINEUP). */
 function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
   const sections = lineupPlayers(d);
@@ -263,7 +241,7 @@ function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
   const vs = home ? `Heim gegen ${m.guest}` : `Auswärts bei ${m.home}`;
   const history = lineupHistory(d);
   const suggest = Object.keys(history).length > 0;
-  return html`<details class="card lineup-editor" id="lineup"${suggest ? ` data-history="${esc(JSON.stringify(history))}"` : ""}>
+  return html`<details class="card fold lineup-editor" id="lineup"${suggest ? ` data-history="${esc(JSON.stringify(history))}"` : ""}>
       <summary>Aufstellung planen</summary>
       <p class="small muted">Wer spielt welches Spiel? Bei Herren- und Damenspielen siehst Du nur Herren bzw. Damen (aus den nuLiga-Ranglisten); Spieler ohne bekanntes Geschlecht stehen überall. Fehler werden nur angezeigt, gespeichert wird immer. Die Aufstellung bleibt auf diesem Gerät.</p>
       ${suggest ? `<p class="small muted">„Vorschlag“ füllt freie Plätze mit den Spielern, die diese Spiele bisher meist gespielt haben; neuere Spiele zählen mehr.</p>` : ""}
@@ -291,7 +269,7 @@ function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
     </details>`;
 }
 
-export function renderVorschau(d: Dataset, m: Meeting): string {
+export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage[]): string {
   const root = "../";
   const opponent = opponentOf(m);
   const home = isOwn(m.home);
@@ -304,7 +282,47 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
   );
   const opponentReports = Object.values(d.reports).filter((r) => r.home === opponent || r.guest === opponent);
   const lineups = lineup(opponentReports, opponent);
-  const opponentPlayers = playerStats(opponentReports, opponent);
+  const dir = opponentDir(opponent);
+  const pageOf = new Map(opponentPages.map((p) => [p.stats.person, p.slug]));
+  /** Their record against us, for the card's "gegen uns" note. */
+  const vsUs = (p: PlayerPage): Tally => {
+    const games = p.stats.log.filter((g) => g.opponentTeam === d.own.name);
+    return { played: games.length, won: games.filter((g) => g.outcome === "win").length, lost: games.filter((g) => g.outcome === "loss").length };
+  };
+  const nameLink = (name: string, person: number | null | undefined) => {
+    const page = person != null ? pageOf.get(person) : undefined;
+    return page ? `<a href="../${dir}${page}.html">${esc(displayName(name))}</a>` : esc(displayName(name));
+  };
+
+  const fold = (title: string, inner: string) => html`<details class="card fold"><summary>${title}</summary>${inner}</details>`;
+  const opponentLineup = fold(
+    "Aufstellung des Gegners",
+    lineups.length
+      ? html`<p class="small muted">Aus ${opponentReports.length} Spielbericht${opponentReports.length === 1 ? "" : "en"}: wer in welcher Disziplin gespielt hat, mit Bilanz (S–N).</p>
+        <div class="lineups">
+          ${lineups.map(
+            (l) => html`<article class="lineup">
+              <div class="game-head"><span class="badge badge--primary">${esc(l.discipline)}</span></div>
+              <ul>
+                ${l.entries.map(
+                  (e) => html`<li>
+                    <span class="who">${e.players.map((p, i) => `<span>${nameLink(p, e.persons[i])}</span>`)}</span>
+                    <span class="rec num">${e.played}× · ${e.won}–${e.lost}</span>
+                  </li>`,
+                )}
+              </ul>
+            </article>`,
+          )}
+        </div>`
+      : `<p class="small muted">Noch keine Spielberichte.</p>`,
+  );
+  const opponentRoster = fold(
+    "Spieler des Gegners",
+    opponentPages.length
+      ? html`<p class="small muted">Alle ${opponentPages.length} Spieler, die ${esc(opponent)} bisher eingesetzt hat, nach Einsätzen. Tippe auf einen Namen für Details.</p>
+        ${opponentPages.map((p) => playerCard(p.stats, `../${dir}${p.slug}.html`, undefined, vsUs(p)))}`
+      : `<p class="small muted">Noch keine Spielberichte.</p>`,
+  );
 
   const body = html`
     <section class="next">
@@ -314,8 +332,6 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
       ${m.postponed ? `<p class="small"><span class="badge">${esc(postponedLabel(m))}</span></p>` : ""}
       <div class="btn-row">${playToggle(m, "hero")}</div>
     </section>
-
-    ${lineupEditor(d, m, home)}
 
     <h2>Anfahrt</h2>
     <div class="card">
@@ -328,6 +344,11 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
         <a class="btn btn-secondary" href="${previewName(m)}.ics" download>Termin speichern</a>
       </div>
     </div>
+
+    <h2>Aufstellung</h2>
+    ${lineupEditor(d, m, home)}
+    ${opponentLineup}
+    ${opponentRoster}
 
     <h2>Gegner: ${teamLogo(d.clubs, opponent, "../../")}${esc(opponent)}</h2>
     ${standing
@@ -348,42 +369,6 @@ export function renderVorschau(d: Dataset, m: Meeting): string {
       : `<p class="muted">Noch kein Spiel in dieser Saison.${
           returnMatch ? ` Das Rückspiel ist am ${esc(formatDate(returnMatch.date))}.` : ""
         }</p>`}
-
-    <h2>Spieler des Gegners</h2>
-    ${opponentPlayers.length
-      ? html`<p class="small muted">Alle ${opponentPlayers.length} Spieler, die ${esc(opponent)} bisher eingesetzt hat, nach Einsätzen.</p>
-        <div class="results-wrap">
-          <table class="results results--plain players-table">
-            <thead><tr>
-              <th scope="col">Spieler</th>
-              <th class="num" scope="col" title="Spiele">Sp.</th>
-              <th class="num" scope="col">S–N</th>
-              <th class="num" scope="col">Sätze</th>
-            </tr></thead>
-            <tbody>${opponentPlayers.map((s) => opponentRow(s, d.own.name))}</tbody>
-          </table>
-        </div>`
-      : `<p class="muted">Noch keine Spielberichte.</p>`}
-
-    <h2>Aufstellung des Gegners</h2>
-    ${lineups.length
-      ? html`<p class="small muted">Aus ${opponentReports.length} Spielbericht${opponentReports.length === 1 ? "" : "en"}: wer in welcher Disziplin gespielt hat, mit Bilanz (S–N).</p>
-        <div class="lineups">
-          ${lineups.map(
-            (l) => html`<article class="card lineup">
-              <div class="game-head"><span class="badge badge--primary">${esc(l.discipline)}</span></div>
-              <ul>
-                ${l.entries.map(
-                  (e) => html`<li>
-                    <span class="who">${e.players.map((p) => `<span>${esc(displayName(p))}</span>`)}</span>
-                    <span class="rec num">${e.played}× · ${e.won}–${e.lost}</span>
-                  </li>`,
-                )}
-              </ul>
-            </article>`,
-          )}
-        </div>`
-      : `<p class="muted">Noch keine Spielberichte.</p>`}
   `;
 
   return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: "spielplan", back: { href: `${root}spielplan.html`, label: "Spielplan" }, checkedAt: d.meta.checkedAt, body, script: LINEUP(storageKey(`lineup-${d.own.slug}-${SEASON_KEY}-${previewName(m)}`)) });

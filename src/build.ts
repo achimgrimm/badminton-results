@@ -15,10 +15,10 @@ import { loadReleases } from "./releases.ts";
 import { ownLineups } from "./lineup.ts";
 import { renderIndex } from "./render/index.ts";
 import { renderManifest, renderServiceWorker } from "./render/pwa.ts";
-import { ownPlayers, pickablePlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
+import { opponentDir, opponentPlayers, ownPlayers, pickablePlayers, playerLinker, renderSpieler, renderSpielerListe } from "./render/spieler.ts";
 import { renderSpielplan } from "./render/spielplan.ts";
 import { renderTabelle } from "./render/tabelle.ts";
-import { hasPreview, involvesOwn, previewName, todayInBremen } from "./render/util.ts";
+import { hasPreview, involvesOwn, opponentOf, previewHref, previewName, todayInBremen } from "./render/util.ts";
 import { renderIcs, renderVorschau } from "./render/vorschau.ts";
 
 function stubReport(m: Meeting): MatchReport {
@@ -94,11 +94,25 @@ function buildTeam(d: Dataset): number {
   write("spieler.html", renderSpielerListe(d, players));
   for (const p of players) write(`spieler/${p.slug}.html`, renderSpieler(d, p));
   const previews = d.schedule.filter(hasPreview);
+  // The opponents' players get pages too, linked from the preview and leading back to it.
+  const opponents = new Map<string, ReturnType<typeof opponentPlayers>>();
+  let opponentPages = 0;
   for (const m of previews) {
-    write(`vorschau/${previewName(m)}.html`, renderVorschau(d, m));
+    const team = opponentOf(m);
+    if (opponents.has(team)) continue;
+    const list = opponentPlayers(d, team);
+    opponents.set(team, list);
+    mkdirSync(join(dir, opponentDir(team)), { recursive: true });
+    for (const p of list) {
+      write(`${opponentDir(team)}${p.slug}.html`, renderSpieler(d, p, { back: { href: previewHref("../../", m), label: "Vorschau" } }));
+    }
+    opponentPages += list.length;
+  }
+  for (const m of previews) {
+    write(`vorschau/${previewName(m)}.html`, renderVorschau(d, m, opponents.get(opponentOf(m))!));
     write(`vorschau/${previewName(m)}.ics`, renderIcs(d, m, now));
   }
-  return 4 + Object.keys(d.reports).length + missing.length + players.length + previews.length;
+  return 4 + Object.keys(d.reports).length + missing.length + players.length + previews.length + opponentPages;
 }
 
 let pages = 0;

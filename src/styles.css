@@ -327,8 +327,11 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .lineup li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--ot-border); }
 .lineup li:first-child { border-top: 0; }
 .lineup .who span { display: block; line-height: 1.3; }
-.lineup-editor summary { font-weight: 700; cursor: pointer; }
-.lineup-editor[open] summary { margin-bottom: 8px; }
+.fold summary { font-weight: 700; cursor: pointer; }
+.fold[open] summary { margin-bottom: 8px; }
+.fold .lineups { margin-top: 4px; }
+.fold .lineup { margin-top: 8px; }
+.fold .player-card { box-shadow: none; border: 1px solid var(--ot-border); margin-top: 8px; }
 .lineup-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--ot-border); }
 .lineup-row .badge { justify-self: start; }
 .lineup-selects { display: grid; gap: 6px; }
@@ -356,9 +359,6 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .player-card .player-name { font-size: 1.125rem; }
 .player-card .card-meta { margin: 2px 0 4px; }
 .player-rec { font-weight: 900; font-size: 1.375rem; font-variant-numeric: tabular-nums; color: var(--ot-text-strong); }
-.players-table td { vertical-align: top; }
-.players-table td:first-child > span { display: block; }
-.players-table td:first-child > .pill-row { display: flex; }
 .vs-us { color: var(--ot-primary); font-weight: 600; }
 .game-log .sets { margin-top: 6px; font-variant-numeric: tabular-nums; color: var(--ot-text-muted); }
 .game-log .set.won { font-weight: 700; color: var(--ot-text-strong); }
@@ -459,8 +459,8 @@ a.stat:hover { text-decoration: none; box-shadow: var(--ot-shadow-hover); }
 
 /* Opponent table (Vorschau): numbers never wrap, discipline chips are tighter */
 .results .num { white-space: nowrap; }
-.players-table .pill-row { gap: 3px; margin: 2px 0 4px; }
-.players-table .pill-row .badge { font-size: .6875rem; padding: 0 6px; }
 
 .team-card .next-line { margin-top: 4px; color: var(--ot-text-strong); }
 @media (max-width: 559px) { .results th, .results td { padding-left: 6px; padding-right: 6px; } .results .chev { padding-left: 0; padding-right: 6px; } }
+
+.lineup .who a { color: inherit; text-decoration: underline; text-decoration-color: var(--ot-border); text-underline-offset: 3px; }

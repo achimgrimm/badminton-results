@@ -51,6 +51,8 @@ const tally = (): Tally => ({ played: 0, won: 0, lost: 0 });
 export interface LineupEntry extends Tally {
   /** One name for singles, two for doubles */
   players: string[];
+  /** nuLiga person ids in the same order; null for placeholders without a person */
+  persons: (number | null)[];
 }
 
 export interface DisciplineLineup {
@@ -77,7 +79,7 @@ export function lineup(reports: MatchReport[], team: string): DisciplineLineup[]
       const entries = byDiscipline.get(g.discipline) ?? new Map<string, LineupEntry>();
       byDiscipline.set(g.discipline, entries);
       const key = players.join(" / ");
-      const entry = entries.get(key) ?? { players, played: 0, won: 0, lost: 0 };
+      const entry = entries.get(key) ?? { players, persons: g[side].map((p) => p.person), played: 0, won: 0, lost: 0 };
       entries.set(key, entry);
       count(entry, gameOutcome(g, side));
     }

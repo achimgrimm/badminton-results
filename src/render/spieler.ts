@@ -26,6 +26,21 @@ export function ownPlayers(d: Dataset): PlayerPage[] {
   });
 }
 
+/** The players another team fielded, for the "Spieler des Gegners" pages (gegner/<team>/<player>.html). */
+export function opponentPlayers(d: Dataset, team: string): PlayerPage[] {
+  const reports = Object.values(d.reports).filter((r) => r.home === team || r.guest === team);
+  const taken = new Set<string>();
+  return playerStats(reports, team).map((stats) => {
+    let name = slug(stats.name);
+    if (taken.has(name)) name += `-${stats.person}`;
+    taken.add(name);
+    return { stats, slug: name };
+  });
+}
+
+/** Folder of an opponent's player pages, relative to the team's folder. */
+export const opponentDir = (team: string) => `gegner/${slug(team)}/`;
+
 /** Link target for an OT player on a report page, or null if there is no page. */
 export function playerLinker(pages: PlayerPage[], root: string): (p: Player) => string | null {
   const byPerson = new Map(pages.map((p) => [p.stats.person, p.slug]));
@@ -141,6 +156,21 @@ function groupByMeeting(log: PlayerGame[]): PlayerGame[][] {
   return [...groups.values()];
 }
 
+/** A tappable card: name, record, games, quota and disciplines. */
+export function playerCard(s: PlayerStats, href: string, genders?: Map<number, Gender>, vsUs?: Tally): string {
+  const gender = s.person != null ? genders?.get(s.person) : undefined;
+  return html`<a class="card player-card" href="${esc(href)}"${s.person != null && genders ? ` data-person="${s.person}"` : ""}>
+      <div class="player-head">
+        <span class="player-name">${esc(displayName(s.name))}</span>
+        <span class="player-rec num">${record(s)}</span>
+      </div>
+      <div class="card-meta">
+        <span>${gender ? `${GENDER_LABEL[gender]} · ` : ""}${s.played} Spiel${s.played === 1 ? "" : "e"} · ${quota(s)} gewonnen${vsUs?.played ? html` · <span class="vs-us">gegen uns ${record(vsUs)}</span>` : ""}</span>
+      </div>
+      ${disciplinePills(s)}
+    </a>`;
+}
+
 export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
   const genders = playerGenders(d);
   const body = html`
@@ -149,32 +179,29 @@ export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
     <p class="small muted">Alle Einsätze für ${esc(d.own.name)} in dieser Saison, aus den Spielberichten.</p>
     ${pages.length
       ? `<div id="player-list">${[...pages].sort((a, b) => byName(a.stats, b.stats)).map(
-          ({ stats: s, slug }) => html`<a class="card player-card" href="spieler/${slug}.html"${s.person != null ? ` data-person="${s.person}"` : ""}>
-            <div class="player-head">
-              <span class="player-name">${esc(displayName(s.name))}</span>
-              <span class="player-rec num">${record(s)}</span>
-            </div>
-            <div class="card-meta">
-              <span>${s.person != null && genders.has(s.person) ? `${GENDER_LABEL[genders.get(s.person)!]} · ` : ""}${s.played} Spiel${s.played === 1 ? "" : "e"} · ${quota(s)} gewonnen</span>
-            </div>
-            ${disciplinePills(s)}
-          </a>`,
+          ({ stats: s, slug }) => playerCard(s, `spieler/${slug}.html`, genders),
         ).join("")}</div>`
       : `<p class="muted">Noch keine Spielberichte.</p>`}
   `;
   return layout({ title: "Spieler", root: "", nav: "spieler", checkedAt: d.meta.checkedAt, noindex: true, body });
 }
 
-export function renderSpieler(d: Dataset, { stats: s, slug }: PlayerPage): string {
-  const root = "../";
+/** Where an opponent's player page sits and where it leads back to (the match preview). */
+export interface OpponentView {
+  back: { href: string; label: string };
+}
+
+export function renderSpieler(d: Dataset, { stats: s, slug }: PlayerPage, opponent?: OpponentView): string {
+  const root = opponent ? "../../" : "../";
   const singles = s.disciplines.filter((x) => !isDoubles(x.discipline));
   const doubles = s.disciplines.filter((x) => isDoubles(x.discipline));
-  const gender = s.person != null ? playerGenders(d).get(s.person) : undefined;
+  const gender = s.person != null && !opponent ? playerGenders(d).get(s.person) : undefined;
 
   const body = html`
-    <h1${s.person != null ? ` data-person="${s.person}"` : ""}>${esc(displayName(s.name))}</h1>
+    <h1${s.person != null && !opponent ? ` data-person="${s.person}"` : ""}>${esc(displayName(s.name))}</h1>
     ${gender ? `<p class="small muted">${GENDER_LABEL[gender]}</p>` : ""}
-    ${s.person != null
+    ${opponent ? `<p class="small muted">Spieler von ${esc(s.team)}</p>` : ""}
+    ${s.person != null && !opponent
       ? html`<div class="btn-row"><button type="button" class="btn btn-secondary me-toggle" data-person="${s.person}" data-name="${esc(s.name)}" data-href="spieler/${esc(slug)}.html" aria-pressed="false">${CHECK}<span>Das bin ich</span></button></div>`
       : ""}
     <div class="stats">
@@ -226,5 +253,5 @@ export function renderSpieler(d: Dataset, { stats: s, slug }: PlayerPage): strin
     ${groupByMeeting(s.log).map((games) => meetingLog(games, root))}
   `;
 
-  return layout({ title: displayName(s.name), root, nav: "spieler", back: { href: `${root}spieler.html`, label: "Spieler" }, checkedAt: d.meta.checkedAt, noindex: true, body });
+  return layout({ title: displayName(s.name), root, nav: opponent ? "spielplan" : "spieler", back: opponent?.back ?? { href: `${root}spieler.html`, label: "Spieler" }, checkedAt: d.meta.checkedAt, noindex: true, body });
 }

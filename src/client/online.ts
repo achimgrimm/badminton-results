@@ -32,6 +32,24 @@ const callback = (() => {
 })();
 
 let session: Session | null = null;
+/** True until supabase-js reports the stored session (first auth event); offline that can take a while. */
+let loading = true;
+const CACHE_KEY = `${STORAGE_KEY}-cache`;
+/** What was loaded for the signed-in user last time, so the menu is right at once when offline. */
+interface AccountCache { uid: string; displayName: string | null; roles: string[]; permissions: string[] }
+const readCache = (uid: string): AccountCache | null => {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY) ?? "null") as AccountCache | null;
+    return c && c.uid === uid && Array.isArray(c.roles) && Array.isArray(c.permissions) ? c : null;
+  } catch { return null; }
+};
+/** The session supabase-js persisted, read without waiting for its (possibly network-bound) startup. */
+const storedSession = (): Session | null => {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as Session | null;
+    return s && typeof s === "object" && s.user && typeof s.user.id === "string" ? s : null;
+  } catch { return null; }
+};
 /** The permissions of the signed-in user's roles (RBAC, see supabase/migrations); empty when signed out. */
 let permissions: ReadonlySet<string> = new Set();
 /** The name from public.profiles (editable by the user) and the user's role names; empty until loaded. */
@@ -183,6 +201,7 @@ function renderAccount(): void {
     return p;
   };
   if (!session) {
+    if (loading) return; // not known yet: show neither "signed in" nor "local" options
     // A player chosen without an account stays on this device; signed in, the account keeps it.
     if (pick) whoEl.append(block(nameLine(shownName(pick.name)), "Spieler nur auf diesem Gerät"));
     el.append(item("Mit Google anmelden", () => void Online.signIn(), false, GOOGLE_ICON));
@@ -533,9 +552,10 @@ let applied = 0;
 function apply(s: Session | null): void {
   const run = ++applied;
   session = s;
-  permissions = new Set();
-  displayName = null;
-  roles = [];
+  const cached = s ? readCache(s.user.id) : null;
+  permissions = new Set(cached?.permissions);
+  displayName = cached?.displayName ?? null;
+  roles = cached?.roles ?? [];
   claims = new Map();
   pending = [];
   const done = () => {
@@ -543,7 +563,12 @@ function apply(s: Session | null): void {
     renderAccount();
     listeners.forEach((fn) => fn(session));
   };
-  if (!s) return done();
+  if (!s) {
+    try { localStorage.removeItem(CACHE_KEY); } catch { /* the cache is optional */ }
+    return done();
+  }
+  // Show the account at once; the loads below can take long (or fail) offline.
+  done();
   // Not awaited inside the auth callback: supabase-js would deadlock on its own lock.
   const load = async () => {
     const [perms, profile, userRoles] = await Promise.all([
@@ -552,9 +577,15 @@ function apply(s: Session | null): void {
       supabase.from("user_roles").select("role").eq("user_id", s.user.id),
     ]);
     if (run !== applied) return;
-    permissions = new Set(Array.isArray(perms.data) ? (perms.data as string[]) : []);
-    displayName = (profile.data as { display_name: string | null } | null)?.display_name ?? null;
-    roles = Array.isArray(userRoles.data) ? (userRoles.data as { role: string }[]).map((r) => r.role) : [];
+    // Only a fully successful load replaces what is shown (and cached); on failure keep the cached values.
+    if (!perms.error && !profile.error && !userRoles.error) {
+      permissions = new Set(Array.isArray(perms.data) ? (perms.data as string[]) : []);
+      displayName = (profile.data as { display_name: string | null } | null)?.display_name ?? null;
+      roles = Array.isArray(userRoles.data) ? (userRoles.data as { role: string }[]).map((r) => r.role) : [];
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ uid: s.user.id, displayName, roles: [...roles], permissions: [...permissions] } satisfies AccountCache));
+      } catch { /* the cache is optional */ }
+    }
     await loadClaims(s, run);
     if (run === applied) syncNow();
   };
@@ -563,7 +594,18 @@ function apply(s: Session | null): void {
 }
 
 // Fires once with the stored session and again on every sign-in, sign-out and token refresh.
-supabase.auth.onAuthStateChange((_event, s) => {
+// Until then the session persisted by supabase-js is shown (see storedSession).
+const initial = storedSession();
+if (initial) {
+  try { otIdentify({ storage: "cloud" }); } catch { /* tracking is optional */ }
+  apply(initial);
+}
+supabase.auth.onAuthStateChange((event, s) => {
+  loading = false;
+  // Offline, a failed token refresh must not look like signing out; only an explicit sign-out does.
+  if (!s && event !== "SIGNED_OUT" && session && !navigator.onLine) return;
   try { otIdentify({ storage: s ? "cloud" : "local" }); } catch { /* tracking is optional */ }
   apply(s);
 });
+// Signed out: show the local state now, also if no event ever arrives.
+if (!initial) setTimeout(() => { if (loading) { loading = false; renderAccount(); } }, 3000);

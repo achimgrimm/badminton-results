@@ -18,6 +18,18 @@ export function parseTeam(html: string): TeamInfo {
   };
 }
 
+/** The route planner link, only when it really is an https Google Maps URL (it goes into an href, so no javascript: and the like). */
+function mapsLink(href: string | undefined): string | null {
+  try {
+    const u = new URL(href ?? "");
+    const host = u.hostname.toLowerCase();
+    const google = host === "google.com" || host.endsWith(".google.com");
+    return u.protocol === "https:" && google && u.pathname.startsWith("/maps") ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function parseCourt(html: string, location: number): Hall {
   const $ = load(html);
   const content = $("#content");
@@ -31,6 +43,6 @@ export function parseCourt(html: string, location: number): Hall {
     location,
     name,
     address,
-    mapsUrl: p.find('a[href*="google.com/maps"]').attr("href") ?? null,
+    mapsUrl: p.find("a[href]").toArray().map((a) => mapsLink($(a).attr("href"))).find((u) => u) ?? null,
   };
 }

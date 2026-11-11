@@ -152,7 +152,8 @@ for (const icon of ["icon-192.png", "icon-512.png", "apple-touch-icon.png"]) {
   copyFileSync(join(SRC, "icons", icon), join(DIST, "icons", icon));
 }
 // Club logos of the match pages (downloaded by the scrape; clubs without one just show no logo).
-const clubs = loadClubs().filter((c) => c.logo);
+// Logos cached as SVG before they were refused are left out; the next scrape replaces them.
+const clubs = loadClubs().filter((c) => c.logo && !c.logo.endsWith(".svg"));
 if (clubs.length) mkdirSync(join(DIST, "logos"), { recursive: true });
 for (const c of clubs) copyFileSync(join(DATA_DIR, paths.logos, c.logo!), join(DIST, "logos", c.logo!));
 writeFileSync(join(DIST, "manifest.webmanifest"), renderManifest());

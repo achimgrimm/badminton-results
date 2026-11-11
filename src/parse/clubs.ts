@@ -1,3 +1,4 @@
+import { BASE_URL } from "../config.ts";
 import { absolute, clean, load, param } from "./util.ts";
 
 /** A club as listed on nuLiga's clubSearch page. */
@@ -20,5 +21,7 @@ export function parseClubSearch(html: string): ClubRow[] {
 /** URL of the club's logo on its clubInfoDisplay page; null when it has none. */
 export function parseClubLogo(html: string): string | null {
   // The page's other images (federation logo, spacer) are plain files; an uploaded logo is a "wodata" resource.
-  return absolute(load(html)('img[src*="wodata"]').first().attr("src"));
+  const url = absolute(load(html)('img[src*="wodata"]').first().attr("src"));
+  // The scraper sends nuLiga's session cookie with this request: never to another host.
+  return url && new URL(url).origin === new URL(BASE_URL).origin ? url : null;
 }

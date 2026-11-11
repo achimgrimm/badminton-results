@@ -61,3 +61,15 @@ test("the menu offers feedback by Signal and e-mail, without a phone number", as
   assert.ok(menu.includes(`href="mailto:${PRIVACY_CONTACT}?subject=`));
   assert.ok(!menu.includes("tel:") && !/\+\d{6,}/.test(menu));
 });
+
+test("the page carries a CSP that covers every external script and stylesheet it loads", () => {
+  const { html } = page();
+  const csp = /<meta http-equiv="Content-Security-Policy" content="([^"]+)">/.exec(html)?.[1];
+  assert.ok(csp, "CSP meta tag");
+  assert.match(csp, /object-src 'none'/);
+  const hosts = new Set([...html.matchAll(/<(?:script|link)\b[^>]*?(?:src|href)="(https:\/\/[^/"]+)/g)].map((m) => m[1]));
+  assert.ok(hosts.size > 0);
+  for (const host of hosts) {
+    assert.ok(csp.includes(host), `${host} is loaded but not allowed by the CSP`);
+  }
+});

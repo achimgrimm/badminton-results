@@ -1,10 +1,10 @@
 import { CLUB_PREFIX } from "./config.ts";
 import type { Club } from "./types.ts";
 
-/** File extension for the image types nuLiga serves logos as; null for anything else. */
+/** File extension for the image types nuLiga serves logos as; null for anything else. No SVG: it would be served from our origin and can carry scripts. */
 export function logoExtension(contentType: string): string | null {
   const type = contentType.split(";")[0].trim().toLowerCase();
-  return { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/svg+xml": "svg", "image/webp": "webp" }[type] ?? null;
+  return { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" }[type] ?? null;
 }
 
 /**

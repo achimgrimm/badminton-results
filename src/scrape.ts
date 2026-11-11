@@ -124,7 +124,7 @@ try {
   const clubs: Club[] = [];
   for (const region of CLUB_REGIONS) {
     for (const row of parseClubSearch(await fetchHtml(urls.clubSearch(region)))) {
-      if (!clubs.some((c) => c.id === row.id)) clubs.push({ ...row, logo: known.get(row.id)?.logo });
+      if (!clubs.some((c) => c.id === row.id)) clubs.push({ ...row, logo: known.get(row.id)?.logo?.endsWith(".svg") ? undefined : known.get(row.id)?.logo });
     }
   }
   if (clubs.length === 0) throw new Error("club list parsed empty");

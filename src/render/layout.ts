@@ -1,4 +1,4 @@
-import { CLUB_NAME, ONLINE, PRIVACY_CONTACT, REPO_URL, SIGNAL_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
+import { CLUB_NAME, ONLINE, PRIVACY_CONTACT, REPO_URL, SIGNAL_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, SUPABASE_URL, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
 import { PLAYING_STATE } from "../playing.ts";
 import { APP_SHORT_NAME } from "./pwa.ts";
@@ -447,6 +447,26 @@ function otIdentify(extra) {
   s.onload = function () { otIdentify(); };
   document.head.appendChild(s);
 })();`;
+/**
+ * Content Security Policy as a meta tag (GitHub Pages can't send headers, so frame-ancestors and
+ * reporting are not possible). It limits where scripts load from and where the page may send data:
+ * only this site, Umami and Supabase. The pages use inline scripts and styles, hence 'unsafe-inline'.
+ * Images may come from any https host (the Google profile picture). Add a new external host here.
+ */
+export const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' ${new URL(UMAMI_SCRIPT).origin}`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' data: https:",
+  `connect-src 'self' ${ONLINE ? `${new URL(SUPABASE_URL).origin} ` : ""}${new URL(UMAMI_SCRIPT).origin} https://api-gateway.umami.dev`,
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 /** Stages share the live hostname, so Umami's domain filter wouldn't keep them out: no tracking there. */
 const TRACKING = UMAMI_WEBSITE_ID !== "" && !STAGE;
 /** Stub when tracking is off, so the other scripts can call otTrack() unconditionally. */
@@ -641,6 +661,7 @@ export function layout(o: PageOptions): string {
 <html lang="de">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${CSP}">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a409f">
 ${o.noindex || STAGE ? `<meta name="robots" content="noindex">\n` : ""}<title>${esc(o.title)} · ${esc(team ? `${CLUB_NAME} ${team.label}` : `${CLUB_NAME} Badminton`)}</title>

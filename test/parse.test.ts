@@ -75,7 +75,16 @@ test("court", () => {
   const c = parseCourt(fixture("court.html"), 13566);
   assert.equal(c.name, "Sportanlage Schevemoor (09-28325-1)");
   assert.deepEqual(c.address, ["Walliser Straße 119", "28325 Bremen (Osterholz)"]);
-  assert.match(c.mapsUrl!, /google\.com\/maps/);
+  assert.match(c.mapsUrl!, /^https:\/\/www\.google\.com\/maps/);
+});
+
+test("court: only https Google Maps links are kept", () => {
+  const page = (href: string) => `<div id="content"><h1>Halle</h1><h2>Hallenadresse</h2><p>Weg 1<br><a href="${href}">Plan</a></p></div>`;
+  assert.equal(parseCourt(page("javascript:alert(1)//google.com/maps"), 1).mapsUrl, null);
+  assert.equal(parseCourt(page("http://www.google.com/maps/dir/"), 1).mapsUrl, null);
+  assert.equal(parseCourt(page("https://evil.example/google.com/maps"), 1).mapsUrl, null);
+  assert.equal(parseCourt(page("https://google.com.evil.example/maps"), 1).mapsUrl, null);
+  assert.equal(parseCourt(page("https://www.google.com/maps/dir/?api=1"), 1).mapsUrl, "https://www.google.com/maps/dir/?api=1");
 });
 
 test("schedule: 0:0 placeholder of an unfilled report is no result", () => {
@@ -150,5 +159,8 @@ test("club page logo", () => {
     "https://brbv-badminton.liga.nu/cgi-bin/WebObjects/nuLigaBADDE.woa/wr?wodata=-8236409040307075805",
   );
   // The federation logo and the spacer are not club logos.
+  // Another host would get nuLiga's session cookie.
+  assert.equal(parseClubLogo('<img src="https://evil.example/x?wodata=1">'), null);
+  assert.equal(parseClubLogo('<img src="//evil.example/x?wodata=1">'), null);
   assert.equal(parseClubLogo('<img src="/images/brbv-logo.png"><img src="/img/spacer.gif?nlv=1">'), null);
 });

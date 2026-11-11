@@ -34,5 +34,5 @@ test("logo path: own club, club with logo, without, unknown", () => {
 });
 
 test("only image types are kept", () => {
-  assert.deepEqual(["image/png", "image/jpeg; charset=x", "image/svg+xml", "text/html", ""].map(logoExtension), ["png", "jpg", "svg", null, null]);
+  assert.deepEqual(["image/png", "image/jpeg; charset=x", "image/svg+xml", "text/html", ""].map(logoExtension), ["png", "jpg", null, null, null]);
 });

@@ -31,18 +31,60 @@ const callback = (() => {
   return attr ? new URL(attr, location.href).href : location.origin + location.pathname;
 })();
 
-let session: Session | null = null;
-/** True until supabase-js reports the stored session (first auth event); offline that can take a while. */
-let loading = true;
-const CACHE_KEY = `${STORAGE_KEY}-cache`;
-/** What was loaded for the signed-in user last time, so the menu is right at once when offline. */
-interface AccountCache { uid: string; displayName: string | null; roles: string[]; permissions: string[] }
-const readCache = (uid: string): AccountCache | null => {
-  try {
-    const c = JSON.parse(localStorage.getItem(CACHE_KEY) ?? "null") as AccountCache | null;
-    return c && c.uid === uid && Array.isArray(c.roles) && Array.isArray(c.permissions) ? c : null;
-  } catch { return null; }
+/** The account's chosen players, keyed "team|season" (table player_claims; see supabase/migrations). */
+interface ClaimRow { id: string; user_id: string; team_slug: string; season: string; person: number; player_name: string; status: "pending" | "approved" }
+/** For approvers (permission player.link): the claims waiting for a decision, with the claimer's display name. */
+interface PendingClaim extends ClaimRow { who: string; email: string }
+
+/**
+ * Everything the UI knows about the account, in one place. Local and cloud data are not two states:
+ * the account is the source of truth and this object is what was last known of it. It is saved as a
+ * whole (see commit) and restored as a whole at startup (see hydrate), so an offline start looks
+ * exactly like the last online state. Change it only through commit(), which saves and renders.
+ */
+const state = {
+  /** True until supabase-js reports the stored session (first auth event); offline that can take a while. */
+  loading: true,
+  session: null as Session | null,
+  /** The permissions of the signed-in user's roles (RBAC, see supabase/migrations); empty when signed out. */
+  permissions: new Set<string>(),
+  /** The name from public.profiles (editable by the user) and the user's role names; empty until loaded. */
+  displayName: null as string | null,
+  roles: [] as string[],
+  claims: new Map<string, ClaimRow>(),
+  pending: [] as PendingClaim[],
 };
+/** The part of the state that supabase-js doesn't persist itself. */
+interface Saved { uid: string; displayName: string | null; roles: string[]; permissions: string[]; claims: ClaimRow[]; pending: PendingClaim[] }
+const SAVED_KEY = `${STORAGE_KEY}-account`;
+
+function save(): void {
+  const s = state.session;
+  try {
+    if (!s) { localStorage.removeItem(SAVED_KEY); return; }
+    const saved: Saved = { uid: s.user.id, displayName: state.displayName, roles: state.roles, permissions: [...state.permissions], claims: [...state.claims.values()], pending: state.pending };
+    localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
+  } catch { /* the saved copy is optional */ }
+}
+
+/** Fills the state with what was saved for this user (nothing for another one). */
+function hydrate(uid: string): void {
+  let saved: Saved | null = null;
+  try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) ?? "null"); } catch { /* ignore */ }
+  const ok = !!saved && saved.uid === uid && Array.isArray(saved.roles) && Array.isArray(saved.permissions) && Array.isArray(saved.claims) && Array.isArray(saved.pending);
+  state.displayName = ok ? saved!.displayName : null;
+  state.roles = ok ? saved!.roles : [];
+  state.permissions = new Set(ok ? saved!.permissions : []);
+  state.claims = new Map(ok ? saved!.claims.map((c) => [claimKey(c.team_slug, c.season), c]) : []);
+  state.pending = ok ? saved!.pending : [];
+}
+
+/** After every change of the state: keep a copy and show it. */
+function commit(): void {
+  save();
+  renderAccount();
+}
+
 /** The session supabase-js persisted, read without waiting for its (possibly network-bound) startup. */
 const storedSession = (): Session | null => {
   try {
@@ -50,17 +92,6 @@ const storedSession = (): Session | null => {
     return s && typeof s === "object" && s.user && typeof s.user.id === "string" ? s : null;
   } catch { return null; }
 };
-/** The permissions of the signed-in user's roles (RBAC, see supabase/migrations); empty when signed out. */
-let permissions: ReadonlySet<string> = new Set();
-/** The name from public.profiles (editable by the user) and the user's role names; empty until loaded. */
-let displayName: string | null = null;
-let roles: readonly string[] = [];
-/** The account's chosen players, keyed "team|season" (table player_claims; see supabase/migrations). */
-interface ClaimRow { id: string; user_id: string; team_slug: string; season: string; person: number; player_name: string; status: "pending" | "approved" }
-let claims = new Map<string, ClaimRow>();
-/** For approvers (permission player.link): the claims waiting for a decision, with the claimer's display name. */
-interface PendingClaim extends ClaimRow { who: string; email: string }
-let pending: PendingClaim[] = [];
 const claimKey = (team: string, season: string) => `${team}|${season}`;
 
 /** The page's "Wer bist Du?" state (ME script in layout.ts); undefined on pages without a team. */
@@ -79,7 +110,7 @@ const sync = createSync({
     buttons: [{ label: "Daten vom Konto", value: "cloud", primary: true }, { label: "Daten von diesem Gerät", value: "local" }],
   })) === "local" ? "local" : "cloud",
 });
-const syncNow = () => void sync.sync(session?.user.id ?? null);
+const syncNow = () => void sync.sync(state.session?.user.id ?? null);
 let syncTimer: ReturnType<typeof setTimeout> | undefined;
 // An answer given on this page, the connection coming back and returning to the tab all trigger a sync.
 document.addEventListener("ot-answers", () => { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 400); });
@@ -87,13 +118,13 @@ window.addEventListener("online", syncNow);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
 
 export const Online = {
-  get session() { return session; },
-  get permissions() { return permissions; },
-  get displayName() { return displayName; },
-  get roles() { return roles; },
-  get claims() { return claims; },
+  get session() { return state.session; },
+  get permissions() { return state.permissions; },
+  get displayName() { return state.displayName; },
+  get roles() { return state.roles; },
+  get claims() { return state.claims; },
   /** Whether the signed-in user may do this, e.g. can("lineup.write"). The server enforces it again. */
-  can: (permission: string) => permissions.has(permission),
+  can: (permission: string) => state.permissions.has(permission),
   signIn: async () => {
     track("login", { provider: "google" });
     // The callback page sends the visitor back to this page afterwards.
@@ -104,7 +135,7 @@ export const Online = {
     track("logout");
     // The pick belongs to the account: signing out clears it (and the sign-in notes, so the next login matches afresh).
     // Answers given offline are sent first (best effort), so they are on the account when signing in elsewhere.
-    await sync.sync(session?.user.id ?? null).catch(() => {});
+    await sync.sync(state.session?.user.id ?? null).catch(() => {});
     const me = meApi();
     if (me) {
       writeNote(note("attempt", me.team, me.season), null);
@@ -119,7 +150,7 @@ export const Online = {
     track("delete-account");
     await supabase.auth.signOut();
   },
-  onChange: (fn: (s: Session | null) => void) => { listeners.add(fn); fn(session); },
+  onChange: (fn: (s: Session | null) => void) => { listeners.add(fn); fn(state.session); },
   client: supabase,
 };
 (window as unknown as { Online: typeof Online }).Online = Online;
@@ -155,8 +186,8 @@ function renderAccount(): void {
   // A count on the header's menu button tells approvers that claims wait for them.
   const menuBtn = document.getElementById("menu-btn");
   if (menuBtn) {
-    if (pending.length) menuBtn.dataset.count = String(pending.length); else delete menuBtn.dataset.count;
-    menuBtn.setAttribute("aria-label", pending.length ? `Menü, ${pending.length} offene Anfragen` : "Menü");
+    if (state.pending.length) menuBtn.dataset.count = String(state.pending.length); else delete menuBtn.dataset.count;
+    menuBtn.setAttribute("aria-label", state.pending.length ? `Menü, ${state.pending.length} offene Anfragen` : "Menü");
   }
   const whoEl = document.getElementById("account-who"), el = document.getElementById("account-actions");
   if (!whoEl || !el) return;
@@ -178,7 +209,7 @@ function renderAccount(): void {
   const me = meApi();
   const pick = me?.get() ?? null;
   // An approved player can't be cleared on the device ("Ich bin nicht …"), only replaced by another pick.
-  const approved = me && session ? claims.get(claimKey(me.team, me.season)) : undefined;
+  const approved = me && state.session ? state.claims.get(claimKey(me.team, me.season)) : undefined;
   me?.lock?.(!!pick && approved?.status === "approved" && approved.person === pick.person);
   /** The name line, same look signed in or out: the chosen player, linked to the player page when known. */
   const nameLine = (text: string) => {
@@ -200,21 +231,21 @@ function renderAccount(): void {
     for (const l of lines) p.append(document.createElement("br"), l);
     return p;
   };
-  if (!session) {
-    if (loading) return; // not known yet: show neither "signed in" nor "local" options
+  if (!state.session) {
+    if (state.loading) return; // not known yet: show neither "signed in" nor "local" options
     // A player chosen without an account stays on this device; signed in, the account keeps it.
     if (pick) whoEl.append(block(nameLine(shownName(pick.name)), "Spieler nur auf diesem Gerät"));
     el.append(item("Mit Google anmelden", () => void Online.signIn(), false, GOOGLE_ICON));
     return;
   }
   // With a chosen player the menu shows that player (linked to the player page); otherwise the Google name.
-  const meta = session.user.user_metadata as Record<string, unknown>;
-  const accountName = displayName ?? String(meta.full_name ?? meta.name ?? session.user.email ?? "Konto");
-  const role = roleLabel(roles);
+  const meta = state.session.user.user_metadata as Record<string, unknown>;
+  const accountName = state.displayName ?? String(meta.full_name ?? meta.name ?? state.session.user.email ?? "Konto");
+  const role = roleLabel(state.roles);
   const lines: string[] = [];
   if (role) lines.push(role);
   if (me) {
-    const claim = claims.get(claimKey(me.team, me.season));
+    const claim = state.claims.get(claimKey(me.team, me.season));
     // A confirmed player is shown by the check mark next to the name, so only the waiting state needs words.
     const waiting = pick && claim?.person === pick.person && claim.status !== "approved";
     if (!pick) lines.push("Kein Spieler gewählt");
@@ -237,9 +268,9 @@ function renderAccount(): void {
   row.append(avatar(accountName, meta.avatar_url ?? meta.picture), who);
   whoEl.append(row);
   el.append(
-    ...(pending.length ? [(() => {
+    ...(state.pending.length ? [(() => {
       const b = item("Anfragen prüfen", () => openApprovals(), false, HELP_ICON);
-      b.append(Object.assign(document.createElement("span"), { className: "badge badge--new menu-count", textContent: String(pending.length) }));
+      b.append(Object.assign(document.createElement("span"), { className: "badge badge--new menu-count", textContent: String(state.pending.length) }));
       return b;
     })()] : []),
     item("Abmelden", () => void Online.signOut().then(offerClearLocalData), false, SIGN_OUT_ICON),
@@ -342,13 +373,15 @@ function pageRoster(): { person: number; name: string; href: string | null }[] {
 async function loadClaims(s: Session, run: number): Promise<void> {
   const own = await supabase.from("player_claims").select("*").eq("user_id", s.user.id);
   if (run !== applied) return;
-  claims = new Map(((own.data ?? []) as ClaimRow[]).map((c) => [claimKey(c.team_slug, c.season), c]));
+  // A failed read (offline) keeps the saved claims instead of clearing them.
+  if (own.error) return;
+  state.claims = new Map(((own.data ?? []) as ClaimRow[]).map((c) => [claimKey(c.team_slug, c.season), c]));
   await loadPending(run);
   const me = meApi();
   if (!me) return;
-  const server = claims.get(claimKey(me.team, me.season)) ?? null;
+  const server = state.claims.get(claimKey(me.team, me.season)) ?? null;
   const local = me.get();
-  const canApprove = permissions.has("player.link");
+  const canApprove = state.permissions.has("player.link");
   const result = reconcile(local, server && { person: server.person, name: server.player_name, status: server.status }, canApprove, lastAttempt(me.team, me.season));
   if (result.action === "adopt") me.set(result.pick);
   else if (result.action === "upload") await saveClaim(me.team, me.season, result.pick, result.status);
@@ -408,14 +441,15 @@ async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: nu
 // they ask for the new one right away, and nothing changes until one is confirmed.
 (window as unknown as { otClearMe: () => boolean }).otClearMe = () => {
   const me = meApi();
-  if (!session || !me || !me.get() || !pageRoster().length) return false;
-  void confirmPlayer(me, session, permissions.has("player.link"), applied, true);
+  if (!state.session || !me || !me.get() || !pageRoster().length) return false;
+  void confirmPlayer(me, state.session, state.permissions.has("player.link"), applied, true);
   return true;
 };
 
 async function loadPending(run: number): Promise<void> {
-  if (!permissions.has("player.link")) { pending = []; return; }
-  const { data } = await supabase.from("player_claims").select("*").eq("status", "pending").order("created_at");
+  if (!state.permissions.has("player.link")) { state.pending = []; return; }
+  const { data, error } = await supabase.from("player_claims").select("*").eq("status", "pending").order("created_at");
+  if (error) return;
   const rows = (data ?? []) as ClaimRow[];
   const ids = [...new Set(rows.map((r) => r.user_id))];
   const [names, mails] = ids.length
@@ -424,16 +458,16 @@ async function loadPending(run: number): Promise<void> {
   if (run !== applied) return;
   const byId = new Map(((names?.data ?? []) as { id: string; display_name: string | null }[]).map((n) => [n.id, n.display_name]));
   const emailById = new Map(((mails?.data ?? []) as { user_id: string; email: string | null }[]).map((m) => [m.user_id, m.email ?? ""]));
-  pending = rows.filter((r) => r.user_id !== session?.user.id).map((r) => ({ ...r, who: byId.get(r.user_id) ?? "Unbekannt", email: emailById.get(r.user_id) ?? "" }));
+  state.pending = rows.filter((r) => r.user_id !== state.session?.user.id).map((r) => ({ ...r, who: byId.get(r.user_id) ?? "Unbekannt", email: emailById.get(r.user_id) ?? "" }));
 }
 
 /** Replaces the account's claim for this team and season. A taken player keeps the device pick only. */
 async function saveClaim(team: string, season: string, pick: Pick | null, status: "pending" | "approved" = "pending"): Promise<void> {
-  if (!session) return;
-  const uid = session.user.id;
+  if (!state.session) return;
+  const uid = state.session.user.id;
   const del = await supabase.from("player_claims").delete().eq("user_id", uid).eq("team_slug", team).eq("season", season);
   if (del.error) console.error("player_claims delete failed", del.error);
-  claims.delete(claimKey(team, season));
+  state.claims.delete(claimKey(team, season));
   if (pick) {
     const { data, error } = await supabase.from("player_claims")
       .insert({ user_id: uid, team_slug: team, season, person: pick.person, player_name: pick.name, status })
@@ -447,29 +481,29 @@ async function saveClaim(team: string, season: string, pick: Pick | null, status
         console.error("player_claims insert failed", error);
       }
     } else {
-      claims.set(claimKey(team, season), data as ClaimRow);
+      state.claims.set(claimKey(team, season), data as ClaimRow);
       writeNote(note("attempt", team, season), `ok:${pick.person}`);
     }
   } else {
     writeNote(note("attempt", team, season), null);
   }
   track("claim", { action: pick ? status : "clear" });
-  renderAccount();
+  commit();
 }
 
 // The ME script reports every pick made on this device; signed in, it becomes the account's claim.
 (window as unknown as { otMeChanged: (pick: Pick | null) => void }).otMeChanged = (pick) => {
   const me = meApi();
-  if (!session) { renderAccount(); return; }
+  if (!state.session) { renderAccount(); return; }
   if (!me) return;
-  const current = claims.get(claimKey(me.team, me.season));
-  if (current && current.status === "approved" && pick?.person !== current.person && !permissions.has("player.link")) {
+  const current = state.claims.get(claimKey(me.team, me.season));
+  if (current && current.status === "approved" && pick?.person !== current.person && !state.permissions.has("player.link")) {
     if (!confirm("Dein bestätigter Spieler wird ersetzt und muss neu bestätigt werden. Fortfahren?")) {
       me.set({ person: current.person, name: current.player_name });
       return;
     }
   }
-  void saveClaim(me.team, me.season, pick, permissions.has("player.link") ? "approved" : "pending").catch(() => {});
+  void saveClaim(me.team, me.season, pick, state.permissions.has("player.link") ? "approved" : "pending").catch(() => {});
 };
 
 /** Approvers: a dialog with the waiting claims. Names come from the roster of this page's team when it is the same team. */
@@ -494,7 +528,7 @@ function openApprovals(): void {
   };
   const d = dlg;
   const render = () => {
-    const competing = competingClaims(pending);
+    const competing = competingClaims(state.pending);
     d.textContent = "";
     const head = document.createElement("div");
     head.className = "dialog-head";
@@ -509,12 +543,12 @@ function openApprovals(): void {
     close.addEventListener("click", () => d.close());
     head.append(h, close);
     d.append(head);
-    if (!pending.length) {
+    if (!state.pending.length) {
       const p = document.createElement("p");
       p.textContent = "Keine offenen Anfragen.";
       d.append(p);
     }
-    for (const c of pending) {
+    for (const c of state.pending) {
       const row = document.createElement("div");
       row.className = "claim-row";
       const text = document.createElement("p");
@@ -530,8 +564,8 @@ function openApprovals(): void {
           : await supabase.from("player_claims").delete().eq("id", c.id);
         if (error) { alert("Das hat nicht geklappt. Bitte versuche es später noch einmal."); return; }
         track("claim-decision", { decision: approve ? "approve" : "reject" });
-        pending = pending.filter((x) => x.id !== c.id);
-        renderAccount();
+        state.pending = state.pending.filter((x) => x.id !== c.id);
+        commit();
         render();
       };
       const yes = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-primary", textContent: "Bestätigen" });
@@ -551,20 +585,20 @@ let applied = 0;
 /** Takes over a session change: loads the profile, roles and permissions, shows the account, then tells the listeners. */
 function apply(s: Session | null): void {
   const run = ++applied;
-  session = s;
-  const cached = s ? readCache(s.user.id) : null;
-  permissions = new Set(cached?.permissions);
-  displayName = cached?.displayName ?? null;
-  roles = cached?.roles ?? [];
-  claims = new Map();
-  pending = [];
+  // A token refresh keeps what is known; another user (or none) starts from what was saved for them.
+  if (s?.user.id !== state.session?.user.id) {
+    state.session = s;
+    hydrate(s?.user.id ?? "");
+  } else {
+    state.session = s;
+  }
   const done = () => {
     if (run !== applied) return;
-    renderAccount();
-    listeners.forEach((fn) => fn(session));
+    commit();
+    listeners.forEach((fn) => fn(state.session));
   };
   if (!s) {
-    try { localStorage.removeItem(CACHE_KEY); } catch { /* the cache is optional */ }
+    save();
     return done();
   }
   // Show the account at once; the loads below can take long (or fail) offline.
@@ -579,12 +613,9 @@ function apply(s: Session | null): void {
     if (run !== applied) return;
     // Only a fully successful load replaces what is shown (and cached); on failure keep the cached values.
     if (!perms.error && !profile.error && !userRoles.error) {
-      permissions = new Set(Array.isArray(perms.data) ? (perms.data as string[]) : []);
-      displayName = (profile.data as { display_name: string | null } | null)?.display_name ?? null;
-      roles = Array.isArray(userRoles.data) ? (userRoles.data as { role: string }[]).map((r) => r.role) : [];
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ uid: s.user.id, displayName, roles: [...roles], permissions: [...permissions] } satisfies AccountCache));
-      } catch { /* the cache is optional */ }
+      state.permissions = new Set(Array.isArray(perms.data) ? (perms.data as string[]) : []);
+      state.displayName = (profile.data as { display_name: string | null } | null)?.display_name ?? null;
+      state.roles = Array.isArray(userRoles.data) ? (userRoles.data as { role: string }[]).map((r) => r.role) : [];
     }
     await loadClaims(s, run);
     if (run === applied) syncNow();
@@ -601,11 +632,11 @@ if (initial) {
   apply(initial);
 }
 supabase.auth.onAuthStateChange((event, s) => {
-  loading = false;
+  state.loading = false;
   // Offline, a failed token refresh must not look like signing out; only an explicit sign-out does.
-  if (!s && event !== "SIGNED_OUT" && session && !navigator.onLine) return;
+  if (!s && event !== "SIGNED_OUT" && state.session && !navigator.onLine) return;
   try { otIdentify({ storage: s ? "cloud" : "local" }); } catch { /* tracking is optional */ }
   apply(s);
 });
 // Signed out: show the local state now, also if no event ever arrives.
-if (!initial) setTimeout(() => { if (loading) { loading = false; renderAccount(); } }, 3000);
+if (!initial) setTimeout(() => { if (state.loading) { state.loading = false; renderAccount(); } }, 3000);

@@ -1,7 +1,7 @@
 # Weekly dependency updates. Minor and patch updates of npm packages come as one grouped PR that
 # is merged automatically once tests pass (.github/workflows/dependabot-automerge.yml). Major npm
 # updates and all GitHub Actions updates (pinned to commit SHAs) get their own PRs for a manual
-# review. The Supabase CLI version in migrate.yml is pinned by hand.
+# review. The Supabase CLI is an npm devDependency (used by migrate.yml), so it follows the same rules.
 version: 2
 updates:
   - package-ecosystem: npm

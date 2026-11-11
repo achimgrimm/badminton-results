@@ -238,6 +238,16 @@ a.card.match-card.is-playing:hover { box-shadow: inset 4px 0 0 var(--ot-success)
 .next .vs { font-size: 1.125rem; margin: 8px 0; }
 .next a { color: #fff; text-decoration: underline; }
 .next .badge { background: rgba(255,255,255,.18); color: #fff; }
+.next .badge--win { background: var(--ot-success-bg); color: var(--ot-success); }
+.next .badge--draw { background: var(--ot-warning-bg); color: var(--ot-warning); }
+.next .badge--loss { background: var(--ot-error-bg); color: var(--ot-error); }
+.hero-facts { margin: 12px 0 4px; }
+.hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hero-stats div { background: rgba(255,255,255,.12); border-radius: var(--ot-radius); padding: 8px 6px; text-align: center; }
+.hero-stats b { display: block; font-weight: 900; font-size: 1.375rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.hero-stats span { font-size: .8125rem; opacity: .85; }
+.hero-line { margin: 8px 0 0; font-size: .9375rem; }
+.form-chips { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
 
 /* Stat tiles */
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }

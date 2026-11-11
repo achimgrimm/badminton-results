@@ -6,7 +6,7 @@ import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle, teamLogo } from "./components.ts";
 import { layout, SHARE_BTN_ICON } from "./layout.ts";
 import { opponentDir, playerCard, type PlayerPage } from "./spieler.ts";
-import { displayName, esc, formatDate, html, isOwn, opponentOf, postponedLabel, previewName } from "./util.ts";
+import { displayName, esc, formatDate, html, isOwn, opponentOf, outcomeBadge, outcomeFor, ownOutcome, postponedLabel, previewName } from "./util.ts";
 
 /**
  * Lineup editor: one select per player slot, stored per match on the device as { discipline: [person, …] }
@@ -294,6 +294,25 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
     return page ? `<a href="../${dir}${page}.html">${esc(displayName(name))}</a>` : esc(displayName(name));
   };
 
+  /** 10-second read: the opponent's table position, recent form (oldest to newest) and the last direct meeting. */
+  const formChips = [...form].reverse().map((x) => {
+    const o = outcomeFor(opponent, x) ?? "draw";
+    return `<span class="badge badge--${o}" title="${esc(`${x.home} ${x.result![0]}:${x.result![1]} ${x.guest}`)}">${{ win: "S", draw: "U", loss: "N" }[o]}</span>`;
+  });
+  const lastH2h = h2h.at(-1);
+  const heroFacts = standing || form.length || lastH2h
+    ? html`<div class="hero-facts">
+        ${standing
+          ? html`<div class="hero-stats">
+              <div><b>${standing.rank}.</b><span>Platz</span></div>
+              <div><b>${standing.points[0]}:${standing.points[1]}</b><span>Punkte</span></div>
+              <div><b>${standing.won}-${standing.drawn}-${standing.lost}</b><span>S-U-N</span></div>
+            </div>`
+          : ""}
+        ${form.length ? `<p class="hero-line">Form <span class="form-chips">${formChips.join("")}</span></p>` : ""}
+        ${lastH2h ? `<p class="hero-line">Direkter Vergleich ${outcomeBadge(ownOutcome(lastH2h))} ${isOwn(lastH2h.home) ? `${lastH2h.result![0]}:${lastH2h.result![1]}` : `${lastH2h.result![1]}:${lastH2h.result![0]}`}</p>` : ""}
+      </div>`
+    : "";
   const fold = (title: string, inner: string) => html`<details class="card fold"><summary>${title}</summary>${inner}</details>`;
   const opponentLineup = fold(
     "Aufstellung des Gegners",
@@ -330,6 +349,7 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
       <div class="when">${esc(formatDate(m.date, true))}${m.time ? `, ${esc(m.time)} Uhr` : ""}</div>
       <div class="vs">${home ? "<b>Heim</b> gegen" : "<b>Auswärts</b> bei"} ${teamLogo(d.clubs, opponent, "../../")}${esc(opponent)}</div>
       ${m.postponed ? `<p class="small"><span class="badge">${esc(postponedLabel(m))}</span></p>` : ""}
+      ${heroFacts}
       <div class="btn-row">${playToggle(m, "hero")}</div>
     </section>
 
@@ -351,13 +371,6 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
     ${opponentRoster}
 
     <h2>Gegner: ${teamLogo(d.clubs, opponent, "../../")}${esc(opponent)}</h2>
-    ${standing
-      ? html`<div class="stats">
-          <div class="stat"><span class="stat-value">${standing.rank}.</span><span class="stat-label">Platz</span></div>
-          <div class="stat"><span class="stat-value">${standing.points[0]}:${standing.points[1]}</span><span class="stat-label">Punkte</span></div>
-          <div class="stat"><span class="stat-value">${standing.won}-${standing.drawn}-${standing.lost}</span><span class="stat-label">S-U-N</span></div>
-        </div>`
-      : ""}
     <h3>Letzte Ergebnisse</h3>
     ${form.length
       ? form.map((x) => matchCard(x, root, { showDate: true, perspective: opponent })).join("")

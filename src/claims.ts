@@ -41,3 +41,11 @@ export function reconcile(
   if (attempted && attempted.person === local.person) return attempted.ok ? { action: "rejected", pick: local } : { action: "none" };
   return { action: "upload", pick: local, status: canApprove ? "approved" : "pending" };
 }
+
+/** The pending claims that compete for the same player (same team, season and person), by claim id: the approver sees that approving one rejects the others. */
+export function competingClaims<T extends { id: string; team_slug: string; season: string; person: number }>(pending: T[]): Map<string, number> {
+  const key = (c: T) => `${c.team_slug}|${c.season}|${c.person}`;
+  const count = new Map<string, number>();
+  for (const c of pending) count.set(key(c), (count.get(key(c)) ?? 0) + 1);
+  return new Map(pending.flatMap((c) => (count.get(key(c))! > 1 ? [[c.id, count.get(key(c))! - 1] as [string, number]] : [])));
+}

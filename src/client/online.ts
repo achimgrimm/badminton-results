@@ -6,7 +6,7 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import { roleLabel } from "../roles.ts";
 import { displayName as shownName, matchPlayer } from "../names.ts";
-import { reconcile, type Pick } from "../claims.ts";
+import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
 
 declare const SUPABASE_URL: string;
@@ -475,6 +475,7 @@ function openApprovals(): void {
   };
   const d = dlg;
   const render = () => {
+    const competing = competingClaims(pending);
     d.textContent = "";
     const head = document.createElement("div");
     head.className = "dialog-head";
@@ -500,6 +501,8 @@ function openApprovals(): void {
       const text = document.createElement("p");
       text.append(Object.assign(document.createElement("b"), { textContent: c.who }), ` möchte ${rosterName(c)} (${teamLabel(c.team_slug)}) sein.`);
       if (c.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: c.email }));
+      const others = competing.get(c.id);
+      if (others) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small", textContent: `Noch ${others === 1 ? "eine weitere Anfrage" : `${others} weitere Anfragen`} für diesen Spieler: mit Bestätigen ${others === 1 ? "wird sie" : "werden sie"} abgelehnt.` }));
       const buttons = document.createElement("div");
       buttons.className = "btn-row";
       const decide = (approve: boolean) => async () => {

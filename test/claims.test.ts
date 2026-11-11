@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reconcile } from "../src/claims.ts";
+import { competingClaims, reconcile } from "../src/claims.ts";
 
 const anna = { person: 1, name: "Anna" };
 const bob = { person: 2, name: "Bob" };
@@ -28,4 +28,11 @@ test("a pick sent earlier that is gone from the server was rejected; a taken pla
   assert.deepEqual(reconcile(anna, null, false, { person: 1, ok: true }), { action: "rejected", pick: anna });
   assert.deepEqual(reconcile(anna, null, false, { person: 1, ok: false }), { action: "none" });
   assert.deepEqual(reconcile(bob, null, false, { person: 1, ok: true }), { action: "upload", pick: bob, status: "pending" });
+});
+
+test("pending claims for the same player compete; others don't", () => {
+  const c = (id: string, team_slug: string, person: number, season = "2026-27") => ({ id, team_slug, season, person });
+  const result = competingClaims([c("a", "aktive-i", 1), c("b", "aktive-i", 1), c("c", "aktive-i", 1), c("d", "aktive-i", 2), c("e", "aktive-ii", 1), c("f", "aktive-i", 1, "2027-28")]);
+  assert.deepEqual([...result], [["a", 2], ["b", 2], ["c", 2]]);
+  assert.equal(competingClaims([]).size, 0);
 });

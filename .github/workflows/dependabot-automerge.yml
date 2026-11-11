@@ -1,7 +1,8 @@
 name: Dependabot auto-merge
 
-# Tests Dependabot PRs and merges them when type check and tests pass.
-# A failing PR stays open with a red check.
+# Tests Dependabot PRs and merges npm minor/patch updates (the "npm-minor-patch" group) when type
+# check and tests pass. Major updates and GitHub Actions updates are tested too, but stay open
+# for a manual review. A failing PR stays open with a red check.
 on: pull_request
 
 permissions:
@@ -14,19 +15,23 @@ jobs:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
 
       - name: Merge
+        if: steps.meta.outputs.dependency-group == 'npm-minor-patch'
         run: gh pr merge "$PR" --squash --delete-branch
         env:
           PR: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Merges made with GITHUB_TOKEN don't trigger the push workflow, so deploy explicitly.
       - name: Deploy
+        if: steps.meta.outputs.dependency-group == 'npm-minor-patch'
         run: gh workflow run update.yml --ref main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

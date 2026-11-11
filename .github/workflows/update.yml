@@ -25,7 +25,7 @@ jobs:
     outputs:
       sites: ${{ steps.list.outputs.sites }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # main is the live site; every other branch except Dependabot's is a test stage.
       - id: list
         run: |
@@ -48,11 +48,11 @@ jobs:
     env:
       STAGE: ${{ matrix.site.stage }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ matrix.site.ref }}
       # Node version comes from mise.toml
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -60,7 +60,7 @@ jobs:
       # data/ is not in git; it lives in the Actions cache so each run only re-fetches new or
       # unapproved Spielberichte. Each site has its own cache, so a stage that changes the data
       # format can't break live; a new stage starts from live's data.
-      - uses: actions/cache/restore@v6
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data
           key: data-${{ matrix.site.name }}-${{ github.run_id }}
@@ -75,12 +75,12 @@ jobs:
         continue-on-error: true
         run: npx tsx scripts/keepalive.ts
       # Only reached when scrape and build succeeded, so bad data is never cached.
-      - uses: actions/cache/save@v6
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data
           key: data-${{ matrix.site.name }}-${{ github.run_id }}
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: site-${{ matrix.site.name }}
           # A stage build writes to dist/stage/<name>/, so its artifact already holds that path.
@@ -99,27 +99,27 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       # Downloaded by name: a missing live build fails here, and nothing is deployed.
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: site-live
           path: site
       # Stage artifacts contain stage/<name>/, so merging them into site/ puts each in place.
       # Without any stage there is nothing to download; that must not stop the live deploy.
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
         with:
           pattern: site-stage-*
           path: site
           merge-multiple: true
       - run: ls site/stage 2>/dev/null || echo "no stages"
-      - uses: actions/configure-pages@v6
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       # Named per attempt: re-running a failed deploy job would otherwise find the earlier
       # attempt's "github-pages" artifact too and refuse to deploy.
-      - uses: actions/upload-pages-artifact@v5
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
           name: github-pages-${{ github.run_attempt }}
       - id: deploy
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         with:
           artifact_name: github-pages-${{ github.run_attempt }}

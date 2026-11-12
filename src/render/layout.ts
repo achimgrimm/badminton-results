@@ -93,7 +93,7 @@ const NEW_RESULTS = (slug: string) => `(function () {
       li.appendChild(item);
       list.appendChild(li);
     });
-    dlg.querySelectorAll(".dialog-close, .btn").forEach(function (b) { b.addEventListener("click", function () { dlg.close(); }); });
+    dlg.querySelectorAll(".dialog-close, .btn-primary").forEach(function (b) { b.addEventListener("click", function () { dlg.close(); }); });
     dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
     dlg.showModal();
     otTrack("new-results", { count: cards.length });
@@ -277,9 +277,8 @@ const ME = (slug: string, root: string) => `(function () {
   render();
 })();`;
 
-/** How many of the newest release notes each page shows (after the role filter) and how many it carries to filter from. */
-const RELEASES_SHOWN = 3;
-const RELEASES_EMBEDDED = 12;
+/** How many release notes the dialog shows per page when opened from the menu (all notes are embedded, filtered by role in the browser). */
+const RELEASES_PAGE = 3;
 const RELEASE_KEY = storageKey("releaseSeen");
 /** Where the client saves the signed-in account (uid, roles); see SAVED_KEY in client/online.ts. */
 const ACCOUNT_KEY = `${storageKey("auth")}-account`;
@@ -307,7 +306,7 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
     arts = all.filter(function (a) {
       var r = a.dataset.roles;
       return !r || r.split(" ").some(function (x) { return mine.indexOf(x) >= 0; });
-    }).slice(0, ${RELEASES_SHOWN});
+    });
     all.forEach(function (a) { a.hidden = arts.indexOf(a) < 0; });
     newest = arts.length ? arts[0].dataset.release : null;
     if (link) link.style.display = arts.length ? "" : "none";
@@ -315,8 +314,23 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
   refilter();
   window.otReleaseRefilter = refilter;
   try { seen = localStorage.getItem("${RELEASE_KEY}"); known = localStorage.getItem("${TEAM_KEY}"); } catch (e) {}
-  function show(list, via) {
-    all.forEach(function (a) { a.hidden = list.indexOf(a) < 0; });
+  var nav = dlg.querySelector(".release-nav"), prev = nav.children[0], label = nav.children[1], next = nav.children[2];
+  var list = [], from = 0;
+  // Pages of ${RELEASES_PAGE}, newest first; the notes shown automatically (the new ones) come on one page.
+  function page(paged) {
+    var size = paged ? ${RELEASES_PAGE} : list.length;
+    all.forEach(function (a) { var i = list.indexOf(a); a.hidden = i < from || i >= from + size; });
+    nav.hidden = !paged || list.length <= size;
+    prev.disabled = from <= 0;
+    next.disabled = from + size >= list.length;
+    label.textContent = (Math.floor(from / size) + 1) + " / " + Math.ceil(list.length / size);
+    dlg.querySelector(".release-body").scrollTop = 0;
+  }
+  prev.addEventListener("click", function () { from = Math.max(0, from - ${RELEASES_PAGE}); page(true); });
+  next.addEventListener("click", function () { from += ${RELEASES_PAGE}; page(true); });
+  function show(shown, via) {
+    list = shown; from = 0;
+    page(via === "menu");
     dlg.showModal();
     // The OK button is focused, but the notes start at the top, newest first.
     dlg.querySelector(".release-body").scrollTop = 0;
@@ -324,7 +338,7 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
   }
   // Saved right away on a click too: the close event fires a moment later, possibly after a reload.
   function done() { try { if (newest) localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} dlg.close(); }
-  dlg.querySelectorAll(".dialog-close, .btn").forEach(function (b) { b.addEventListener("click", done); });
+  dlg.querySelectorAll(".dialog-close, .btn-primary").forEach(function (b) { b.addEventListener("click", done); });
   dlg.addEventListener("click", function (e) { if (e.target === dlg) done(); });
   dlg.addEventListener("close", function () { try { if (newest) localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} });
   document.getElementById("release-link").addEventListener("click", function (e) { e.preventDefault(); show(arts, "menu"); });
@@ -341,7 +355,7 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
 })();`;
 
 function releaseDialog(): string {
-  const shown = releaseNotes().slice(0, RELEASES_EMBEDDED);
+  const shown = releaseNotes();
   if (!shown.length) return "";
   return html`<dialog class="team-dialog release-dialog" id="release-dialog" aria-labelledby="release-dialog-h">
   <div class="dialog-head">
@@ -356,6 +370,9 @@ function releaseDialog(): string {
       ${r.html}
     </article>`,
   )}
+  </div>
+  <div class="release-nav" hidden>
+    <button type="button" class="btn">‹ Neuere</button><span class="small muted"></span><button type="button" class="btn">Ältere ›</button>
   </div>
   <div class="btn-row"><button type="button" class="btn btn-primary" autofocus>OK</button></div>
 </dialog>`;

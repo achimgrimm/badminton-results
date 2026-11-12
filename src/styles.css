@@ -404,7 +404,9 @@ dialog { overscroll-behavior: contain; }
 /* Head and OK button stay put; only the notes scroll. */
 .release-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
 .release-dialog .release-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-.release-dialog .dialog-head, .release-dialog .btn-row { flex: none; }
+.release-dialog .dialog-head, .release-dialog .btn-row, .release-dialog .release-nav { flex: none; }
+.release-dialog .release-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.release-dialog .release-nav[hidden] { display: none; }
 .release-dialog article + article { border-top: 1px solid var(--ot-border); margin-top: 16px; padding-top: 16px; }
 .release-dialog article h3 { font-size: 1.125rem; text-transform: none; letter-spacing: 0; color: var(--ot-text-strong); margin: 12px 0 0; }
 .release-dialog article > p.small { margin: 0 0 8px; }

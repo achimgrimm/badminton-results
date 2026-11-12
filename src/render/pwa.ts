@@ -1,4 +1,5 @@
 import { CLUB_NAME, STAGE } from "../config.ts";
+import { PROBE_PARAM } from "./net-status.ts";
 
 /** Home screen name; a stage's installed app is named after it, so it can't be mixed up with the live app. */
 export const APP_SHORT_NAME = STAGE ? `OT Test ${STAGE}` : "OT Badminton";
@@ -66,6 +67,8 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
   // Test stages live in stage/<name>/ inside this scope; their own service workers handle them.
   if (req.url.startsWith(self.registration.scope + "stage/")) return;
+  // Connection probe of the offline/slow notice: always the real network, never cached.
+  if (new URL(req.url).searchParams.has("${PROBE_PARAM}")) return;
 
   if (req.mode === "navigate") {
     // Offline and never visited: redirect to the team's cached overview, so relative links still

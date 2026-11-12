@@ -3,6 +3,7 @@ import { CLUB_NAME, ONLINE, PRIVACY_CONTACT, REPO_URL, SIGNAL_URL, SEASON_KEY, S
 import type { ClubTeam } from "../types.ts";
 import { PLAYING_STATE } from "../playing.ts";
 import { APP_SHORT_NAME } from "./pwa.ts";
+import { NET_STATUS } from "./net-status.ts";
 import { buildVersion, clubTeams, currentTeam, onlineHref, releaseNotes, rosterEntries, stylesHref } from "./context.ts";
 import { esc, formatDate, formatTimestamp, html, todayInBremen } from "./util.ts";
 
@@ -720,6 +721,7 @@ ${o.noindex || STAGE ? `<meta name="robots" content="noindex">\n` : ""}<title>${
 </head>
 <body${o.meeting ? ` data-meeting="${o.meeting}"` : ""}>
 ${STAGE ? html`<div class="stage-banner" role="note">Testversion: <b>${esc(STAGE)}</b> · <a href="${assets}${STAGE_TO_LIVE}">Zur Live-Version</a></div>` : ""}
+<div class="net-banner" id="net-banner" role="status" aria-live="polite" hidden></div>
 <header class="site-header">
   <div class="container header-inner">
     <img class="club-logo" src="${assets}club-logo.png" alt="TSV Osterholz-Tenever" width="40" height="40">
@@ -786,6 +788,7 @@ ${releaseDialog()}
 ${o.back ? `<script>${BACK_LINK}</script>` : ""}
 <script>${MENU}</script>
 <script>${THEME_TOGGLE}</script>
+<script>${NET_STATUS(assets)}</script>
 ${ONLINE ? `<script src="${assets}${onlineHref()}" data-callback="${assets}auth-callback.html" defer></script>` : ""}
 <script>${INSTALL(assets)}</script>
 ${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}

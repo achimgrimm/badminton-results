@@ -91,6 +91,10 @@ main.container { padding-bottom: 32px; }
 /* Test stages only: a strip above the header, so a test build is never mistaken for the live app. */
 .stage-banner { background: var(--ot-warning-bg); color: var(--ot-warning); text-align: center; font-size: .875rem; padding: 4px 16px; }
 .stage-banner a { color: inherit; }
+/* Offline / slow connection notice: floats at the bottom and never blocks clicks. */
+.net-banner { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 30; margin: 0 auto; max-width: 480px; padding: 10px 14px; border-radius: var(--ot-radius); box-shadow: var(--ot-shadow); font-size: .875rem; text-align: center; pointer-events: none; background: var(--ot-warning-bg); color: var(--ot-warning); }
+.net-banner[data-state="offline"] { background: var(--ot-error-bg); color: var(--ot-error); }
+.net-banner[hidden] { display: none; }
 .site-header { background: var(--ot-header); color: var(--ot-on-primary); position: sticky; top: 0; z-index: 10; }
 .header-inner { padding-top: 12px; padding-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .header-actions { flex: none; display: flex; gap: 8px; }

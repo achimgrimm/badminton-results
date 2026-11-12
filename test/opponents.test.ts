@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { probableOpponents } from "../src/lineup.ts";
 import { lineup, playerStats } from "../src/stats.ts";
 import type { MatchReport } from "../src/types.ts";
 
@@ -19,4 +20,11 @@ test("opposing players are found with their person and games against us", () => 
   assert.equal(p.person, 7);
   assert.equal(p.log[0].opponentTeam, "OT");
   assert.equal(p.log[0].outcome, "loss");
+});
+
+test("probableOpponents: the opponent's usual players of one game, empty when unknown", () => {
+  const l = lineup([report(1, [{ name: "B", person: 7 }]), report(2, [{ name: "B", person: 7 }]), report(3, [{ name: "C", person: 8 }])], "Gegner");
+  const entries = probableOpponents(l, "1.HE");
+  assert.deepEqual(entries.map((e) => e.persons), [[7], [8]]);
+  assert.deepEqual(probableOpponents(l, "DD"), []);
 });

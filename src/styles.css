@@ -345,6 +345,10 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .lineup-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--ot-border); }
 .lineup-row .badge { justify-self: start; }
 .lineup-selects { display: grid; gap: 6px; }
+.lineup-opp { grid-column: 2; font-size: .875rem; line-height: 1.4; }
+.lineup-opp .rec { margin-left: 4px; }
+.lineup-opp details > div { margin-top: 2px; }
+.lineup-opp summary { cursor: pointer; color: var(--ot-text-muted); }
 @media (min-width: 560px) { .lineup-selects { grid-template-columns: 1fr 1fr; } }
 .lineup-slot { display: block; }
 .lineup-pick { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-width: 0; font: inherit; text-align: left; padding: 6px 8px; color: var(--ot-text);

@@ -1,4 +1,5 @@
 import type { Dataset } from "./data.ts";
+import type { DisciplineLineup, LineupEntry } from "./stats.ts";
 import type { Gender, MatchReport, RosterPlayer } from "./types.ts";
 import { displayName } from "./render/util.ts";
 
@@ -60,6 +61,11 @@ export function ownLineups(d: Dataset): Map<number, number[]> {
     if (persons.size) lineups.set(r.meeting, [...persons]);
   }
   return lineups;
+}
+
+/** The opponent's players of one game, most played first (what they usually field there); empty if unknown. */
+export function probableOpponents(lineups: DisciplineLineup[], discipline: string): LineupEntry[] {
+  return lineups.find((l) => l.discipline === discipline)?.entries ?? [];
 }
 
 export interface LineupPlayer {

@@ -1,7 +1,7 @@
 import { SEASON_KEY, storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
-import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
-import { headToHead, lineup, teamForm, type Tally } from "../stats.ts";
+import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, probableOpponents, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
+import { headToHead, lineup, teamForm, type DisciplineLineup, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle, teamLogo } from "./components.ts";
 import { layout, SHARE_BTN_ICON } from "./layout.ts";
@@ -224,7 +224,13 @@ export function renderIcs(d: Dataset, m: Meeting, now: Date): string {
 }
 
 /** "Aufstellung planen": who plays which game; collapsed until used (see LINEUP). */
-function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
+function lineupEditor(
+  d: Dataset,
+  m: Meeting,
+  home: boolean,
+  opponents: DisciplineLineup[],
+  nameLink: (name: string, person: number | null | undefined) => string,
+): string {
   const sections = lineupPlayers(d);
   /** Herren games offer men, Damen games women; players of unknown gender are offered everywhere. */
   const optionsFor = (need: string | null) => html`<option value="">–</option>${sections.map((s) => {
@@ -241,9 +247,19 @@ function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
   const vs = home ? `Heim gegen ${m.guest}` : `Auswärts bei ${m.home}`;
   const history = lineupHistory(d);
   const suggest = Object.keys(history).length > 0;
+  /** The opponent's usual players of a game (most played first): the most likely one, the rest behind "weitere". */
+  const opponentLine = (discipline: string) => {
+    const [first, ...more] = probableOpponents(opponents, discipline);
+    if (!first) return "";
+    const entry = (e: (typeof first)) =>
+      `<span class="opp-who">${e.players.map((p, i) => nameLink(p, e.persons[i])).join(" / ")}</span> <span class="rec num">${e.played}× · ${e.won}–${e.lost}</span>`;
+    return `<div class="lineup-opp"><span class="muted">Gegner</span> ${entry(first)}${more.length
+      ? `<details><summary>weitere</summary>${more.map((e) => `<div>${entry(e)}</div>`).join("")}</details>`
+      : ""}</div>`;
+  };
   return html`<details class="card fold lineup-editor" id="lineup"${suggest ? ` data-history="${esc(JSON.stringify(history))}"` : ""}>
       <summary>Aufstellung planen</summary>
-      <p class="small muted">Wer spielt welches Spiel? Bei Herren- und Damenspielen siehst Du nur Herren bzw. Damen (aus den nuLiga-Ranglisten); Spieler ohne bekanntes Geschlecht stehen überall. Fehler werden nur angezeigt, gespeichert wird immer. Die Aufstellung bleibt auf diesem Gerät.</p>
+      <p class="small muted">Unter jedem Spiel steht, wer beim Gegner dieses Spiel bisher meist gespielt hat (aus den Spielberichten). Wer spielt welches Spiel? Bei Herren- und Damenspielen siehst Du nur Herren bzw. Damen (aus den nuLiga-Ranglisten); Spieler ohne bekanntes Geschlecht stehen überall. Fehler werden nur angezeigt, gespeichert wird immer. Die Aufstellung bleibt auf diesem Gerät.</p>
       ${suggest ? `<p class="small muted">„Vorschlag“ füllt freie Plätze mit den Spielern, die diese Spiele bisher meist gespielt haben; neuere Spiele zählen mehr.</p>` : ""}
       ${games.map(
         (g) => html`<div class="lineup-row" data-discipline="${esc(g)}" data-kind="${kind(g)}" data-need="${requiredGender(g) ?? ""}">
@@ -251,6 +267,7 @@ function lineupEditor(d: Dataset, m: Meeting, home: boolean): string {
           <span class="lineup-selects">${Array.from({ length: slots(g) }, (_, i) =>
             `<span class="lineup-slot"><select hidden aria-hidden="true" tabindex="-1">${optionsFor(requiredGender(g))}</select>`
             + `<button type="button" class="lineup-pick" aria-haspopup="dialog" aria-label="${esc(g)}, Spieler ${i + 1} wählen"><span>Spieler wählen</span></button></span>`)}</span>
+          ${opponentLine(g)}
         </div>`,
       )}
       <div class="lineup-issues" role="status" hidden></div>
@@ -314,7 +331,9 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
       </div>`
     : "";
   const fold = (title: string, inner: string) => html`<details class="card fold"><summary>${title}</summary>${inner}</details>`;
-  const opponentLineup = fold(
+  const editor = lineupEditor(d, m, home, lineups, nameLink);
+  /** The opponent's lineup is part of the editor; the separate fold is only the fallback while no games are known. */
+  const opponentLineup = editor ? "" : fold(
     "Aufstellung des Gegners",
     lineups.length
       ? html`<p class="small muted">Aus ${opponentReports.length} Spielbericht${opponentReports.length === 1 ? "" : "en"}: wer in welcher Disziplin gespielt hat, mit Bilanz (S–N).</p>
@@ -366,7 +385,7 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
     </div>
 
     <h2>Aufstellung</h2>
-    ${lineupEditor(d, m, home)}
+    ${editor}
     ${opponentLineup}
     ${opponentRoster}
 

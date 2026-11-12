@@ -74,6 +74,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
         });
       });
     }
+    renderPublished();
     box.hidden = false;
     box.className = "lineup-issues" + (issues.length ? " has-issues" : "");
     box.innerHTML = "";
@@ -179,6 +180,81 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
       render();
     });
   }
+  /* Published lineup: team leads publish the draft, every signed-in player sees it read only. */
+  var pub = document.getElementById("published-lineup"), PUB_KEY = KEY + "-published";
+  var pubBtn = root.querySelector(".lineup-publish"), unpubBtn = root.querySelector(".lineup-unpublish"), pubInfo = root.querySelector(".lineup-pub-status");
+  var session = null, canWrite = false, published = undefined; /* undefined = unknown, null = none */
+  try { var c = JSON.parse(localStorage.getItem(PUB_KEY) || "null"); if (c && c.lineup) published = c; } catch (e) {}
+  function when(at) { return new Date(at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }); }
+  function samePublished() {
+    var mine = read();
+    return rows.every(function (r) {
+      var a = mine[r.dataset.discipline] || [], b = (published.lineup[r.dataset.discipline] || []);
+      return a.every(function (p, i) { return (p || null) === (b[i] || null); });
+    });
+  }
+  function renderPublished() {
+    if (pubBtn) {
+      pubBtn.hidden = !canWrite;
+      unpubBtn.hidden = !canWrite || !published;
+      pubInfo.hidden = !canWrite;
+      pubInfo.textContent = !published ? "Nicht veröffentlicht: Spieler sehen noch keine Aufstellung."
+        : "Veröffentlicht am " + when(published.at) + (samePublished() ? "." : ". Dein Entwurf weicht ab, veröffentliche ihn erneut.");
+    }
+    if (!pub) return;
+    pub.hidden = !session || canWrite;
+    if (pub.hidden) return;
+    var body = pub.querySelector(".pub-body"), meta = pub.querySelector(".pub-meta"), me = window.otMe && otMe.get();
+    body.innerHTML = "";
+    if (!published) { meta.textContent = published === null ? "Noch keine Aufstellung veröffentlicht." : "Die Aufstellung konnte nicht geladen werden."; return; }
+    meta.textContent = "Veröffentlicht am " + when(published.at) + " (nur lesen).";
+    rows.forEach(function (r) {
+      var list = published.lineup[r.dataset.discipline];
+      if (!list) return;
+      var row = document.createElement("div"), tag = document.createElement("span"), who = document.createElement("span");
+      row.className = "lineup-row";
+      tag.className = "badge badge--primary";
+      tag.textContent = r.dataset.discipline;
+      who.className = "pub-who";
+      list.forEach(function (p, i) {
+        var s = document.createElement("span");
+        s.textContent = p ? (names[p] || "Spieler " + p) : "offen";
+        if (p && me && String(me.person) === p) s.className = "pub-me";
+        if (i) who.appendChild(document.createTextNode(" / "));
+        who.appendChild(s);
+      });
+      row.appendChild(tag);
+      row.appendChild(who);
+      body.appendChild(row);
+    });
+  }
+  function loadPublished() {
+    if (!window.Online || !Online.publishedLineup) return;
+    Online.publishedLineup(GAME.team, GAME.season, GAME.game).then(function (res) {
+      if (res === undefined) return;
+      published = res;
+      try { if (res) localStorage.setItem(PUB_KEY, JSON.stringify(res)); else localStorage.removeItem(PUB_KEY); } catch (e) {}
+      renderPublished();
+    }, function () {});
+  }
+  function publishNow(withdraw) {
+    var action = withdraw ? "unpublish" : "publish", l = read();
+    if (!withdraw && !any(l)) { pubInfo.textContent = "Noch niemand aufgestellt."; return; }
+    (withdraw ? Online.unpublishLineup(GAME.team, GAME.season, GAME.game) : Online.publishLineup(GAME.team, GAME.season, GAME.game, l)).then(function (ok) {
+      otTrack("lineup", { action: action, ok: ok ? "yes" : "no" });
+      if (!ok) { pubInfo.textContent = "Das hat nicht geklappt. Bist Du online?"; return; }
+      published = withdraw ? null : { lineup: l, at: Date.now() };
+      try { if (withdraw) localStorage.removeItem(PUB_KEY); else localStorage.setItem(PUB_KEY, JSON.stringify(published)); } catch (e) {}
+      renderPublished();
+    });
+  }
+  if (pubBtn) {
+    pubBtn.addEventListener("click", function () { publishNow(false); });
+    unpubBtn.addEventListener("click", function () { publishNow(true); });
+    root.addEventListener("change", renderPublished);
+  }
+  renderPublished();
+
   /* The statuses come from the account (team leads only); without them everything works as before. */
   var loading = false;
   function loadStatus() {
@@ -193,8 +269,14 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
   }
   function whenOnline() {
     if (!window.Online) return;
-    Online.onChange(loadStatus);
-    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") loadStatus(); });
+    Online.onChange(function (s) {
+      session = s; canWrite = !!s && Online.can("lineup.write");
+      if (!s) published = undefined;
+      renderPublished();
+      loadStatus();
+      if (s) loadPublished();
+    });
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { loadStatus(); if (session) loadPublished(); } });
   }
   if (window.Online) whenOnline(); else document.addEventListener("DOMContentLoaded", whenOnline);
   var btn = root.querySelector(".lineup-share"), label = btn.querySelector("span"), timer = null;
@@ -321,7 +403,10 @@ function lineupEditor(
         </div>
         <div class="lineup-list"></div>
       </dialog>
+      <p class="small muted lineup-pub-status" role="status" hidden></p>
       <div class="btn-row">
+        <button type="button" class="btn btn-primary lineup-publish" hidden>Veröffentlichen</button>
+        <button type="button" class="btn btn-secondary lineup-unpublish" hidden>Zurückziehen</button>
         ${suggest ? `<button type="button" class="btn btn-secondary lineup-suggest">Vorschlag</button>` : ""}
         <button type="button" class="btn btn-secondary lineup-clear">Leeren</button>
         <button type="button" class="btn btn-primary lineup-share" data-title="${esc(`Aufstellung · ${m.home} – ${m.guest}`)}" data-when="${esc(when)}" data-vs="${esc(vs)}" data-href="${esc(previewName(m))}.html">${SHARE_BTN_ICON}<span>Aufstellung teilen</span></button>
@@ -428,6 +513,7 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
     </div>
 
     <h2>Aufstellung</h2>
+    ${editor ? `<section class="card published-lineup" id="published-lineup" hidden><h3>Aufstellung vom Mannschaftsführer</h3><p class="small muted pub-meta"></p><div class="pub-body"></div></section>` : ""}
     ${editor}
     ${opponentLineup}
     ${opponentRoster}

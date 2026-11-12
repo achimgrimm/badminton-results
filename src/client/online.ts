@@ -9,6 +9,7 @@ import { displayName as shownName, matchPlayer } from "../names.ts";
 import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
 import { statusMap } from "../answers.ts";
+import { parsePublished, type PublishedLineup } from "../lineup.ts";
 
 declare const SUPABASE_URL: string;
 declare const SUPABASE_ANON_KEY: string;
@@ -162,6 +163,39 @@ export const Online = {
       const { data, error } = await supabase.rpc("team_answers", { p_team: team, p_season: season, p_game_key: gameKey });
       return error ? null : statusMap(data);
     } catch { return null; }
+  },
+  /**
+   * The lineup the team lead published for a game: { lineup, at } (at = ms), null when none is published,
+   * undefined when it can't be read (signed out, offline).
+   */
+  publishedLineup: async (team: string, season: string, gameKey: string): Promise<{ lineup: PublishedLineup; at: number } | null | undefined> => {
+    if (!state.session) return undefined;
+    try {
+      const { data, error } = await supabase.from("published_lineups").select("lineup, published_at")
+        .eq("team_slug", team).eq("season", season).eq("game_key", gameKey).maybeSingle();
+      if (error) return undefined;
+      const lineup = parsePublished((data as { lineup: unknown } | null)?.lineup);
+      return data && lineup ? { lineup, at: Date.parse((data as { published_at: string }).published_at) } : null;
+    } catch { return undefined; }
+  },
+  /** Publishes the lineup for a game (team leads and admins; the server enforces lineup.write). */
+  publishLineup: async (team: string, season: string, gameKey: string, lineup: PublishedLineup): Promise<boolean> => {
+    if (!state.session || !state.permissions.has("lineup.write")) return false;
+    try {
+      const { error } = await supabase.from("published_lineups").upsert(
+        { team_slug: team, season, game_key: gameKey, lineup, published_by: state.session.user.id, published_at: new Date().toISOString() },
+        { onConflict: "team_slug,season,game_key" },
+      );
+      return !error;
+    } catch { return false; }
+  },
+  /** Withdraws the published lineup of a game. */
+  unpublishLineup: async (team: string, season: string, gameKey: string): Promise<boolean> => {
+    if (!state.session || !state.permissions.has("lineup.write")) return false;
+    try {
+      const { error } = await supabase.from("published_lineups").delete().eq("team_slug", team).eq("season", season).eq("game_key", gameKey);
+      return !error;
+    } catch { return false; }
   },
   client: supabase,
 };

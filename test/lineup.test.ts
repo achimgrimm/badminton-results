@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, playerGenders, requiredGender, slots, SUGGEST_LINEUP } from "../src/lineup.ts";
+import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, parsePublished, playerGenders, requiredGender, slots, SUGGEST_LINEUP } from "../src/lineup.ts";
 import type { Dataset } from "../src/data.ts";
 import type { MatchReport } from "../src/types.ts";
 
@@ -152,4 +152,14 @@ test("suggestLineup: players who answered no are skipped, everyone else stays el
   assert.deepEqual(suggest([game("1.HE")], history, g), [["1"]]);
   // A blocked player already placed by hand stays; only suggestions skip them.
   assert.deepEqual(suggest([game("1.HE", ["1"]), game("2.HE")], history, g, { 1: true }), [["1"], ["2"]]);
+});
+
+test("parsePublished: keeps valid disciplines, converts ids, drops junk", () => {
+  assert.deepEqual(parsePublished({ "1.HD": ["12", 34], "1.HE": ["5"], DE: [null, null], X: "no", GD: ["a", "7"], Y: ["1", "2", "3"] }), {
+    "1.HD": ["12", "34"], "1.HE": ["5"], GD: [null, "7"],
+  });
+  assert.equal(parsePublished(null), null);
+  assert.equal(parsePublished([]), null);
+  assert.equal(parsePublished({ DE: [null] }), null);
+  assert.equal(parsePublished("x"), null);
 });

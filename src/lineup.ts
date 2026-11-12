@@ -68,6 +68,24 @@ export function probableOpponents(lineups: DisciplineLineup[], discipline: strin
   return lineups.find((l) => l.discipline === discipline)?.entries ?? [];
 }
 
+/** A lineup as published: { discipline: [person id | null, …] } with person ids as strings. */
+export type PublishedLineup = Record<string, (string | null)[]>;
+
+/**
+ * Reads a published lineup from untrusted data (database row, localStorage): keeps disciplines whose value is a
+ * list of person ids (digit strings or numbers, converted to strings) or null; anything else is dropped. Null if nothing is left.
+ */
+export function parsePublished(raw: unknown): PublishedLineup | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out: PublishedLineup = {};
+  for (const [discipline, persons] of Object.entries(raw)) {
+    if (!Array.isArray(persons) || persons.length > 2) continue;
+    const ids = persons.map((p) => (typeof p === "number" && Number.isInteger(p) ? String(p) : typeof p === "string" && /^\d+$/.test(p) ? p : null));
+    if (ids.some(Boolean)) out[discipline] = ids;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 export interface LineupPlayer {
   person: number;
   name: string;

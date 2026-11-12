@@ -345,6 +345,10 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .lineup-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--ot-border); }
 .lineup-row .badge { justify-self: start; }
 .lineup-selects { display: grid; gap: 6px; }
+.lineup-editor .btn[hidden] { display: none; }
+.published-lineup h3 { margin: 0 0 4px; }
+.pub-who { line-height: 1.4; }
+.pub-me { font-weight: 700; color: var(--ot-primary); }
 .lineup-opp { grid-column: 2; font-size: .875rem; line-height: 1.4; }
 .lineup-opp .rec { margin-left: 4px; }
 .lineup-opp details > div { margin-top: 2px; }

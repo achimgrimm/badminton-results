@@ -4,7 +4,7 @@
  * replaced at build time (see buildOnlineBundle in src/build.ts).
  */
 import { createClient, type Session } from "@supabase/supabase-js";
-import { roleLabel } from "../roles.ts";
+import { ASSIGNABLE_ROLES, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, type RoleUser } from "../roles.ts";
 import { displayName as shownName, matchPlayer } from "../names.ts";
 import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
@@ -207,6 +207,7 @@ const GOOGLE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#42
 const SIGN_OUT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>`;
 const VERIFIED_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12.5 2.8 2.8L16 9.5"/></svg>`;
 const HELP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>`;
+const ROLES_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`;
 
 /** A round avatar: the initials of the name, covered by the picture when it is an https URL that loads. */
@@ -319,6 +320,7 @@ function renderAccount(): void {
       b.append(Object.assign(document.createElement("span"), { className: "badge badge--new menu-count", textContent: String(state.pending.length) }));
       return b;
     })()] : []),
+    ...(state.permissions.has("role.manage") ? [item("Rollen verwalten", () => void openRoles(), false, ROLES_ICON)] : []),
     item("Abmelden", () => void Online.signOut().then(offerClearLocalData), false, SIGN_OUT_ICON),
     item("Konto löschen", () => {
       void confirmDeleteAccount().then((yes) => {
@@ -625,6 +627,74 @@ function openApprovals(): void {
   };
   render();
   d.showModal();
+}
+
+/** Admin dialog (permission role.manage): all accounts with their roles; grant or revoke team lead and admin. The database enforces it again. */
+async function openRoles(): Promise<void> {
+  let dlg = document.getElementById("roles-dialog") as HTMLDialogElement | null;
+  if (!dlg) {
+    dlg = document.createElement("dialog");
+    dlg.id = "roles-dialog";
+    dlg.className = "team-dialog";
+    dlg.setAttribute("aria-labelledby", "roles-h");
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg!.close(); });
+    document.body.append(dlg);
+  }
+  const d = dlg;
+  const selfId = state.session?.user.id ?? "";
+  let users: RoleUser[] = [];
+  let failed = false;
+  const render = () => {
+    d.textContent = "";
+    const head = document.createElement("div");
+    head.className = "dialog-head";
+    const h = Object.assign(document.createElement("h2"), { id: "roles-h", textContent: "Rollen verwalten" });
+    const close = Object.assign(document.createElement("button"), { type: "button", className: "dialog-close", textContent: "×" });
+    close.setAttribute("aria-label", "Schließen");
+    close.addEventListener("click", () => d.close());
+    head.append(h, close);
+    d.append(head);
+    if (failed) d.append(Object.assign(document.createElement("p"), { textContent: "Die Nutzer konnten nicht geladen werden. Bitte versuche es später noch einmal." }));
+    const adminCount = users.filter((u) => u.roles.includes("admin")).length;
+    for (const u of sortUsers(users)) {
+      const row = document.createElement("div");
+      row.className = "claim-row";
+      const text = document.createElement("p");
+      text.append(Object.assign(document.createElement("b"), { textContent: u.display_name || u.email || "Unbekannt" }));
+      if (u.email && u.display_name) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
+      text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small", textContent: roleLabel(u.roles) ?? "" }));
+      const buttons = document.createElement("div");
+      buttons.className = "btn-row";
+      for (const role of ASSIGNABLE_ROLES) {
+        const has = u.roles.includes(role);
+        const b = Object.assign(document.createElement("button"), {
+          type: "button",
+          className: has ? "btn btn-primary" : "btn btn-secondary",
+          textContent: ROLE_LABELS[role],
+        });
+        b.setAttribute("aria-pressed", String(has));
+        if (has && !canRevokeRole(selfId, u.user_id, role, adminCount)) b.disabled = true;
+        b.addEventListener("click", async () => {
+          if (has && role === "admin" && !(await ask({ title: "Administrator entziehen?", text: `${u.display_name || u.email} verliert die Administratorrechte.`, cancel: "Abbrechen", ok: "Entziehen", danger: true }))) return;
+          const { error } = await supabase.rpc("set_user_role", { target: u.user_id, role_name: role, on_: !has });
+          if (error) { alert("Das hat nicht geklappt. Bitte versuche es später noch einmal."); return; }
+          track("role-change", { role, granted: String(!has) });
+          u.roles = has ? u.roles.filter((r) => r !== role) : [...u.roles, role];
+          if (u.user_id === selfId) { state.roles = u.roles; commit(); }
+          render();
+        });
+        buttons.append(b);
+      }
+      row.append(text, buttons);
+      d.append(row);
+    }
+  };
+  render();
+  d.showModal();
+  const { data, error } = await supabase.rpc("list_users_with_roles");
+  failed = !!error;
+  users = Array.isArray(data) ? (data as RoleUser[]) : [];
+  render();
 }
 
 let applied = 0;

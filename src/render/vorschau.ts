@@ -227,6 +227,8 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
       });
       row.appendChild(tag);
       row.appendChild(who);
+      var opp = r.querySelector(".lineup-opp");
+      if (opp) row.appendChild(opp.cloneNode(true)); /* the opponent's usual players, as in the editor */
       body.appendChild(row);
     });
   }

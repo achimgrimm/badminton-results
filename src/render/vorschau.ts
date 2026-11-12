@@ -75,6 +75,8 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
       });
     }
     renderPublished();
+    var clearBtn = root.querySelector(".lineup-clear");
+    if (clearBtn) clearBtn.hidden = !any(read());
     box.hidden = false;
     box.className = "lineup-issues" + (issues.length ? " has-issues" : "");
     box.innerHTML = "";
@@ -405,10 +407,10 @@ function lineupEditor(
       </dialog>
       <p class="small muted lineup-pub-status" role="status" hidden></p>
       <div class="btn-row">
+        ${suggest ? `<button type="button" class="btn btn-secondary lineup-suggest">Vorschlag</button>` : ""}
+        <button type="button" class="btn btn-secondary lineup-clear" hidden>Leeren</button>
         <button type="button" class="btn btn-primary lineup-publish" hidden>Veröffentlichen</button>
         <button type="button" class="btn btn-secondary lineup-unpublish" hidden>Zurückziehen</button>
-        ${suggest ? `<button type="button" class="btn btn-secondary lineup-suggest">Vorschlag</button>` : ""}
-        <button type="button" class="btn btn-secondary lineup-clear">Leeren</button>
         <button type="button" class="btn btn-primary lineup-share" data-title="${esc(`Aufstellung · ${m.home} – ${m.guest}`)}" data-when="${esc(when)}" data-vs="${esc(vs)}" data-href="${esc(previewName(m))}.html">${SHARE_BTN_ICON}<span>Aufstellung teilen</span></button>
       </div>
     </details>`;

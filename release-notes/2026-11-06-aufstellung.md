@@ -1,3 +1,6 @@
+---
+roles: team_lead, admin
+---
 # Aufstellung planen
 
 Auf der Vorschau eines Spiels kannst Du jetzt die **Aufstellung** planen: wer spielt welches Spiel? Wer schon für die Mannschaft gespielt hat, steht in der Liste ganz oben, danach die Stammspieler und die Reserve.

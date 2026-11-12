@@ -1,3 +1,4 @@
+import { ROLE_LABELS } from "../roles.ts";
 import { CLUB_NAME, ONLINE, PRIVACY_CONTACT, REPO_URL, SIGNAL_URL, SEASON_KEY, SEASON_LABEL, STAGE, storageKey, SUPABASE_URL, UMAMI_DOMAIN, UMAMI_SCRIPT, UMAMI_WEBSITE_ID, urls } from "../config.ts";
 import type { ClubTeam } from "../types.ts";
 import { PLAYING_STATE } from "../playing.ts";
@@ -276,9 +277,12 @@ const ME = (slug: string, root: string) => `(function () {
   render();
 })();`;
 
-/** How many of the newest release notes each page carries. */
+/** How many of the newest release notes each page shows (after the role filter) and how many it carries to filter from. */
 const RELEASES_SHOWN = 3;
+const RELEASES_EMBEDDED = 12;
 const RELEASE_KEY = storageKey("releaseSeen");
+/** Where the client saves the signed-in account (uid, roles); see SAVED_KEY in client/online.ts. */
+const ACCOUNT_KEY = `${storageKey("auth")}-account`;
 
 /**
  * Release notes dialog. The footer link opens it with all embedded notes. On team pages it opens
@@ -289,23 +293,42 @@ const RELEASE_KEY = storageKey("releaseSeen");
 const RELEASE_NOTES = (auto: boolean) => `(function () {
   var dlg = document.getElementById("release-dialog");
   if (!dlg) return;
-  var arts = Array.prototype.slice.call(dlg.querySelectorAll("[data-release]"));
-  var newest = arts[0].dataset.release, seen = null, known = null;
+  var all = Array.prototype.slice.call(dlg.querySelectorAll("[data-release]"));
+  var arts = [], newest = null, seen = null, known = null;
+  var link = document.getElementById("release-link");
+  // Only the notes for the user's roles; everyone counts as a member, also when signed out.
+  // Runs again when the account changes (sign-in, sign-out, roles loaded): online.js calls otReleaseRefilter.
+  function refilter() {
+    var mine = ["member"];
+    try {
+      var acc = JSON.parse(localStorage.getItem("${ACCOUNT_KEY}") || "null");
+      if (acc && acc.uid && Array.isArray(acc.roles)) mine = acc.roles.concat("member");
+    } catch (e) {}
+    arts = all.filter(function (a) {
+      var r = a.dataset.roles;
+      return !r || r.split(" ").some(function (x) { return mine.indexOf(x) >= 0; });
+    }).slice(0, ${RELEASES_SHOWN});
+    all.forEach(function (a) { a.hidden = arts.indexOf(a) < 0; });
+    newest = arts.length ? arts[0].dataset.release : null;
+    if (link) link.style.display = arts.length ? "" : "none";
+  }
+  refilter();
+  window.otReleaseRefilter = refilter;
   try { seen = localStorage.getItem("${RELEASE_KEY}"); known = localStorage.getItem("${TEAM_KEY}"); } catch (e) {}
   function show(list, via) {
-    arts.forEach(function (a) { a.hidden = list.indexOf(a) < 0; });
+    all.forEach(function (a) { a.hidden = list.indexOf(a) < 0; });
     dlg.showModal();
     // The OK button is focused, but the notes start at the top, newest first.
     dlg.querySelector(".release-body").scrollTop = 0;
     otTrack("release-notes", { id: newest, via: via });
   }
   // Saved right away on a click too: the close event fires a moment later, possibly after a reload.
-  function done() { try { localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} dlg.close(); }
+  function done() { try { if (newest) localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} dlg.close(); }
   dlg.querySelectorAll(".dialog-close, .btn").forEach(function (b) { b.addEventListener("click", done); });
   dlg.addEventListener("click", function (e) { if (e.target === dlg) done(); });
-  dlg.addEventListener("close", function () { try { localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} });
+  dlg.addEventListener("close", function () { try { if (newest) localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} });
   document.getElementById("release-link").addEventListener("click", function (e) { e.preventDefault(); show(arts, "menu"); });
-  if (!${auto}) return;
+  if (!${auto} || !newest) return;
   if (!seen && !known) { try { localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} return; }
   var fresh = arts.filter(function (a) { return !seen || a.dataset.release > seen; });
   if (!fresh.length) return;
@@ -318,7 +341,7 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
 })();`;
 
 function releaseDialog(): string {
-  const shown = releaseNotes().slice(0, RELEASES_SHOWN);
+  const shown = releaseNotes().slice(0, RELEASES_EMBEDDED);
   if (!shown.length) return "";
   return html`<dialog class="team-dialog release-dialog" id="release-dialog" aria-labelledby="release-dialog-h">
   <div class="dialog-head">
@@ -327,9 +350,9 @@ function releaseDialog(): string {
   </div>
   <div class="release-body">
   ${shown.map(
-    (r) => html`<article data-release="${esc(r.id)}">
+    (r) => html`<article data-release="${esc(r.id)}"${r.roles.length ? ` data-roles="${esc(r.roles.join(" "))}"` : ""}>
       <h3>${esc(r.title)}</h3>
-      <p class="small muted">${esc(formatDate(r.date))}</p>
+      <p class="small muted release-meta">${esc(formatDate(r.date))}${r.roles.map((x) => ` <span class="badge badge--outline">${esc(ROLE_LABELS[x] ?? x)}</span>`).join("")}</p>
       ${r.html}
     </article>`,
   )}

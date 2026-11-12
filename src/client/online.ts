@@ -723,6 +723,7 @@ function apply(s: Session | null): void {
   const done = () => {
     if (run !== applied) return;
     commit();
+    (window as unknown as { otReleaseRefilter?: () => void }).otReleaseRefilter?.();
     listeners.forEach((fn) => fn(state.session));
   };
   if (!s) {

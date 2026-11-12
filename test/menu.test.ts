@@ -7,7 +7,7 @@ import { setReleases, setTeam } from "../src/render/context.ts";
 /** A page of the shared layout, split into header, menu dialog and footer. */
 function page() {
   setTeam(null, []);
-  setReleases([{ id: "2026-11-08-x", date: "2026-11-08", title: "Neu", html: "<p>x</p>" }]);
+  setReleases([{ id: "2026-11-08-x", date: "2026-11-08", title: "Neu", html: "<p>x</p>", roles: [] }]);
   const html = renderDatenschutz(null);
   const between = (from: string, to: string) => html.slice(html.indexOf(from), html.indexOf(to, html.indexOf(from)));
   return { html, header: between("<header", "</header>"), menu: between('<dialog class="team-dialog menu-dialog"', "</dialog>"), footer: between("<footer", "</footer>") };
@@ -72,4 +72,15 @@ test("the page carries a CSP that covers every external script and stylesheet it
   for (const host of hosts) {
     assert.ok(csp.includes(host), `${host} is loaded but not allowed by the CSP`);
   }
+});
+
+test("release notes carry their roles as data-roles, untagged ones carry none", () => {
+  setTeam(null, []);
+  setReleases([
+    { id: "2026-11-09-b", date: "2026-11-09", title: "B", html: "<p>b</p>", roles: ["team_lead", "admin"] },
+    { id: "2026-11-08-a", date: "2026-11-08", title: "A", html: "<p>a</p>", roles: [] },
+  ]);
+  const html = renderDatenschutz(null);
+  assert.match(html, /data-release="2026-11-09-b" data-roles="team_lead admin"/);
+  assert.match(html, /data-release="2026-11-08-a">/);
 });

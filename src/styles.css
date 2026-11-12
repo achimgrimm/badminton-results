@@ -408,6 +408,7 @@ dialog { overscroll-behavior: contain; }
 .release-dialog article + article { border-top: 1px solid var(--ot-border); margin-top: 16px; padding-top: 16px; }
 .release-dialog article h3 { font-size: 1.125rem; text-transform: none; letter-spacing: 0; color: var(--ot-text-strong); margin: 12px 0 0; }
 .release-dialog article > p.small { margin: 0 0 8px; }
+.release-dialog .release-meta .badge { margin-left: 6px; padding: 0 8px; font-size: .75rem; }
 .release-dialog ul { padding-left: 1.25rem; }
 .release-dialog li { margin: 4px 0; }
 .release-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }

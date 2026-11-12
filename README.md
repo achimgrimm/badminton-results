@@ -66,7 +66,9 @@ Tell users about new features with a file in `release-notes/`, named `YYYY-MM-DD
 What's new, in Markdown: paragraphs, lists, **bold**, [links](https://…).
 ```
 
-The build (`src/releases.ts`, using `marked`) embeds the three newest notes in every page. On their next visit to a team page, users who already used the app see the notes newer than the last one they closed (localStorage `releaseSeen`); after a new-results pop-up, if there is one. New users skip the existing notes. The menu item "Was ist neu?" shows them anytime. A bad file name or a missing `# ` title fails the build. Umami event: `release-notes` (`via`: `auto` or `menu`).
+To show a note only to some roles, start the file with front matter: `---`, `roles: team_lead, admin`, `---` (valid: `admin`, `team_lead`, `member`; unknown names fail the build). No front matter means everyone. Users see only notes for their roles; everyone counts as `member`, also when signed out or in local mode. The skill `release-note` asks for the roles and tags bug fixes admin-only by default.
+
+The build (`src/releases.ts`, using `marked`) embeds the twelve newest notes in every page; the browser shows the three newest that match the user's roles. On their next visit to a team page, users who already used the app see the notes newer than the last one they closed (localStorage `releaseSeen`); after a new-results pop-up, if there is one. New users skip the existing notes. The menu item "Was ist neu?" shows them anytime. A bad file name or a missing `# ` title fails the build. Umami event: `release-notes` (`via`: `auto` or `menu`).
 
 ## Live site
 

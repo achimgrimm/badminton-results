@@ -42,3 +42,25 @@ test("loadReleases: bad file name or missing title fails", () => {
 test("loadReleases: missing folder means no releases", () => {
   assert.deepEqual(loadReleases(join(tmpdir(), "does-not-exist-releases")), []);
 });
+
+test("loadReleases: roles from front matter, none means everyone", () => {
+  withNotes(
+    {
+      "2026-11-01-a.md": "---\nroles: team_lead, admin\n---\n# A\n\nText",
+      "2026-11-02-b.md": "# B\n\nText",
+    },
+    (dir) => {
+      const [b, a] = loadReleases(dir);
+      assert.deepEqual(a.roles, ["team_lead", "admin"]);
+      assert.equal(a.title, "A");
+      assert.doesNotMatch(a.html, /roles/);
+      assert.deepEqual(b.roles, []);
+    },
+  );
+});
+
+test("loadReleases: an unknown role fails the build", () => {
+  withNotes({ "2026-11-01-a.md": "---\nroles: boss\n---\n# A\n" }, (dir) => {
+    assert.throws(() => loadReleases(dir), /unknown role "boss"/);
+  });
+});

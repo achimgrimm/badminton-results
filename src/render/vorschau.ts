@@ -1,4 +1,5 @@
 import { STATUS_BADGE, STATUS_LABEL } from "../answers.ts";
+import { VERIFIED_ICON } from "../icons.ts";
 import { SEASON_KEY, storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, probableOpponents, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
@@ -20,7 +21,19 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
   var rows = Array.prototype.slice.call(root.querySelectorAll(".lineup-row"));
   var box = root.querySelector(".lineup-issues"), names = {}, genders = {}, saved = {};
   /* Team leads signed in (online.js): { person: "yes"|"maybe"|"no" } for this game; null otherwise (local mode). */
-  var GAME = ${JSON.stringify(game)}, LABEL = ${JSON.stringify(STATUS_LABEL)}, BADGE = ${JSON.stringify(STATUS_BADGE)}, status = null;
+  var GAME = ${JSON.stringify(game)}, LABEL = ${JSON.stringify(STATUS_LABEL)}, BADGE = ${JSON.stringify(STATUS_BADGE)}, status = null, verified = null;
+  var CHECK = ${JSON.stringify(VERIFIED_ICON)};
+  /* Verified players (team leads and admins only, see online.js) get a check mark after their name. */
+  function check(p) {
+    if (!verified || !p || !verified.has(Number(p))) return null;
+    var c = document.createElement("span");
+    c.className = "verified";
+    c.title = "Verifiziert";
+    c.setAttribute("role", "img");
+    c.setAttribute("aria-label", "Verifiziert");
+    c.innerHTML = CHECK;
+    return c;
+  }
   function badge(p) {
     if (!status || !p || !status[p]) return null;
     var b = document.createElement("span");
@@ -60,6 +73,8 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
       r.querySelectorAll(".lineup-slot").forEach(function (slot) {
         var sel = slot.querySelector("select"), pick = slot.querySelector(".lineup-pick");
         pick.querySelector("span").textContent = sel.value ? names[sel.value] : "Spieler wählen";
+        var ck = check(sel.value);
+        if (ck) pick.querySelector("span").append(" ", ck);
         pick.classList.toggle("is-empty", !sel.value);
         var old = pick.querySelector(".badge"), b = badge(sel.value);
         if (old) old.remove();
@@ -102,6 +117,8 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
       b.className = "me-option";
       t.className = "team-label";
       t.textContent = o.value ? o.textContent : "Niemand";
+      var ck = check(o.value);
+      if (ck) t.append(" ", ck);
       if (o.value === sel.value && o.value) b.setAttribute("aria-current", "true");
       b.addEventListener("click", function () { choose(sel, o.value); });
       b.appendChild(t);
@@ -271,9 +288,18 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
       render();
     }, function () { loading = false; });
   }
+  function loadVerified() {
+    if (!window.Online || !Online.verifiedPlayers) return;
+    Online.verifiedPlayers(GAME.team, GAME.season).then(function (set) {
+      if (!set && !verified) return;
+      verified = set;
+      render();
+    }, function () {});
+  }
   function whenOnline() {
     if (!window.Online) return;
     Online.onChange(function (s) {
+      loadVerified();
       session = s; canWrite = !!s && Online.can("lineup.write");
       if (!s) published = undefined;
       renderPublished();

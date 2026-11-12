@@ -8,6 +8,7 @@ import { ASSIGNABLE_ROLES, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, typ
 import { displayName as shownName, matchPlayer } from "../names.ts";
 import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
+import { VERIFIED_ICON } from "../icons.ts";
 import { statusMap } from "../answers.ts";
 import { parsePublished, type PublishedLineup } from "../lineup.ts";
 
@@ -165,6 +166,17 @@ export const Online = {
     } catch { return null; }
   },
   /**
+   * The nuLiga person ids of the team's verified players (approved claims), to show a check mark after their names.
+   * Only team leads and admins may read them (the server enforces it); null when signed out, not allowed or offline.
+   */
+  verifiedPlayers: async (team: string, season: string): Promise<Set<number> | null> => {
+    if (!state.session || !state.permissions.has("player.link")) return null;
+    try {
+      const { data, error } = await supabase.rpc("verified_players", { p_team: team, p_season: season });
+      return error || !Array.isArray(data) ? null : new Set((data as unknown[]).map(Number));
+    } catch { return null; }
+  },
+  /**
    * The lineup the team lead published for a game: { lineup, at } (at = ms), null when none is published,
    * undefined when it can't be read (signed out, offline).
    */
@@ -205,10 +217,24 @@ export const Online = {
 const GOOGLE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/></svg>`;
 
 const SIGN_OUT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>`;
-const VERIFIED_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12.5 2.8 2.8L16 9.5"/></svg>`;
 const HELP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>`;
 const ROLES_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`;
+
+/** Appends the check mark after the name of every verified player on the page (own side only: they carry data-person). */
+function markVerified(persons: Set<number>): void {
+  document.querySelectorAll<HTMLElement>("[data-person]:not(button)").forEach((el) => {
+    const target = el.querySelector<HTMLElement>(".player-name") ?? el;
+    if (!persons.has(Number(el.dataset.person)) || target.querySelector(":scope > .verified")) return;
+    const mark = document.createElement("span");
+    mark.className = "verified";
+    mark.title = "Verifiziert";
+    mark.setAttribute("role", "img");
+    mark.setAttribute("aria-label", "Verifiziert");
+    mark.innerHTML = VERIFIED_ICON;
+    target.append(" ", mark);
+  });
+}
 
 /** A round avatar: the initials of the name, covered by the picture when it is an https URL that loads. */
 function avatar(name: string, url: unknown): HTMLElement {
@@ -748,6 +774,9 @@ function apply(s: Session | null): void {
     }
     await loadClaims(s, run);
     if (run === applied) syncNow();
+    const me = meApi();
+    const persons = me ? await Online.verifiedPlayers(me.team, me.season) : null;
+    if (persons && run === applied) markVerified(persons);
   };
   // On failure the footer falls back to the Google name and the user counts as having no permissions.
   void load().catch(() => {}).finally(done);

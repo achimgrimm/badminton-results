@@ -180,15 +180,17 @@ export function lineupHistory(d: Dataset): Record<string, [string[], number][]> 
 
 /**
  * Client-side lineup suggestion as JS source (see LINEUP_ISSUES for why a string).
- * suggestLineup(games, history, genders): games = [{ discipline, kind, need, persons, allowed }] as in
+ * suggestLineup(games, history, genders, blocked): blocked = { person: true } are never suggested (players who
+ * answered "no" for the game; they can still be picked by hand); games = [{ discipline, kind, need, persons, allowed }] as in
  * lineupIssues, allowed = the person ids the slot may take (its options); history from lineupHistory.
  * Returns the persons per game: filled slots are kept, empty ones get (1) the usual pair or player of that
  * game, then (2) per slot the best player by weight in that game, else ×0.5 in a game of the same kind and
  * gender rule, else ×0.1 any game. Only players who fit the rules are used (at most 2 games, one per kind,
  * gender); a slot nobody fits stays empty. Greedy, heaviest first.
  */
-export const SUGGEST_LINEUP = `function suggestLineup(games, history, genders) {
+export const SUGGEST_LINEUP = `function suggestLineup(games, history, genders, blocked) {
   genders = genders || {};
+  blocked = blocked || {};
   var use = {}, all = [], byDiscipline = {};
   var out = games.map(function (g) {
     var x = { discipline: g.discipline, kind: g.kind, need: g.need || "", allowed: g.allowed || null,
@@ -201,7 +203,7 @@ export const SUGGEST_LINEUP = `function suggestLineup(games, history, genders) {
   function free(g) { return g.persons.filter(function (p) { return !p; }).length; }
   function put(g, p) { g.persons[g.persons.indexOf(null)] = p; add(p, g); }
   function canPlay(p, g, partner) {
-    if (g.persons.indexOf(p) >= 0 || p === partner) return false;
+    if (g.persons.indexOf(p) >= 0 || p === partner || blocked[p]) return false;
     if (g.allowed && g.allowed.indexOf(p) < 0) return false;
     var e = usage(p);
     if (e.total >= 2 || e[g.kind] >= 1) return false;

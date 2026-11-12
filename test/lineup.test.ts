@@ -92,6 +92,7 @@ const suggest = new Function(`${SUGGEST_LINEUP}; return suggestLineup;`)() as (
   games: SuggestGame[],
   history: Record<string, [string[], number][]>,
   genders?: Record<string, string>,
+  blocked?: Record<string, boolean>,
 ) => (string | null)[][];
 const game = (discipline: string, persons: (string | null)[] = [], allowed?: string[]): SuggestGame => ({
   discipline, kind: kind(discipline), need: requiredGender(discipline) ?? "",
@@ -137,4 +138,18 @@ test("suggestLineup: rules, fallbacks and empty slots", () => {
   assert.deepEqual(suggest([game("1.HE", [], ["2"])], history, g), [["2"]]);
   // Nothing known: stays empty.
   assert.deepEqual(suggest([game("DD")], {}, g), [[null, null]]);
+});
+
+test("suggestLineup: players who answered no are skipped, everyone else stays eligible", () => {
+  const history: Record<string, [string[], number][]> = { "1.HE": [[["1"], 3]], "2.HE": [[["2"], 1]] };
+  const g = { 1: "m", 2: "m", 3: "m" };
+  // 1 is the usual 1.HE but said no: 2 takes it (from any game), and 2.HE then stays open for nobody else.
+  assert.deepEqual(suggest([game("1.HE")], history, g, { 1: true }), [["2"]]);
+  // Pairs: a blocked partner breaks the usual pair, the other usual player is not paired with a stranger.
+  assert.deepEqual(suggest([game("1.HD")], { "1.HD": [[["1", "2"], 2]] }, g, { 2: true }), [["1", null]]);
+  // Without the block (or with an empty one) nothing changes.
+  assert.deepEqual(suggest([game("1.HE")], history, g, {}), [["1"]]);
+  assert.deepEqual(suggest([game("1.HE")], history, g), [["1"]]);
+  // A blocked player already placed by hand stays; only suggestions skip them.
+  assert.deepEqual(suggest([game("1.HE", ["1"]), game("2.HE")], history, g, { 1: true }), [["1"], ["2"]]);
 });

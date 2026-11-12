@@ -355,6 +355,8 @@ body.only-mine.no-playing .mine-empty { display: block; }
   background: var(--ot-bg); border: 1px solid var(--ot-border); border-radius: var(--ot-radius); cursor: pointer; }
 .lineup-pick::after { content: "▾"; flex: none; color: var(--ot-text-muted); }
 .lineup-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lineup-pick .badge { flex: none; margin-left: auto; }
+.me-option .badge { flex: none; margin-left: auto; }
 .lineup-pick.is-empty span { color: var(--ot-text-muted); }
 .lineup-pick:hover { border-color: var(--ot-primary); }
 .lineup-issues { margin-top: 12px; font-size: .9375rem; color: var(--ot-text-muted); }

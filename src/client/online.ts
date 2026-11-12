@@ -8,6 +8,7 @@ import { roleLabel } from "../roles.ts";
 import { displayName as shownName, matchPlayer } from "../names.ts";
 import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
+import { statusMap } from "../answers.ts";
 
 declare const SUPABASE_URL: string;
 declare const SUPABASE_ANON_KEY: string;
@@ -151,6 +152,17 @@ export const Online = {
     await supabase.auth.signOut();
   },
   onChange: (fn: (s: Session | null) => void) => { listeners.add(fn); fn(state.session); },
+  /**
+   * The players' answers to one game as { person: "yes" | "maybe" | "no" }, for the lineup planning. Only team leads
+   * and admins may read them (the server enforces it); null when signed out, not allowed or offline.
+   */
+  teamAnswers: async (team: string, season: string, gameKey: string) => {
+    if (!state.session || !state.permissions.has("answers.read_all")) return null;
+    try {
+      const { data, error } = await supabase.rpc("team_answers", { p_team: team, p_season: season, p_game_key: gameKey });
+      return error ? null : statusMap(data);
+    } catch { return null; }
+  },
   client: supabase,
 };
 (window as unknown as { Online: typeof Online }).Online = Online;

@@ -1,3 +1,4 @@
+import { STATUS_BADGE, STATUS_LABEL } from "../answers.ts";
 import { SEASON_KEY, storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, probableOpponents, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
@@ -12,12 +13,21 @@ import { displayName, esc, formatDate, html, isOwn, opponentOf, outcomeBadge, ou
  * Lineup editor: one select per player slot, stored per match on the device as { discipline: [person, …] }
  * (saved on every change, errors or not). Warnings come from lineupIssues; sharing sends plain text.
  */
-const LINEUP = (key: string) => `(function () {
+const LINEUP = (key: string, game: { team: string; season: string; game: string }) => `(function () {
   ${LINEUP_ISSUES}
   ${SUGGEST_LINEUP}
   var KEY = "${key}", root = document.getElementById("lineup");
   var rows = Array.prototype.slice.call(root.querySelectorAll(".lineup-row"));
   var box = root.querySelector(".lineup-issues"), names = {}, genders = {}, saved = {};
+  /* Team leads signed in (online.js): { person: "yes"|"maybe"|"no" } for this game; null otherwise (local mode). */
+  var GAME = ${JSON.stringify(game)}, LABEL = ${JSON.stringify(STATUS_LABEL)}, BADGE = ${JSON.stringify(STATUS_BADGE)}, status = null;
+  function badge(p) {
+    if (!status || !p || !status[p]) return null;
+    var b = document.createElement("span");
+    b.className = "badge " + BADGE[status[p]];
+    b.textContent = LABEL[status[p]];
+    return b;
+  }
   root.querySelectorAll("option[value]").forEach(function (o) {
     if (!o.value) return;
     names[o.value] = o.dataset.name;
@@ -51,8 +61,19 @@ const LINEUP = (key: string) => `(function () {
         var sel = slot.querySelector("select"), pick = slot.querySelector(".lineup-pick");
         pick.querySelector("span").textContent = sel.value ? names[sel.value] : "Spieler wählen";
         pick.classList.toggle("is-empty", !sel.value);
+        var old = pick.querySelector(".badge"), b = badge(sel.value);
+        if (old) old.remove();
+        if (b) pick.querySelector("span").after(b);
       });
     });
+    if (status) {
+      var said = {};
+      games().forEach(function (g) {
+        g.persons.forEach(function (p) {
+          if (p && status[p] === "no" && !said[p]) { said[p] = 1; issues.push(names[p] + " hat für dieses Spiel abgesagt."); }
+        });
+      });
+    }
     box.hidden = false;
     box.className = "lineup-issues" + (issues.length ? " has-issues" : "");
     box.innerHTML = "";
@@ -81,6 +102,8 @@ const LINEUP = (key: string) => `(function () {
       if (o.value === sel.value && o.value) b.setAttribute("aria-current", "true");
       b.addEventListener("click", function () { choose(sel, o.value); });
       b.appendChild(t);
+      var st = badge(o.value);
+      if (st) b.appendChild(st);
       li.appendChild(b);
       ul.appendChild(li);
     });
@@ -135,7 +158,9 @@ const LINEUP = (key: string) => `(function () {
           allowed: Array.prototype.map.call(sel[0].querySelectorAll("option"), function (o) { return o.value; }).filter(Boolean),
         };
       });
-      var result = suggestLineup(input, history, genders), filled = 0, open = 0;
+      var blocked = {};
+      if (status) Object.keys(status).forEach(function (p) { if (status[p] === "no") blocked[p] = true; });
+      var result = suggestLineup(input, history, genders, blocked), filled = 0, open = 0;
       rows.forEach(function (r, i) {
         r.querySelectorAll("select").forEach(function (s, j) {
           var p = result[i][j];
@@ -154,6 +179,24 @@ const LINEUP = (key: string) => `(function () {
       render();
     });
   }
+  /* The statuses come from the account (team leads only); without them everything works as before. */
+  var loading = false;
+  function loadStatus() {
+    if (loading || !window.Online || !Online.teamAnswers) return;
+    loading = true;
+    Online.teamAnswers(GAME.team, GAME.season, GAME.game).then(function (map) {
+      loading = false;
+      if (!map && !status) return;
+      status = map;
+      render();
+    }, function () { loading = false; });
+  }
+  function whenOnline() {
+    if (!window.Online) return;
+    Online.onChange(loadStatus);
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") loadStatus(); });
+  }
+  if (window.Online) whenOnline(); else document.addEventListener("DOMContentLoaded", whenOnline);
   var btn = root.querySelector(".lineup-share"), label = btn.querySelector("span"), timer = null;
   function flash(text) {
     label.textContent = text;
@@ -403,5 +446,5 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
         }</p>`}
   `;
 
-  return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: "spielplan", back: { href: `${root}spielplan.html`, label: "Spielplan" }, checkedAt: d.meta.checkedAt, body, script: LINEUP(storageKey(`lineup-${d.own.slug}-${SEASON_KEY}-${previewName(m)}`)) });
+  return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: "spielplan", back: { href: `${root}spielplan.html`, label: "Spielplan" }, checkedAt: d.meta.checkedAt, body, script: LINEUP(storageKey(`lineup-${d.own.slug}-${SEASON_KEY}-${previewName(m)}`), { team: d.own.slug, season: SEASON_KEY, game: previewName(m) }) });
 }

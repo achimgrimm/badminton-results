@@ -685,6 +685,18 @@ async function openRoles(): Promise<void> {
         });
         buttons.append(b);
       }
+      if (u.user_id !== selfId) {
+        const del = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-secondary", textContent: "Konto löschen" });
+        del.addEventListener("click", async () => {
+          if (!(await ask({ title: "Konto löschen?", text: `Das Konto von ${u.display_name || u.email} und alle zugehörigen Daten werden unwiderruflich gelöscht.`, cancel: "Abbrechen", ok: "Löschen", danger: true }))) return;
+          const { error } = await supabase.rpc("admin_delete_user", { target: u.user_id });
+          if (error) { alert("Das hat nicht geklappt. Bitte versuche es später noch einmal."); return; }
+          track("admin-delete-user");
+          users = users.filter((x) => x.user_id !== u.user_id);
+          render();
+        });
+        buttons.append(del);
+      }
       row.append(text, buttons);
       d.append(row);
     }

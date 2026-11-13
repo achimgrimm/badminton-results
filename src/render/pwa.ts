@@ -53,6 +53,33 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Web Push (lineup published or changed, #47): show the message; a click opens the page it names.
+self.addEventListener("push", (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) {}
+  const path = typeof d.path === "string" ? d.path : "";
+  event.waitUntil(self.registration.showNotification(String(d.title || "${APP_SHORT_NAME}").slice(0, 100), {
+    body: String(d.body || "").slice(0, 300),
+    icon: "icons/icon-192.png",
+    tag: path || undefined,
+    data: { path },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const scope = self.registration.scope;
+  let url = new URL((event.notification.data && event.notification.data.path) || "./", scope).href;
+  if (!url.startsWith(scope)) url = scope; // never leave the site
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => c.url.startsWith(scope));
+      if (open) return open.focus().then((c) => (c && "navigate" in c ? c.navigate(url) : c));
+      return self.clients.openWindow(url);
+    }),
+  );
+});
+
 /** Stores a copy of a successful response; the copy must be taken before the body is read. */
 function remember(req, res) {
   if (res.ok) {

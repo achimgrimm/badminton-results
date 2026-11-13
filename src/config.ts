@@ -88,6 +88,11 @@ export const SUPABASE_PROJECT_ID = "jfsjjkfrhkaothradjiy";
 export const SUPABASE_URL: string = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
 export const SUPABASE_ANON_KEY: string = "sb_publishable_C1miwWvIufN93GrVHZPPwA_KMteGNua";
 export const ONLINE = SUPABASE_URL !== "" && SUPABASE_ANON_KEY !== "";
+/**
+ * Public VAPID key for Web Push (lineup notifications). The private key lives only in the Supabase secret
+ * VAPID_PRIVATE_KEY (see README). Empty hides the notification switch in the menu.
+ */
+export const VAPID_PUBLIC_KEY: string = "BNfus-UYNoNya1PVg3OGWnUMrhcvfFx08JgXAT99LX_-Z3xeJ-KSc6YMGe41z5n_K4RmjNh0EztP-vQg__CMPXw";
 
 /** Branch name → stage folder name: lowercase, every run of other characters becomes "-". */
 export function stageName(branch: string): string {

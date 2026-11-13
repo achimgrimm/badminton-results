@@ -14,7 +14,7 @@ import { displayName, esc, formatDate, html, isOwn, opponentOf, outcomeBadge, ou
  * Lineup editor: one select per player slot, stored per match on the device as { discipline: [person, …] }
  * (saved on every change, errors or not). Warnings come from lineupIssues; sharing sends plain text.
  */
-const LINEUP = (key: string, game: { team: string; season: string; game: string }) => `(function () {
+const LINEUP = (key: string, game: { team: string; season: string; game: string; match: string; path: string }) => `(function () {
   ${LINEUP_ISSUES}
   ${SUGGEST_LINEUP}
   var KEY = "${key}", root = document.getElementById("lineup");
@@ -261,7 +261,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string 
   function publishNow(withdraw) {
     var action = withdraw ? "unpublish" : "publish", l = read();
     if (!withdraw && !any(l)) { pubInfo.textContent = "Noch niemand aufgestellt."; return; }
-    (withdraw ? Online.unpublishLineup(GAME.team, GAME.season, GAME.game) : Online.publishLineup(GAME.team, GAME.season, GAME.game, l)).then(function (ok) {
+    (withdraw ? Online.unpublishLineup(GAME.team, GAME.season, GAME.game) : Online.publishLineup(GAME.team, GAME.season, GAME.game, l, { match: GAME.match, path: GAME.path })).then(function (ok) {
       otTrack("lineup", { action: action, ok: ok ? "yes" : "no" });
       if (!ok) { pubInfo.textContent = "Das hat nicht geklappt. Bist Du online?"; return; }
       published = withdraw ? null : { lineup: l, at: Date.now() };
@@ -562,5 +562,5 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
         }</p>`}
   `;
 
-  return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: "spielplan", back: { href: `${root}spielplan.html`, label: "Spielplan" }, checkedAt: d.meta.checkedAt, body, script: LINEUP(storageKey(`lineup-${d.own.slug}-${SEASON_KEY}-${previewName(m)}`), { team: d.own.slug, season: SEASON_KEY, game: previewName(m) }) });
+  return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: "spielplan", back: { href: `${root}spielplan.html`, label: "Spielplan" }, checkedAt: d.meta.checkedAt, body, script: LINEUP(storageKey(`lineup-${d.own.slug}-${SEASON_KEY}-${previewName(m)}`), { team: d.own.slug, season: SEASON_KEY, game: previewName(m), match: `${m.home} – ${m.guest}`, path: `${d.own.slug}/vorschau/${previewName(m)}.html` }) });
 }

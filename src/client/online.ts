@@ -15,6 +15,7 @@ import { parsePublished, type PublishedLineup } from "../lineup.ts";
 declare const SUPABASE_URL: string;
 declare const SUPABASE_ANON_KEY: string;
 declare const STORAGE_KEY: string;
+declare const VAPID_PUBLIC_KEY: string;
 /** This build's localStorage names and prefixes (STORAGE_NAMES/STORAGE_PREFIXES in config.ts, with the stage prefix). */
 declare const OWN_KEYS: { names: string[]; prefixes: string[] };
 declare function otTrack(name: string, data?: Record<string, string>): void;
@@ -139,6 +140,7 @@ export const Online = {
     // The pick belongs to the account: signing out clears it (and the sign-in notes, so the next login matches afresh).
     // Answers given offline are sent first (best effort), so they are on the account when signing in elsewhere.
     await sync.sync(state.session?.user.id ?? null).catch(() => {});
+    await Online.disablePush().catch(() => {});
     const me = meApi();
     if (me) {
       writeNote(note("attempt", me.team, me.season), null);
@@ -191,13 +193,15 @@ export const Online = {
     } catch { return undefined; }
   },
   /** Publishes the lineup for a game (team leads and admins; the server enforces lineup.write). */
-  publishLineup: async (team: string, season: string, gameKey: string, lineup: PublishedLineup): Promise<boolean> => {
+  publishLineup: async (team: string, season: string, gameKey: string, lineup: PublishedLineup, notify?: { match: string; path: string }): Promise<boolean> => {
     if (!state.session || !state.permissions.has("lineup.write")) return false;
     try {
       const { error } = await supabase.from("published_lineups").upsert(
         { team_slug: team, season, game_key: gameKey, lineup, published_by: state.session.user.id, published_at: new Date().toISOString() },
         { onConflict: "team_slug,season,game_key" },
       );
+      // Tell the affected players by push (best effort: the lineup is published either way).
+      if (!error && notify) void supabase.functions.invoke("notify-lineup", { body: { team, season, game: gameKey, ...notify } }).catch(() => {});
       return !error;
     } catch { return false; }
   },
@@ -209,6 +213,46 @@ export const Online = {
       return !error;
     } catch { return false; }
   },
+  /** Whether this browser and build can do Web Push (the menu shows the switch only then). */
+  pushSupported: () => !!VAPID_PUBLIC_KEY && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
+  /** "on" = this device is subscribed, "denied" = blocked in the browser, else "off". */
+  pushState: async (): Promise<"on" | "off" | "denied"> => {
+    if (!Online.pushSupported()) return "off";
+    if (Notification.permission === "denied") return "denied";
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      return Notification.permission === "granted" && (await reg?.pushManager.getSubscription()) ? "on" : "off";
+    } catch { return "off"; }
+  },
+  /** Asks for permission, subscribes this device and saves the subscription on the account. */
+  enablePush: async (): Promise<"on" | "denied" | "failed"> => {
+    if (!state.session || !Online.pushSupported()) return "failed";
+    try {
+      if ((await Notification.requestPermission()) !== "granted") return "denied";
+      const reg = await navigator.serviceWorker.ready;
+      const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: Uint8Array.from(atob(VAPID_PUBLIC_KEY.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)),
+      });
+      const j = sub.toJSON();
+      const { error } = await supabase.rpc("save_push_subscription", {
+        p_endpoint: sub.endpoint, p_p256dh: j.keys?.p256dh ?? "", p_auth: j.keys?.auth ?? "", p_scope: reg.scope,
+      });
+      if (error) return "failed";
+      track("push", { action: "on" });
+      return "on";
+    } catch { return "failed"; }
+  },
+  /** Unsubscribes this device and removes the subscription from the account. */
+  disablePush: async (): Promise<void> => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return;
+    if (state.session) await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+    await sub.unsubscribe();
+    track("push", { action: "off" });
+  },
   client: supabase,
 };
 (window as unknown as { Online: typeof Online }).Online = Online;
@@ -219,6 +263,7 @@ const GOOGLE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#42
 const SIGN_OUT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>`;
 const HELP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>`;
 const ROLES_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>`;
+const BELL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`;
 
 /** Appends the check mark after the name of every verified player on the page (own side only: they carry data-person). */
@@ -347,6 +392,7 @@ function renderAccount(): void {
       return b;
     })()] : []),
     ...(state.permissions.has("role.manage") ? [item("Rollen verwalten", () => void openRoles(), false, ROLES_ICON)] : []),
+    ...(Online.pushSupported() ? [pushItem(item)] : []),
     item("Abmelden", () => void Online.signOut().then(offerClearLocalData), false, SIGN_OUT_ICON),
     item("Konto löschen", () => {
       void confirmDeleteAccount().then((yes) => {
@@ -354,6 +400,24 @@ function renderAccount(): void {
       });
     }, true, TRASH_ICON),
   );
+}
+
+/** The menu switch for push notifications; its label follows the state of this device once known. */
+function pushItem(item: (text: string, onClick: () => void, danger?: boolean, icon?: string) => HTMLButtonElement): HTMLButtonElement {
+  let on = false;
+  const b = item("Benachrichtigungen", () => {
+    void (on ? Online.disablePush().then(() => alert("Benachrichtigungen sind auf diesem Gerät aus."))
+      : Online.enablePush().then((r) => alert(r === "on"
+        ? "Du bekommst jetzt eine Nachricht, wenn Deine Aufstellung veröffentlicht oder geändert wird."
+        : r === "denied"
+          ? "Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Einstellungen der Seite."
+          : "Das hat nicht geklappt. Bist Du online?")));
+  }, false, BELL_ICON);
+  void Online.pushState().then((st) => {
+    on = st === "on";
+    b.querySelector("span")!.textContent = on ? "Benachrichtigungen ausschalten" : "Benachrichtigungen einschalten";
+  });
+  return b;
 }
 
 /** A small confirmation dialog; resolves true only on the confirm button, false on cancel, Escape or a click outside. */

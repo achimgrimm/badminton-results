@@ -417,6 +417,7 @@ function renderAccount(): void {
           ],
           cancel: "Schließen",
           ok: "Mit Google anmelden",
+          okIcon: GOOGLE_ICON,
         }).then((yes) => { if (yes) void Online.signIn(); });
       }, false, HELP_ICON),
       item("Mit Google anmelden", () => void Online.signIn(), false, GOOGLE_ICON),
@@ -530,7 +531,7 @@ function notice(o: { title: string; text: string; ok?: string }): Promise<void> 
 }
 
 /** A small confirmation dialog; resolves true only on the confirm button, false on cancel, Escape or a click outside. */
-function ask(o: { title: string; text: string; /** Bullet points shown under the text */ items?: string[]; cancel: string; ok: string; danger?: boolean }): Promise<boolean> {
+function ask(o: { title: string; text: string; /** Bullet points shown under the text */ items?: string[]; cancel: string; ok: string; /** A constant SVG shown before the confirm label */ okIcon?: string; danger?: boolean }): Promise<boolean> {
   return new Promise((resolve) => {
     const dlg = document.createElement("dialog");
     dlg.className = "team-dialog confirm-dialog";
@@ -541,6 +542,15 @@ function ask(o: { title: string; text: string; /** Bullet points shown under the
     row.className = "btn-row";
     const cancel = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-secondary", textContent: o.cancel });
     const ok = Object.assign(document.createElement("button"), { type: "button", className: o.danger ? "btn btn-danger" : "btn btn-primary", textContent: o.ok });
+    if (o.okIcon) {
+      // A white badge keeps the multicolour logo readable on the blue button.
+      const badge = document.createElement("span");
+      badge.insertAdjacentHTML("afterbegin", o.okIcon); // a constant SVG, never user input
+      Object.assign(badge.style, { display: "inline-flex", background: "#fff", borderRadius: "50%", padding: "3px", marginRight: "8px", verticalAlign: "middle" });
+      const svg = badge.querySelector("svg");
+      if (svg) { svg.style.width = "16px"; svg.style.height = "16px"; }
+      ok.prepend(badge);
+    }
     cancel.addEventListener("click", () => dlg.close("cancel"));
     ok.addEventListener("click", () => dlg.close("ok"));
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close("cancel"); });

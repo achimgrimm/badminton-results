@@ -406,7 +406,12 @@ function renderAccount(): void {
       item("Warum anmelden?", () => {
         void ask({
           title: "Warum anmelden?",
-          text: "Ohne Konto bleibt alles auf diesem Gerät. Mit Anmeldung gelten Deine Spielerwahl und Deine „Ich spiele“-Antworten auf allen Geräten, Du siehst die Aufstellung vom Mannschaftsführer und bekommst Benachrichtigungen: bei neuer Aufstellung, 24 Stunden vor einem Spiel und bei neuen Ergebnissen gefolgter Teams.",
+          text: "Ohne Konto bleibt alles auf diesem Gerät. Mit Anmeldung:",
+          items: [
+            "Deine Spielerwahl und „Ich spiele“-Antworten gelten auf allen Geräten.",
+            "Du siehst die Aufstellung vom Mannschaftsführer.",
+            "Du bekommst Benachrichtigungen bei neuer Aufstellung, 24 Stunden vor einem Spiel und bei neuen Ergebnissen gefolgter Teams.",
+          ],
           cancel: "Schließen",
           ok: "Mit Google anmelden",
         }).then((yes) => { if (yes) void Online.signIn(); });
@@ -522,7 +527,7 @@ function notice(o: { title: string; text: string; ok?: string }): Promise<void> 
 }
 
 /** A small confirmation dialog; resolves true only on the confirm button, false on cancel, Escape or a click outside. */
-function ask(o: { title: string; text: string; cancel: string; ok: string; danger?: boolean }): Promise<boolean> {
+function ask(o: { title: string; text: string; /** Bullet points shown under the text */ items?: string[]; cancel: string; ok: string; danger?: boolean }): Promise<boolean> {
   return new Promise((resolve) => {
     const dlg = document.createElement("dialog");
     dlg.className = "team-dialog confirm-dialog";
@@ -538,7 +543,9 @@ function ask(o: { title: string; text: string; cancel: string; ok: string; dange
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close("cancel"); });
     dlg.addEventListener("close", () => { dlg.remove(); resolve(dlg.returnValue === "ok"); });
     row.append(cancel, ok);
-    dlg.append(h, p, row);
+    const list = o.items?.length ? document.createElement("ul") : null;
+    if (list) for (const t of o.items!) list.append(Object.assign(document.createElement("li"), { textContent: t }));
+    dlg.append(h, p, ...(list ? [list] : []), row);
     document.body.append(dlg);
     dlg.showModal();
     cancel.focus();

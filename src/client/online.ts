@@ -581,7 +581,16 @@ async function setNotAPlayer(me: MeApi): Promise<void> {
  * the team's roster and preselected; the user confirms it or picks another. The pick becomes a normal
  * claim, so it still needs approval. The dialog can only be left by choosing or by signing out.
  */
+let playerDialogOpen = false;
 async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: number, replacing = false): Promise<void> {
+  // Every auth event (also the one supabase-js fires when the tab regains focus, e.g. while a select's
+  // list is open) runs loadClaims again; a second dialog would close the first one's open list.
+  if (playerDialogOpen) return;
+  playerDialogOpen = true;
+  try { await askPlayer(me, s, canApprove, run, replacing); } finally { playerDialogOpen = false; }
+}
+
+async function askPlayer(me: MeApi, s: Session, canApprove: boolean, run: number, replacing: boolean): Promise<void> {
   const roster = pageRoster();
   if (!roster.length) return;
   // The page's own list of players would sit behind this dialog; this one replaces it.
@@ -620,7 +629,8 @@ async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: nu
     }
     chosen = roster.find((r) => String(r.person) === select.value);
   }
-  if (run !== applied) return;
+  // Not `run !== applied`: a later auth event (same user) must not throw the answer away.
+  if (state.session?.user.id !== s.user.id) return;
   const pick = { person: chosen.person, name: chosen.name };
   me.set(pick);
   track("claim", { action: replacing ? "pick" : hit && hit.person === chosen.person ? "automatch" : "pick" });

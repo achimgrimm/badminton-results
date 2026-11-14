@@ -255,6 +255,17 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
       if (res === undefined) return;
       published = res;
       try { if (res) localStorage.setItem(PUB_KEY, JSON.stringify(res)); else localStorage.removeItem(PUB_KEY); } catch (e) {}
+      /* The draft lives on one device: a team lead on a new device starts from what they published. */
+      if (res && canWrite && !any(read())) {
+        rows.forEach(function (r) {
+          var sel = r.querySelectorAll("select");
+          (res.lineup[r.dataset.discipline] || []).forEach(function (p, i) { if (sel[i] && p) sel[i].value = String(p); });
+        });
+        try { localStorage.setItem(KEY, JSON.stringify(read())); } catch (e) {}
+        if (any(read())) root.open = true;
+        render();
+        return;
+      }
       renderPublished();
     }, function () {});
   }

@@ -601,7 +601,8 @@ async function askPlayer(me: MeApi, s: Session, canApprove: boolean, run: number
   const select = document.createElement("select");
   select.className = "select";
   select.setAttribute("aria-label", "Spieler");
-  select.append(Object.assign(document.createElement("option"), { value: "", textContent: "Bitte wählen …", selected: !hit, disabled: true }));
+  // A list that is always open (no popup): the popup of a closed select kept closing right after the first click.
+  select.size = 8;
   // For members who don't play; not offered when replacing an existing pick (that has its own "Ich bin nicht …").
   if (!replacing) select.append(Object.assign(document.createElement("option"), { value: NOT_A_PLAYER, textContent: "Nicht aktiver Spieler" }));
   for (const r of [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de"))) {

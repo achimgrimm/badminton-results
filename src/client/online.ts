@@ -401,7 +401,18 @@ function renderAccount(): void {
     if (state.loading) return; // not known yet: show neither "signed in" nor "local" options
     // A player chosen without an account stays on this device; signed in, the account keeps it.
     if (pick) whoEl.append(block(nameLine(shownName(pick.name)), "Spieler nur auf diesem Gerät"));
-    el.append(item("Mit Google anmelden", () => void Online.signIn(), false, GOOGLE_ICON));
+    // The explanation only appears when this item is opened, never by itself.
+    el.append(
+      item("Warum anmelden?", () => {
+        void ask({
+          title: "Warum anmelden?",
+          text: "Ohne Konto bleibt alles auf diesem Gerät. Mit Anmeldung gelten Deine Spielerwahl und Deine „Ich spiele“-Antworten auf allen Geräten, Du siehst die Aufstellung vom Mannschaftsführer und bekommst Benachrichtigungen: bei neuer Aufstellung, 24 Stunden vor einem Spiel und bei neuen Ergebnissen gefolgter Teams.",
+          cancel: "Schließen",
+          ok: "Mit Google anmelden",
+        }).then((yes) => { if (yes) void Online.signIn(); });
+      }, false, HELP_ICON),
+      item("Mit Google anmelden", () => void Online.signIn(), false, GOOGLE_ICON),
+    );
     return;
   }
   // With a chosen player the menu shows that player (linked to the player page); otherwise the Google name.

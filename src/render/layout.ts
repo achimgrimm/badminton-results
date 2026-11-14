@@ -101,8 +101,29 @@ const NEW_RESULTS = (slug: string) => `(function () {
   }
 })();`;
 
-/** The chosen player ("Wer bist Du?"), per team and season; read by PLAYING, written by ME. */
-const meKey = (slug: string) => storageKey(`me-${slug}-${SEASON_KEY}`);
+/** The chosen player ("Wer bist Du?"): one per device, whatever the team; read by PLAYING, written by ME. */
+const ME_KEY = storageKey("me");
+
+/**
+ * Until the pick was global it was stored per team and season as me-<team>-<season>. On first load it
+ * moves to the single key: the pick of this page's team wins, else the first one found. Must run before
+ * PLAYING and ME. Exported as a string so the test can run it against a fake localStorage.
+ */
+export const ME_MIGRATE = (slug: string) => `(function () {
+  try {
+    var KEY = "${ME_KEY}", OLD = "${storageKey("me-")}", old = [];
+    for (var i = 0; i < localStorage.length; i++) if (localStorage.key(i).indexOf(OLD) === 0) old.push(localStorage.key(i));
+    if (!old.length) return;
+    if (!localStorage.getItem(KEY)) {
+      old.sort();
+      var own = "${storageKey(`me-${slug}-${SEASON_KEY}`)}", from = old.indexOf(own) >= 0 ? own : old[0];
+      var m = null;
+      try { m = JSON.parse(localStorage.getItem(from) || "null"); } catch (e) {}
+      if (m && typeof m === "object" && m.person) localStorage.setItem(KEY, JSON.stringify({ person: m.person, name: m.name }));
+    }
+    old.forEach(function (k) { localStorage.removeItem(k); });
+  } catch (e) {}
+})();`;
 
 /**
  * "Ich spiele": the user answers yes, maybe or no for own matches. Stored per team and season as an
@@ -123,7 +144,7 @@ const PLAYING = (slug: string) => `(function () {
   load();
   function me() {
     var m = null;
-    try { m = JSON.parse(localStorage.getItem("${meKey(slug)}") || "null"); } catch (e) {}
+    try { m = JSON.parse(localStorage.getItem("${ME_KEY}") || "null"); } catch (e) {}
     return m && m.person ? String(m.person) : null;
   }
   function badge(card, cls, text) {
@@ -181,20 +202,29 @@ const PLAYING = (slug: string) => `(function () {
 
 /**
  * "Wer bist Du?": the user picks themselves from the team's players (Spieler page) or with
- * "Das bin ich" on a player page. Stored per team and season as { person, name }, on the device only.
+ * "Das bin ich" on a player page. Stored once per device as { person, name } (the nuLiga person is the
+ * same on every team), on the device only. The player page link is looked up in the page's team roster.
  * Every element with the chosen data-person gets "is-me", its card "has-me". The Spieler page's
  * player list (alphabetical) starts with the chosen player.
  */
 const ME = (slug: string, root: string) => `(function () {
-  var KEY = "${meKey(slug)}", me = null, locked = false;
+  var KEY = "${ME_KEY}", me = null, locked = false, hrefs = null;
   try { me = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!me || typeof me !== "object" || !me.person) me = null;
+  // The player page of a person in this page's team (embedded roster); null when the team doesn't list them.
+  function hrefOf(person) {
+    if (!hrefs) {
+      hrefs = {};
+      try { JSON.parse(document.getElementById("me-roster").textContent).forEach(function (r) { if (r.href) hrefs[r.person] = r.href; }); } catch (e) {}
+    }
+    return hrefs[person] || null;
+  }
   var card = document.getElementById("me-card"), dlg = document.getElementById("me-dialog");
   var list = document.getElementById("player-list"), order = list ? Array.prototype.slice.call(list.children) : [];
   function save(next, via) {
     // Signed in (online.js), clearing the player instead asks for the new one; the pick stays until then.
     if (!next && via !== "account" && window.otClearMe && window.otClearMe()) return;
-    me = next;
+    me = next ? { person: next.person, name: next.name } : null;
     try { if (me) localStorage.setItem(KEY, JSON.stringify(me)); else localStorage.removeItem(KEY); } catch (e) {}
     render();
     if (window.otPlayingRender) window.otPlayingRender();
@@ -207,7 +237,7 @@ const ME = (slug: string, root: string) => `(function () {
   if (menuClear) menuClear.addEventListener("click", function () { save(null, "menu"); });
   // online.js reads and sets the pick through this, for the account's claim of the player.
   // lock(true): the account's approved player can't be cleared here (no "Ich bin nicht …", no toggle off); it can still be replaced.
-  window.otMe = { team: "${slug}", season: "${SEASON_KEY}", root: "${root}", get: function () { return me; }, set: function (next) { save(next, "account"); }, lock: function (on) { if (locked !== !!on) { locked = !!on; render(); } } };
+  window.otMe = { root: "${root}", get: function () { return me && { person: me.person, name: me.name, href: hrefOf(me.person) || undefined }; }, set: function (next) { save(next, "account"); }, lock: function (on) { if (locked !== !!on) { locked = !!on; render(); } } };
   function render() {
     var id = me ? String(me.person) : "";
     if (id) document.body.dataset.me = id; else delete document.body.dataset.me;
@@ -232,14 +262,6 @@ const ME = (slug: string, root: string) => `(function () {
     });
     // Changing the player means "Ich bin nicht …" first, then choosing again.
     if (pickItem) pickItem.hidden = !!me;
-    // A pick made on a player page or stored earlier may lack the player page link; the list knows it.
-    if (me && !me.href && dlg) {
-      var known = dlg.querySelector('.me-option[data-person="' + id + '"]');
-      if (known && known.dataset.href) {
-        me.href = known.dataset.href;
-        try { localStorage.setItem(KEY, JSON.stringify(me)); } catch (e) {}
-      }
-    }
     // The hint box is only for visitors without a chosen player; the rest is done from the menu.
     if (card) card.hidden = !!me;
     if (menuClear) {
@@ -247,14 +269,16 @@ const ME = (slug: string, root: string) => `(function () {
       if (me) menuClear.querySelector("span").textContent = "Ich bin nicht " + me.name.replace(/^([^,]+),\s*(.+)$/, "$2 $1");
     }
     if (menuStats) {
-      menuStats.hidden = !(me && me.href);
-      if (me && me.href) menuStats.href = new URL("${root}" + me.href, location.href).href;
+      // Only when this team lists the player (a player from another team has no page here).
+      var statsHref = me && hrefOf(me.person);
+      menuStats.hidden = !statsHref;
+      if (statsHref) menuStats.href = new URL("${root}" + statsHref, location.href).href;
     }
   }
   document.querySelectorAll(".me-toggle").forEach(function (b) {
     b.addEventListener("click", function () {
       if (locked && me && String(me.person) === b.dataset.person) return;
-      save(me && String(me.person) === b.dataset.person ? null : { person: Number(b.dataset.person), name: b.dataset.name, href: b.dataset.href }, "page");
+      save(me && String(me.person) === b.dataset.person ? null : { person: Number(b.dataset.person), name: b.dataset.name }, "page");
     });
   });
   if (card && dlg) {
@@ -266,7 +290,7 @@ const ME = (slug: string, root: string) => `(function () {
     dlg.querySelector(".dialog-close").addEventListener("click", function () { dlg.close(); });
     dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
     dlg.querySelectorAll(".me-option").forEach(function (o) {
-      o.addEventListener("click", function () { dlg.close(); save({ person: Number(o.dataset.person), name: o.dataset.name, href: o.dataset.href }, "list"); });
+      o.addEventListener("click", function () { dlg.close(); save({ person: Number(o.dataset.person), name: o.dataset.name }, "list"); });
     });
     // The menu item and the overview's "Wer bist Du?" hint link here to open the list right away.
     if (location.hash === "#wer-bist-du") {
@@ -466,7 +490,7 @@ var otProps = {
   app: function () { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true ? "app" : "browser"; },
   team: function () { return localStorage.getItem("${TEAM_KEY}") ? "yes" : "no"; },
   player: function () {
-    for (var i = 0; i < localStorage.length; i++) if (localStorage.key(i).indexOf("${storageKey("me-")}") === 0) return "yes";
+    for (var i = 0; i < localStorage.length; i++) if (localStorage.key(i) === "${ME_KEY}") return "yes";
     return "no";
   },
   storage: function () { return "local"; }
@@ -763,7 +787,7 @@ ${o.body}
 ${team ? teamDialog(team, assets) : ""}
 ${team ? NEW_DIALOG : ""}
 ${menuDialog(assets, team ? o.root : null)}
-${ONLINE && team ? `<script type="application/json" id="me-roster">${JSON.stringify(rosterEntries()).replace(/</g, "\\u003c")}</script>` : ""}
+${team ? `<script type="application/json" id="me-roster">${JSON.stringify(rosterEntries()).replace(/</g, "\\u003c")}</script>` : ""}
 ${releaseDialog()}
 <dialog class="install-help" id="install-help" aria-labelledby="install-help-h">
   <h2 id="install-help-h">App installieren</h2>
@@ -793,7 +817,7 @@ ${o.back ? `<script>${BACK_LINK}</script>` : ""}
 ${ONLINE ? `<script src="${assets}${onlineHref()}" data-callback="${assets}auth-callback.html" defer></script>` : ""}
 <script>${INSTALL(assets)}</script>
 ${releaseNotes().length ? `<script>${RELEASE_NOTES(team != null)}</script>` : ""}
-${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${PLAYING(team.slug)}${ME(team.slug, o.root)}</script>` : ""}
+${team ? `<script>${REMEMBER(team.slug)}${TEAM_SWITCH}${NEW_RESULTS(team.slug)}${ME_MIGRATE(team.slug)}${PLAYING(team.slug)}${ME(team.slug, o.root)}</script>` : ""}
 ${o.script ? `<script>${o.script}</script>` : ""}
 </body>
 </html>

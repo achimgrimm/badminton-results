@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
   const byUser = new Map<string, (typeof notices)[number]>();
   if (notices.length) {
     const { data: claims } = await db.from("player_claims").select("user_id, person")
-      .eq("team_slug", team).eq("season", season).eq("status", "approved")
+      .eq("status", "approved")
       .in("person", notices.map((n) => Number(n.person)));
     for (const c of claims ?? []) {
       const n = notices.find((x) => Number(x.person) === c.person);

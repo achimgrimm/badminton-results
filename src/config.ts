@@ -114,8 +114,9 @@ export function storageKey(name: string): string {
  * Every localStorage name this app writes, so the privacy page can clear them without touching other
  * sites on the same origin. Add a new storageKey() name here (test/datenschutz.test.ts checks it).
  * Exact names, and name prefixes for the per-team and per-season ones (and the auth session's extras).
+ * "me-" is the old per-team pick (see ME_MIGRATE in render/layout.ts); it stays so it is cleared too.
  */
-export const STORAGE_NAMES = ["theme", "chromeHintDismissed", "team", "releaseSeen", "meHintDismissed", "spielplan-filter", "auth"];
+export const STORAGE_NAMES = ["theme", "chromeHintDismissed", "team", "releaseSeen", "meHintDismissed", "spielplan-filter", "me", "auth"];
 export const STORAGE_PREFIXES = ["seen-", "me-", "playing-", "answers-", "lineup-", "auth-"];
 /** Whether a localStorage key belongs to this build (live site or its stage). */
 export function ownsStorageKey(key: string): boolean {

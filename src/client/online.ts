@@ -35,8 +35,8 @@ const callback = (() => {
   return attr ? new URL(attr, location.href).href : location.origin + location.pathname;
 })();
 
-/** The account's chosen players, keyed "team|season" (table player_claims; see supabase/migrations). */
-interface ClaimRow { id: string; user_id: string; team_slug: string; season: string; person: number; player_name: string; status: "pending" | "approved" }
+/** The account's chosen player: one claim per account, whatever the team (table player_claims; see supabase/migrations). */
+interface ClaimRow { id: string; user_id: string; person: number; player_name: string; status: "pending" | "approved" }
 /** For approvers (permission player.link): the claims waiting for a decision, with the claimer's display name. */
 interface PendingClaim extends ClaimRow { who: string; email: string }
 
@@ -55,18 +55,18 @@ const state = {
   /** The name from public.profiles (editable by the user) and the user's role names; empty until loaded. */
   displayName: null as string | null,
   roles: [] as string[],
-  claims: new Map<string, ClaimRow>(),
+  claim: null as ClaimRow | null,
   pending: [] as PendingClaim[],
 };
 /** The part of the state that supabase-js doesn't persist itself. */
-interface Saved { uid: string; displayName: string | null; roles: string[]; permissions: string[]; claims: ClaimRow[]; pending: PendingClaim[] }
+interface Saved { uid: string; displayName: string | null; roles: string[]; permissions: string[]; claim: ClaimRow | null; pending: PendingClaim[] }
 const SAVED_KEY = `${STORAGE_KEY}-account`;
 
 function save(): void {
   const s = state.session;
   try {
     if (!s) { localStorage.removeItem(SAVED_KEY); return; }
-    const saved: Saved = { uid: s.user.id, displayName: state.displayName, roles: state.roles, permissions: [...state.permissions], claims: [...state.claims.values()], pending: state.pending };
+    const saved: Saved = { uid: s.user.id, displayName: state.displayName, roles: state.roles, permissions: [...state.permissions], claim: state.claim, pending: state.pending };
     localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
   } catch { /* the saved copy is optional */ }
 }
@@ -75,11 +75,12 @@ function save(): void {
 function hydrate(uid: string): void {
   let saved: Saved | null = null;
   try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) ?? "null"); } catch { /* ignore */ }
-  const ok = !!saved && saved.uid === uid && Array.isArray(saved.roles) && Array.isArray(saved.permissions) && Array.isArray(saved.claims) && Array.isArray(saved.pending);
+  const ok = !!saved && saved.uid === uid && Array.isArray(saved.roles) && Array.isArray(saved.permissions) && Array.isArray(saved.pending);
   state.displayName = ok ? saved!.displayName : null;
   state.roles = ok ? saved!.roles : [];
   state.permissions = new Set(ok ? saved!.permissions : []);
-  state.claims = new Map(ok ? saved!.claims.map((c) => [claimKey(c.team_slug, c.season), c]) : []);
+  // An older saved copy had a list of claims (one per team and season); the next load fetches the account's claim.
+  state.claim = ok ? saved!.claim ?? null : null;
   state.pending = ok ? saved!.pending : [];
 }
 
@@ -96,10 +97,9 @@ const storedSession = (): Session | null => {
     return s && typeof s === "object" && s.user && typeof s.user.id === "string" ? s : null;
   } catch { return null; }
 };
-const claimKey = (team: string, season: string) => `${team}|${season}`;
 
 /** The page's "Wer bist Du?" state (ME script in layout.ts); undefined on pages without a team. */
-interface MeApi { team: string; season: string; root: string; get(): (Pick & { href?: string }) | null; set(next: Pick | null): void; lock?(on: boolean): void }
+interface MeApi { root: string; get(): (Pick & { href?: string }) | null; set(next: Pick | null): void; lock?(on: boolean): void }
 const meApi = () => (window as unknown as { otMe?: MeApi }).otMe;
 const listeners = new Set<(s: Session | null) => void>();
 
@@ -126,7 +126,7 @@ export const Online = {
   get permissions() { return state.permissions; },
   get displayName() { return state.displayName; },
   get roles() { return state.roles; },
-  get claims() { return state.claims; },
+  get claim() { return state.claim; },
   /** Whether the signed-in user may do this, e.g. can("lineup.write"). The server enforces it again. */
   can: (permission: string) => state.permissions.has(permission),
   signIn: async () => {
@@ -141,11 +141,8 @@ export const Online = {
     // Answers given offline are sent first (best effort), so they are on the account when signing in elsewhere.
     await sync.sync(state.session?.user.id ?? null).catch(() => {});
     await Online.disablePush().catch(() => {});
-    const me = meApi();
-    if (me) {
-      writeNote(note("attempt", me.team, me.season), null);
-      me.set(null);
-    }
+    writeNote(ATTEMPT_NOTE, null);
+    meApi()?.set(null);
     await supabase.auth.signOut();
   },
   /** Deletes the account and all its data on the server. */
@@ -168,13 +165,13 @@ export const Online = {
     } catch { return null; }
   },
   /**
-   * The nuLiga person ids of the team's verified players (approved claims), to show a check mark after their names.
+   * The nuLiga person ids of all verified players (approved claims), to show a check mark after their names.
    * Only team leads and admins may read them (the server enforces it); null when signed out, not allowed or offline.
    */
-  verifiedPlayers: async (team: string, season: string): Promise<Set<number> | null> => {
+  verifiedPlayers: async (): Promise<Set<number> | null> => {
     if (!state.session || !state.permissions.has("player.link")) return null;
     try {
-      const { data, error } = await supabase.rpc("verified_players", { p_team: team, p_season: season });
+      const { data, error } = await supabase.rpc("verified_players");
       return error || !Array.isArray(data) ? null : new Set((data as unknown[]).map(Number));
     } catch { return null; }
   },
@@ -329,7 +326,7 @@ function renderAccount(): void {
   const me = meApi();
   const pick = me?.get() ?? null;
   // An approved player can't be cleared on the device ("Ich bin nicht …"), only replaced by another pick.
-  const approved = me && state.session ? state.claims.get(claimKey(me.team, me.season)) : undefined;
+  const approved = me && state.session ? state.claim : null;
   me?.lock?.(!!pick && approved?.status === "approved" && approved.person === pick.person);
   /** The name line, same look signed in or out: the chosen player, linked to the player page when known. */
   const nameLine = (text: string) => {
@@ -365,7 +362,7 @@ function renderAccount(): void {
   const lines: string[] = [];
   if (role) lines.push(role);
   if (me) {
-    const claim = state.claims.get(claimKey(me.team, me.season));
+    const claim = state.claim;
     // A confirmed player is shown by the check mark next to the name, so only the waiting state needs words.
     const waiting = pick && claim?.person === pick.person && claim.status !== "approved";
     if (!pick) lines.push("Kein Spieler gewählt");
@@ -517,15 +514,15 @@ async function offerClearLocalData(): Promise<void> {
   location.reload();
 }
 
-/** Small per-device notes next to the session, per team and season (never sent anywhere). */
-const note = (kind: "attempt", team: string, season: string) => `${STORAGE_KEY}-${kind}-${team}-${season}`;
+/** Small per-device note next to the session (never sent anywhere). */
+const ATTEMPT_NOTE = `${STORAGE_KEY}-attempt`;
 const readNote = (key: string): string | null => { try { return localStorage.getItem(key); } catch { return null; } };
 const writeNote = (key: string, value: string | null) => {
   try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* optional */ }
 };
 /** The last pick this device sent as a claim ("ok:<person>" or "taken:<person>"). */
-function lastAttempt(team: string, season: string): { person: number; ok: boolean } | null {
-  const m = /^(ok|taken):(\d+)$/.exec(readNote(note("attempt", team, season)) ?? "");
+function lastAttempt(): { person: number; ok: boolean } | null {
+  const m = /^(ok|taken):(\d+)$/.exec(readNote(ATTEMPT_NOTE) ?? "");
   return m ? { person: Number(m[2]), ok: m[1] === "ok" } : null;
 }
 
@@ -534,24 +531,24 @@ function pageRoster(): { person: number; name: string; href: string | null }[] {
   try { return JSON.parse(document.getElementById("me-roster")?.textContent ?? "[]"); } catch { return []; }
 }
 
-/** The account's own claims, the pending ones for approvers, and the device's pick brought in line with them. */
+/** The account's own claim, the pending ones for approvers, and the device's pick brought in line with them. */
 async function loadClaims(s: Session, run: number): Promise<void> {
   const own = await supabase.from("player_claims").select("*").eq("user_id", s.user.id);
   if (run !== applied) return;
-  // A failed read (offline) keeps the saved claims instead of clearing them.
+  // A failed read (offline) keeps the saved claim instead of clearing it.
   if (own.error) return;
-  state.claims = new Map(((own.data ?? []) as ClaimRow[]).map((c) => [claimKey(c.team_slug, c.season), c]));
+  state.claim = ((own.data ?? []) as ClaimRow[])[0] ?? null;
   await loadPending(run);
   const me = meApi();
   if (!me) return;
-  const server = state.claims.get(claimKey(me.team, me.season)) ?? null;
+  const server = state.claim;
   const local = me.get();
   const canApprove = state.permissions.has("player.link");
-  const result = reconcile(local, server && { person: server.person, name: server.player_name, status: server.status }, canApprove, lastAttempt(me.team, me.season));
+  const result = reconcile(local, server && { person: server.person, name: server.player_name, status: server.status }, canApprove, lastAttempt());
   if (result.action === "adopt") me.set(result.pick);
-  else if (result.action === "upload") await saveClaim(me.team, me.season, result.pick, result.status);
+  else if (result.action === "upload") await saveClaim(result.pick, result.status);
   else if (result.action === "rejected") {
-    writeNote(note("attempt", me.team, me.season), null);
+    writeNote(ATTEMPT_NOTE, null);
     me.set(null);
     alert(`Deine Anfrage für ${shownName(result.pick.name)} wurde nicht bestätigt. Die Auswahl wurde zurückgesetzt.`);
   } else if (!local && !server) await confirmPlayer(me, s, canApprove, run);
@@ -596,10 +593,10 @@ async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: nu
     chosen = roster.find((r) => String(r.person) === select.value);
   }
   if (run !== applied) return;
-  const pick = { person: chosen.person, name: chosen.name, ...(chosen.href ? { href: chosen.href } : {}) };
+  const pick = { person: chosen.person, name: chosen.name };
   me.set(pick);
   track("claim", { action: replacing ? "pick" : hit && hit.person === chosen.person ? "automatch" : "pick" });
-  await saveClaim(me.team, me.season, pick, canApprove ? "approved" : "pending");
+  await saveClaim(pick, canApprove ? "approved" : "pending");
 }
 
 // Signed in, "Ich bin nicht …" and toggling the player off can't leave the device without a player (ME script):
@@ -626,31 +623,31 @@ async function loadPending(run: number): Promise<void> {
   state.pending = rows.filter((r) => r.user_id !== state.session?.user.id).map((r) => ({ ...r, who: byId.get(r.user_id) ?? "Unbekannt", email: emailById.get(r.user_id) ?? "" }));
 }
 
-/** Replaces the account's claim for this team and season. A taken player keeps the device pick only. */
-async function saveClaim(team: string, season: string, pick: Pick | null, status: "pending" | "approved" = "pending"): Promise<void> {
+/** Replaces the account's claim. A taken player keeps the device pick only. */
+async function saveClaim(pick: Pick | null, status: "pending" | "approved" = "pending"): Promise<void> {
   if (!state.session) return;
   const uid = state.session.user.id;
-  const del = await supabase.from("player_claims").delete().eq("user_id", uid).eq("team_slug", team).eq("season", season);
+  const del = await supabase.from("player_claims").delete().eq("user_id", uid);
   if (del.error) console.error("player_claims delete failed", del.error);
-  state.claims.delete(claimKey(team, season));
+  state.claim = null;
   if (pick) {
     const { data, error } = await supabase.from("player_claims")
-      .insert({ user_id: uid, team_slug: team, season, person: pick.person, player_name: pick.name, status })
+      .insert({ user_id: uid, person: pick.person, player_name: pick.name, status })
       .select("*").single();
     if (error) {
       if (error.code === "23505") {
-        writeNote(note("attempt", team, season), `taken:${pick.person}`);
+        writeNote(ATTEMPT_NOTE, `taken:${pick.person}`);
         alert("Dieser Spieler ist schon mit einem anderen Konto verknüpft. Die Auswahl gilt nur auf diesem Gerät.");
       } else {
         // e.g. the table is missing (migration not applied) or a policy refused the row; the pick stays on this device.
         console.error("player_claims insert failed", error);
       }
     } else {
-      state.claims.set(claimKey(team, season), data as ClaimRow);
-      writeNote(note("attempt", team, season), `ok:${pick.person}`);
+      state.claim = data as ClaimRow;
+      writeNote(ATTEMPT_NOTE, `ok:${pick.person}`);
     }
   } else {
-    writeNote(note("attempt", team, season), null);
+    writeNote(ATTEMPT_NOTE, null);
   }
   track("claim", { action: pick ? status : "clear" });
   commit();
@@ -661,17 +658,17 @@ async function saveClaim(team: string, season: string, pick: Pick | null, status
   const me = meApi();
   if (!state.session) { renderAccount(); return; }
   if (!me) return;
-  const current = state.claims.get(claimKey(me.team, me.season));
+  const current = state.claim;
   if (current && current.status === "approved" && pick?.person !== current.person && !state.permissions.has("player.link")) {
     if (!confirm("Dein bestätigter Spieler wird ersetzt und muss neu bestätigt werden. Fortfahren?")) {
       me.set({ person: current.person, name: current.player_name });
       return;
     }
   }
-  void saveClaim(me.team, me.season, pick, state.permissions.has("player.link") ? "approved" : "pending").catch(() => {});
+  void saveClaim(pick, state.permissions.has("player.link") ? "approved" : "pending").catch(() => {});
 };
 
-/** Approvers: a dialog with the waiting claims. Names come from the roster of this page's team when it is the same team. */
+/** Approvers: a dialog with the waiting claims. Names come from the roster of this page's team when the person is on it. */
 function openApprovals(): void {
   let dlg = document.getElementById("claims-dialog") as HTMLDialogElement | null;
   if (!dlg) {
@@ -682,15 +679,7 @@ function openApprovals(): void {
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg!.close(); });
     document.body.append(dlg);
   }
-  const me = meApi();
-  const rosterName = (c: ClaimRow) => {
-    const opt = me && me.team === c.team_slug ? document.querySelector<HTMLElement>(`.me-option[data-person="${c.person}"]`) : null;
-    return opt?.dataset.name ?? c.player_name;
-  };
-  const teamLabel = (slug: string) => {
-    const a = Array.from(document.querySelectorAll<HTMLAnchorElement>("#team-dialog a")).find((l) => l.getAttribute("href")?.startsWith(`${slug}/`) || l.getAttribute("href")?.includes(`/${slug}/`));
-    return a?.querySelector(".team-label")?.textContent ?? slug;
-  };
+  const rosterName = (c: ClaimRow) => pageRoster().find((r) => r.person === c.person)?.name ?? c.player_name;
   const d = dlg;
   const render = () => {
     const competing = competingClaims(state.pending);
@@ -717,7 +706,7 @@ function openApprovals(): void {
       const row = document.createElement("div");
       row.className = "claim-row";
       const text = document.createElement("p");
-      text.append(Object.assign(document.createElement("b"), { textContent: c.who }), ` möchte ${rosterName(c)} (${teamLabel(c.team_slug)}) sein.`);
+      text.append(Object.assign(document.createElement("b"), { textContent: c.who }), ` möchte ${rosterName(c)} sein.`);
       if (c.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: c.email }));
       const others = competing.get(c.id);
       if (others) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small", textContent: `Noch ${others === 1 ? "eine weitere Anfrage" : `${others} weitere Anfragen`} für diesen Spieler: mit Bestätigen ${others === 1 ? "wird sie" : "werden sie"} abgelehnt.` }));
@@ -866,7 +855,7 @@ function apply(s: Session | null): void {
     await loadClaims(s, run);
     if (run === applied) syncNow();
     const me = meApi();
-    const persons = me ? await Online.verifiedPlayers(me.team, me.season) : null;
+    const persons = me ? await Online.verifiedPlayers() : null;
     if (persons && run === applied) markVerified(persons);
   };
   // On failure the footer falls back to the Google name and the user counts as having no permissions.

@@ -1,4 +1,4 @@
-/** The chosen player of one team and season ("Wer bist Du?"). */
+/** The account's or device's chosen player ("Wer bist Du?"): one per account, whatever the team. */
 export interface Pick {
   person: number;
   name: string;
@@ -42,10 +42,9 @@ export function reconcile(
   return { action: "upload", pick: local, status: canApprove ? "approved" : "pending" };
 }
 
-/** The pending claims that compete for the same player (same team, season and person), by claim id: the approver sees that approving one rejects the others. */
-export function competingClaims<T extends { id: string; team_slug: string; season: string; person: number }>(pending: T[]): Map<string, number> {
-  const key = (c: T) => `${c.team_slug}|${c.season}|${c.person}`;
-  const count = new Map<string, number>();
-  for (const c of pending) count.set(key(c), (count.get(key(c)) ?? 0) + 1);
-  return new Map(pending.flatMap((c) => (count.get(key(c))! > 1 ? [[c.id, count.get(key(c))! - 1] as [string, number]] : [])));
+/** The pending claims that compete for the same player (same person), by claim id: the approver sees that approving one rejects the others. */
+export function competingClaims<T extends { id: string; person: number }>(pending: T[]): Map<string, number> {
+  const count = new Map<number, number>();
+  for (const c of pending) count.set(c.person, (count.get(c.person) ?? 0) + 1);
+  return new Map(pending.flatMap((c) => (count.get(c.person)! > 1 ? [[c.id, count.get(c.person)! - 1] as [string, number]] : [])));
 }

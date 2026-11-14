@@ -31,8 +31,8 @@ test("a pick sent earlier that is gone from the server was rejected; a taken pla
 });
 
 test("pending claims for the same player compete; others don't", () => {
-  const c = (id: string, team_slug: string, person: number, season = "2026-27") => ({ id, team_slug, season, person });
-  const result = competingClaims([c("a", "aktive-i", 1), c("b", "aktive-i", 1), c("c", "aktive-i", 1), c("d", "aktive-i", 2), c("e", "aktive-ii", 1), c("f", "aktive-i", 1, "2027-28")]);
+  const c = (id: string, person: number) => ({ id, person });
+  const result = competingClaims([c("a", 1), c("b", 1), c("c", 1), c("d", 2)]);
   assert.deepEqual([...result], [["a", 2], ["b", 2], ["c", 2]]);
   assert.equal(competingClaims([]).size, 0);
 });

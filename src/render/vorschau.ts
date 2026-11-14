@@ -301,7 +301,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
   }
   function loadVerified() {
     if (!window.Online || !Online.verifiedPlayers) return;
-    Online.verifiedPlayers(GAME.team, GAME.season).then(function (set) {
+    Online.verifiedPlayers().then(function (set) {
       if (!set && !verified) return;
       verified = set;
       render();

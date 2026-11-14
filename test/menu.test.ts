@@ -67,6 +67,8 @@ test("the page carries a CSP that covers every external script and stylesheet it
   const csp = /<meta http-equiv="Content-Security-Policy" content="([^"]+)">/.exec(html)?.[1];
   assert.ok(csp, "CSP meta tag");
   assert.match(csp, /object-src 'none'/);
+  const connectSrc = /connect-src ([^;]+)/.exec(csp)?.[1] ?? "";
+  assert.ok(connectSrc.split(" ").includes("https://gateway.umami.is"), "Umami sends its events to gateway.umami.is");
   const hosts = new Set([...html.matchAll(/<(?:script|link)\b[^>]*?(?:src|href)="(https:\/\/[^/"]+)/g)].map((m) => m[1]));
   assert.ok(hosts.size > 0);
   for (const host of hosts) {

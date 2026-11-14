@@ -500,7 +500,7 @@ export const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: https:",
-  `connect-src 'self' ${ONLINE ? `${new URL(SUPABASE_URL).origin} ` : ""}${new URL(UMAMI_SCRIPT).origin} https://api-gateway.umami.dev`,
+  `connect-src 'self' ${ONLINE ? `${new URL(SUPABASE_URL).origin} ` : ""}${new URL(UMAMI_SCRIPT).origin} https://gateway.umami.is https://api-gateway.umami.dev`,
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",

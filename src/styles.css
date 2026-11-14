@@ -489,3 +489,8 @@ a.stat:hover { text-decoration: none; box-shadow: var(--ot-shadow-hover); }
 .team-card .next-line { margin-top: 4px; color: var(--ot-text-strong); }
 @media (max-width: 559px) { .results th, .results td { padding-left: 6px; padding-right: 6px; } .results .chev { padding-left: 0; padding-right: 6px; } }
 
+.follow { margin-left: 8px; padding: 2px 4px; border: 0; background: none; color: var(--ot-muted, inherit); cursor: pointer; vertical-align: middle; border-radius: var(--ot-radius); }
+.follow[hidden] { display: none; }
+.follow.on { color: var(--ot-primary); }
+.follow.on svg path { fill: currentColor; }
+.following { margin: 0 0 8px; font-size: .9rem; }

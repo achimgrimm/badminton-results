@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { CLUB_REGIONS, urls, type PoolRound } from "./config.ts";
 import { DATA_DIR, loadClubTeams, loadHalls, loadReports, paths, readJson, writeJson } from "./data.ts";
 import { fetchBinary, fetchHtml, fetchHtmlWithCookie } from "./fetch.ts";
+import { newResults, type NewResult } from "./new-results.ts";
 import { logoExtension } from "./logos.ts";
 import { leagueName, parseClubTeams, teamSlug } from "./parse/club.ts";
 import { parseClubLogo, parseClubSearch } from "./parse/clubs.ts";
@@ -23,6 +24,8 @@ for (const legacy of ["table.json", "schedule.json", "team.json", "reports"]) {
 }
 
 const changed: string[] = [];
+// Results that appeared in this run, for the push to followers (scripts/notify-results.ts).
+const fresh: NewResult[] = [];
 
 // Club teams: which leagues to follow
 const rows = parseClubTeams(await fetchHtml(urls.clubTeams()));
@@ -45,6 +48,9 @@ for (const group of [...new Set(rows.map((r) => r.group))]) {
   if (table.length === 0) throw new Error(`${tag} table parsed empty`);
   if (schedule.length === 0) throw new Error(`${tag} schedule parsed empty`);
   log(`${tag} table: ${table.length} teams, schedule: ${schedule.length} meetings, ${schedule.filter((m) => m.result).length} with result`);
+  // No previous schedule (cold cache, new league) means nothing is new: don't announce the whole season.
+  const previousSchedule = readJson<Meeting[] | null>(paths.schedule(group), null);
+  if (previousSchedule) fresh.push(...newResults(group, previousSchedule, schedule));
   if (writeJson(paths.table(group), table)) changed.push(`${tag} table`);
   if (writeJson(paths.schedule(group), schedule)) changed.push(`${tag} schedule`);
   schedules.push(...schedule);
@@ -158,6 +164,7 @@ try {
 }
 
 // meta.json changes on every run, so it is not counted as a change.
+writeJson(paths.newResults, fresh);
 writeJson(paths.meta, { checkedAt: new Date().toISOString() });
 const summary = changed.length > 12 ? `${changed.slice(0, 12).join(", ")} and ${changed.length - 12} more` : changed.join(", ");
 log(changed.length ? `done, ${changed.length} updated: ${summary}` : "done, no changes");

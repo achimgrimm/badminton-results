@@ -213,6 +213,36 @@ export const Online = {
       return !error;
     } catch { return false; }
   },
+  /** The teams this account follows for result pushes, as "group|team" keys; null when signed out or offline. */
+  followedTeams: async (): Promise<Set<string> | null> => {
+    if (!state.session) return null;
+    try {
+      const { data, error } = await supabase.from("team_subscriptions").select("group_id, team");
+      return error ? null : new Set((data ?? []).map((r: { group_id: number; team: string }) => `${r.group_id}|${r.team}`));
+    } catch { return null; }
+  },
+  /** Follows a team (push on new results); turns push on for this device first when it isn't. "path" is the page the push opens. */
+  followTeam: async (group: number, team: string, path: string): Promise<"ok" | "denied" | "failed"> => {
+    if (!state.session) return "failed";
+    if ((await Online.pushState()) !== "on") {
+      const r = await Online.enablePush();
+      if (r !== "on") return r === "denied" ? "denied" : "failed";
+    }
+    try {
+      const { error } = await supabase.from("team_subscriptions").upsert({ user_id: state.session.user.id, group_id: group, team, path }, { onConflict: "user_id,group_id,team" });
+      if (error) return "failed";
+      track("follow-team", { action: "on" });
+      return "ok";
+    } catch { return "failed"; }
+  },
+  unfollowTeam: async (group: number, team: string): Promise<boolean> => {
+    if (!state.session) return false;
+    try {
+      const { error } = await supabase.from("team_subscriptions").delete().eq("group_id", group).eq("team", team);
+      if (!error) track("follow-team", { action: "off" });
+      return !error;
+    } catch { return false; }
+  },
   /** Whether this browser and build can do Web Push (the menu shows the switch only then). */
   pushSupported: () => !!VAPID_PUBLIC_KEY && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
   /** "on" = this device is subscribed, "denied" = blocked in the browser, else "off". */

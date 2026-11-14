@@ -74,6 +74,12 @@ jobs:
       - if: ${{ matrix.site.stage == '' }}
         continue-on-error: true
         run: npx tsx scripts/keepalive.ts
+      # Pushes new results to the followers of the teams (#48); needs the secret NOTIFY_SECRET.
+      - if: ${{ matrix.site.stage == '' }}
+        continue-on-error: true
+        run: npx tsx scripts/notify-results.ts
+        env:
+          NOTIFY_SECRET: ${{ secrets.NOTIFY_SECRET }}
       # Only reached when scrape and build succeeded, so bad data is never cached.
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

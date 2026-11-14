@@ -12,6 +12,8 @@ export const paths = {
   /** Folder of the downloaded club logos */
   logos: "logos",
   meta: "meta.json",
+  /** Results that appeared in the last scrape; read by scripts/notify-results.ts */
+  newResults: "new-results.json",
   table: (group: number) => `groups/${group}/table.json`,
   schedule: (group: number) => `groups/${group}/schedule.json`,
   reports: (group: number) => `groups/${group}/reports`,

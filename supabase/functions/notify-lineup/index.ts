@@ -16,6 +16,12 @@ const reply = (status: number, body: unknown) =>
 
 const text = (v: unknown, max: number) => (typeof v === "string" && v.length > 0 && v.length <= max ? v : null);
 
+/** Answers 200 and logs the outcome, so the function's log says why a push did or did not go out. */
+function done(result: Record<string, unknown>) {
+  console.log("notify-lineup", JSON.stringify(result));
+  return reply(200, result);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return reply(405, { error: "POST only" });
@@ -40,9 +46,9 @@ Deno.serve(async (req) => {
   const db = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: row } = await db.from("published_lineups").select("lineup, previous_lineup")
     .eq("team_slug", team).eq("season", season).eq("game_key", game).maybeSingle();
-  if (!row) return reply(200, { sent: 0 }); // withdrawn meanwhile
+  if (!row) return done({ sent: 0, reason: "no published lineup" }); // withdrawn meanwhile
   const notices = lineupNotices(row.previous_lineup as Lineup | null, row.lineup as Lineup);
-  if (!notices.length) return reply(200, { sent: 0 });
+  if (!notices.length) return done({ sent: 0, reason: "lineup unchanged for everyone" });
 
   const { data: claims } = await db.from("player_claims").select("user_id, person")
     .eq("team_slug", team).eq("season", season).eq("status", "approved")
@@ -52,12 +58,13 @@ Deno.serve(async (req) => {
     const n = notices.find((x) => Number(x.person) === c.person);
     if (n && c.user_id !== user.user.id) byUser.set(c.user_id, n);
   }
-  if (!byUser.size) return reply(200, { sent: 0 });
+  if (!byUser.size) return done({ sent: 0, reason: "no approved claim for the placed players", notices: notices.length, claims: claims?.length ?? 0 });
 
   const { data: subs } = await db.from("push_subscriptions").select("id, user_id, endpoint, p256dh, auth").in("user_id", [...byUser.keys()]);
+  if (!subs?.length) return done({ sent: 0, reason: "recipients have no push subscription", recipients: byUser.size });
   webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT")!, Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
 
-  let sent = 0;
+  let sent = 0, failed = 0;
   const gone: string[] = [];
   await Promise.all((subs ?? []).map(async (s) => {
     const { title, body: msg } = noticeText(byUser.get(s.user_id)!, match);
@@ -69,8 +76,10 @@ Deno.serve(async (req) => {
       // 404/410: the device unsubscribed or the subscription expired.
       const code = (e as { statusCode?: number }).statusCode;
       if (code === 404 || code === 410) gone.push(s.id);
+      else console.error("push failed", code, (e as { body?: string }).body ?? String(e));
+      failed++;
     }
   }));
   if (gone.length) await db.from("push_subscriptions").delete().in("id", gone);
-  return reply(200, { sent });
+  return done({ sent, failed, recipients: byUser.size, subscriptions: subs.length });
 });

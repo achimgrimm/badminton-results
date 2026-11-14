@@ -410,6 +410,7 @@ function renderAccount(): void {
           items: [
             "Deine Spielerwahl und „Ich spiele“-Antworten gelten auf allen Geräten.",
             "Du siehst die Aufstellung vom Mannschaftsführer.",
+            "Dein Mannschaftsführer sieht bei der Planung Deinen „Ich spiele“-Status.",
             "Du bekommst Benachrichtigungen bei neuer Aufstellung, 24 Stunden vor einem Spiel und bei neuen Ergebnissen gefolgter Teams.",
           ],
           cancel: "Schließen",

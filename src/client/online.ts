@@ -616,8 +616,8 @@ async function askPlayer(me: MeApi, s: Session, canApprove: boolean, run: number
       ul.append(li);
     };
   };
-  // For members who don't play; not offered when replacing an existing pick (that has its own "Ich bin nicht …").
-  if (!replacing) group(null)(NOT_A_PLAYER, "Nicht aktiver Spieler");
+  // For members who don't play; also the way out of an existing pick ("Ich bin nicht …" asks for a new player).
+  group(null)(NOT_A_PLAYER, "Nicht aktiver Spieler");
   // The same groups as the page's own list ("Wer bist Du?" in the menu).
   const sorted = [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de")).filter((r) => !(replacing && r.person === current));
   for (const [heading, list] of [["Stammspieler", sorted.filter((r) => r.role === "team")], ["Ersatzspieler", sorted.filter((r) => r.role !== "team")]] as const) {
@@ -630,7 +630,7 @@ async function askPlayer(me: MeApi, s: Session, canApprove: boolean, run: number
     // Signed in the dialog is left by choosing a player, "Nicht aktiver Spieler", or by signing out (when replacing: by cancelling, which changes nothing).
     const answer = await decideDialog({
       title: replacing ? "Neuen Spieler wählen" : "Wer bist Du?",
-      text: replacing ? "Wähle den Spieler, der Du stattdessen bist. Erst damit wird die Auswahl geändert." : hit ? "Ist das Dein Name in der Mannschaft? Tippe auf Deinen Spieler." : "Tippe auf Deinen Spieler aus der Mannschaft.",
+      text: replacing ? "Wähle den Spieler, der Du stattdessen bist, oder „Nicht aktiver Spieler“. Erst damit wird die Auswahl geändert." : hit ? "Ist das Dein Name in der Mannschaft? Tippe auf Deinen Spieler." : "Tippe auf Deinen Spieler aus der Mannschaft.",
       body,
       headed: true,
       buttons: [{ label: replacing ? "Abbrechen" : "Abmelden", value: "leave" }],

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { CLUB_REGIONS, urls, type PoolRound } from "./config.ts";
 import { DATA_DIR, loadClubTeams, loadHalls, loadReports, paths, readJson, writeJson } from "./data.ts";
 import { fetchBinary, fetchHtml, fetchHtmlWithCookie } from "./fetch.ts";
+import { upcomingMatches, type Upcoming } from "./reminders.ts";
 import { newResults, type NewResult } from "./new-results.ts";
 import { logoExtension } from "./logos.ts";
 import { leagueName, parseClubTeams, teamSlug } from "./parse/club.ts";
@@ -26,6 +27,8 @@ for (const legacy of ["table.json", "schedule.json", "team.json", "reports"]) {
 const changed: string[] = [];
 // Results that appeared in this run, for the push to followers (scripts/notify-results.ts).
 const fresh: NewResult[] = [];
+// Own matches in the next 24 hours, for the reminder push (scripts/notify-reminders.ts).
+const upcoming: Upcoming[] = [];
 
 // Club teams: which leagues to follow
 const rows = parseClubTeams(await fetchHtml(urls.clubTeams()));
@@ -59,7 +62,9 @@ for (const group of [...new Set(rows.map((r) => r.group))]) {
     const name = leagueName(row.label);
     const standing = table.find((s) => s.team === name);
     if (!standing?.teamtable) throw new Error(`${tag} team "${name}" (${row.label}) not found in table`);
-    teams.push({ slug: teamSlug(row.label), label: row.label, name, league: row.league, ...g, teamtable: standing.teamtable });
+    const team: ClubTeam = { slug: teamSlug(row.label), label: row.label, name, league: row.league, ...g, teamtable: standing.teamtable };
+    teams.push(team);
+    upcoming.push(...upcomingMatches(team, schedule));
   }
 
   // Reports: fetch new ones, and refetch until nuLiga marks them approved.
@@ -165,6 +170,7 @@ try {
 
 // meta.json changes on every run, so it is not counted as a change.
 writeJson(paths.newResults, fresh);
+writeJson(paths.reminders, upcoming);
 writeJson(paths.meta, { checkedAt: new Date().toISOString() });
 const summary = changed.length > 12 ? `${changed.slice(0, 12).join(", ")} and ${changed.length - 12} more` : changed.join(", ");
 log(changed.length ? `done, ${changed.length} updated: ${summary}` : "done, no changes");

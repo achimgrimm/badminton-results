@@ -243,6 +243,22 @@ export const Online = {
       return !error;
     } catch { return false; }
   },
+  /** Whether the reminders before marked matches are on for this account (the default); null when signed out or offline. */
+  remindersOn: async (): Promise<boolean | null> => {
+    if (!state.session) return null;
+    try {
+      const { data, error } = await supabase.from("reminder_settings").select("enabled").maybeSingle();
+      return error ? null : data?.enabled !== false;
+    } catch { return null; }
+  },
+  setReminders: async (on: boolean): Promise<boolean> => {
+    if (!state.session) return false;
+    try {
+      const { error } = await supabase.from("reminder_settings").upsert({ user_id: state.session.user.id, enabled: on }, { onConflict: "user_id" });
+      if (!error) track("reminders", { action: on ? "on" : "off" });
+      return !error;
+    } catch { return false; }
+  },
   /** Whether this browser and build can do Web Push (the menu shows the switch only then). */
   pushSupported: () => !!VAPID_PUBLIC_KEY && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
   /** "on" = this device is subscribed, "denied" = blocked in the browser, else "off". */
@@ -431,7 +447,7 @@ function renderAccount(): void {
       });
     }, true, TRASH_ICON),
   );
-  if (pushEl && Online.pushSupported()) pushEl.append(pushItem(item));
+  if (pushEl && Online.pushSupported()) pushEl.append(pushItem(item), reminderItem(item));
 }
 
 /** The menu switch for push notifications; its label follows the state of this device once known. */
@@ -450,6 +466,23 @@ function pushItem(item: (text: string, onClick: () => void, danger?: boolean, ic
         : r === "denied"
           ? "Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Einstellungen der Seite."
           : "Das hat nicht geklappt. Bist Du online?" }))).then(refresh, refresh);
+  }, false, BELL_ICON);
+  void refresh();
+  return b;
+}
+
+/** The menu switch for the reminders before matches marked "Ich spiele" (#21); the label follows the account's setting. */
+function reminderItem(item: (text: string, onClick: () => void, danger?: boolean, icon?: string) => HTMLButtonElement): HTMLButtonElement {
+  let on = true;
+  const refresh = () => Online.remindersOn().then((v) => {
+    on = v !== false;
+    b.querySelector("span")!.textContent = on ? "Spiel-Erinnerungen ausschalten" : "Spiel-Erinnerungen einschalten";
+  });
+  const b = item("Spiel-Erinnerungen", () => {
+    const title = "Spiel-Erinnerungen";
+    void Online.setReminders(!on).then((ok) => notice({ title, text: !ok ? "Das hat nicht geklappt. Bist Du online?"
+      : on ? "Du bekommst keine Erinnerung mehr vor Deinen Spielen."
+        : "Du bekommst 24 Stunden vor einem Spiel, bei dem Du „Ich spiele“ gewählt hast, eine Benachrichtigung." })).then(refresh, refresh);
   }, false, BELL_ICON);
   void refresh();
   return b;

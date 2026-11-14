@@ -598,37 +598,43 @@ async function askPlayer(me: MeApi, s: Session, canApprove: boolean, run: number
   const meta = s.user.user_metadata as Record<string, unknown>;
   const hit = replacing ? null : matchPlayer(String(meta.full_name ?? meta.name ?? ""), roster);
   const current = me.get()?.person;
-  const select = document.createElement("select");
-  select.className = "select";
-  select.setAttribute("aria-label", "Spieler");
-  // A list that is always open (no popup): the popup of a closed select kept closing right after the first click.
-  select.size = 8;
+  // A list of buttons like the lineup's picker (a native select with this many names closes right after the first click in Chromium).
+  const ul = document.createElement("ul");
+  ul.className = "team-list";
+  const option = (value: string, label: string, isHit = false) => {
+    const b = Object.assign(document.createElement("button"), { type: "button", className: "me-option" });
+    const t = Object.assign(document.createElement("span"), { className: "team-label", textContent: label });
+    b.append(t);
+    if (isHit) b.setAttribute("aria-current", "true");
+    b.addEventListener("click", () => (b.closest("dialog") as HTMLDialogElement).close(`pick:${value}`));
+    const li = document.createElement("li");
+    li.append(b);
+    ul.append(li);
+  };
   // For members who don't play; not offered when replacing an existing pick (that has its own "Ich bin nicht …").
-  if (!replacing) select.append(Object.assign(document.createElement("option"), { value: NOT_A_PLAYER, textContent: "Nicht aktiver Spieler" }));
+  if (!replacing) option(NOT_A_PLAYER, "Nicht aktiver Spieler");
   for (const r of [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de"))) {
     if (replacing && r.person === current) continue;
-    select.append(Object.assign(document.createElement("option"), { value: String(r.person), textContent: shownName(r.name), selected: hit?.person === r.person }));
+    option(String(r.person), shownName(r.name), hit?.person === r.person);
   }
-  const body = document.createElement("p");
-  body.append(select);
   let chosen: (typeof roster)[number] | undefined;
   while (!chosen) {
     // Signed in the dialog is left by choosing a player, "Nicht aktiver Spieler", or by signing out (when replacing: by cancelling, which changes nothing).
     const answer = await decideDialog({
       title: replacing ? "Neuen Spieler wählen" : "Wer bist Du?",
-      text: replacing ? "Wähle den Spieler, der Du stattdessen bist. Erst damit wird die Auswahl geändert." : hit ? "Ist das Dein Name in der Mannschaft? Wähle Deinen Spieler aus." : "Wähle Deinen Spieler aus der Mannschaft.",
-      body,
-      buttons: [{ label: replacing ? "Abbrechen" : "Abmelden", value: "leave" }, { label: "Bestätigen", value: "ok", primary: true }],
+      text: replacing ? "Wähle den Spieler, der Du stattdessen bist. Erst damit wird die Auswahl geändert." : hit ? "Ist das Dein Name in der Mannschaft? Tippe auf Deinen Spieler." : "Tippe auf Deinen Spieler aus der Mannschaft.",
+      body: ul,
+      buttons: [{ label: replacing ? "Abbrechen" : "Abmelden", value: "leave" }],
     });
     if (answer === "leave") {
       if (!replacing) await Online.signOut();
       return;
     }
-    if (select.value === NOT_A_PLAYER) {
+    if (answer === `pick:${NOT_A_PLAYER}`) {
       await setNotAPlayer(me);
       return;
     }
-    chosen = roster.find((r) => String(r.person) === select.value);
+    chosen = roster.find((r) => `pick:${r.person}` === answer);
   }
   // Not `run !== applied`: a later auth event (same user) must not throw the answer away.
   if (state.session?.user.id !== s.user.id) return;

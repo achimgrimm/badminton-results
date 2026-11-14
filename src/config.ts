@@ -92,7 +92,7 @@ export const ONLINE = SUPABASE_URL !== "" && SUPABASE_ANON_KEY !== "";
  * Public VAPID key for Web Push (lineup notifications). The private key lives only in the Supabase secret
  * VAPID_PRIVATE_KEY (see README). Empty hides the notification switch in the menu.
  */
-export const VAPID_PUBLIC_KEY: string = "BNfus-UYNoNya1PVg3OGWnUMrhcvfFx08JgXAT99LX_-Z3xeJ-KSc6YMGe41z5n_K4RmjNh0EztP-vQg__CMPXw";
+export const VAPID_PUBLIC_KEY: string = "BAuC9q4kqpZTMYRcyw0_yCzj0dzOLoaQKvT-FaeR5msAVrLWcgIZ-y6jagQjwOY-aGMiXrt2i0M2rjLVXB7ZJ_E";
 
 /** Branch name → stage folder name: lowercase, every run of other characters becomes "-". */
 export function stageName(branch: string): string {

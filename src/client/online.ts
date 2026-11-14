@@ -539,6 +539,11 @@ async function loadClaims(s: Session, run: number): Promise<void> {
   if (own.error) return;
   state.claim = ((own.data ?? []) as ClaimRow[])[0] ?? null;
   await loadPending(run);
+  // The link in the "new sign-in" push (#49) opens the approvals.
+  if (location.hash === "#anfragen" && state.pending.length) {
+    history.replaceState(null, "", location.pathname + location.search);
+    openApprovals();
+  }
   const me = meApi();
   if (!me) return;
   const server = state.claim;
@@ -645,6 +650,8 @@ async function saveClaim(pick: Pick | null, status: "pending" | "approved" = "pe
     } else {
       state.claim = data as ClaimRow;
       writeNote(ATTEMPT_NOTE, `ok:${pick.person}`);
+      // Tell the approvers about a new account (#49); the function notifies once per account and skips approvers.
+      if (status === "pending") void supabase.functions.invoke("notify-new-user").catch(() => {});
     }
   } else {
     writeNote(ATTEMPT_NOTE, null);

@@ -413,6 +413,7 @@ function renderAccount(): void {
             "Dein Mannschaftsführer sieht bei der Planung Deinen „Ich spiele“-Status.",
             "Du bekommst eine Benachrichtigung, wenn Deine Aufstellung veröffentlicht oder geändert wird.",
             "Du bekommst 24 Stunden vor einem Spiel, bei dem Du „Ich spiele“ gewählt hast, eine Erinnerung.",
+            "Du kannst Mannschaften folgen und siehst sie in der Übersicht oben unter „Du folgst“.",
             "Du bekommst eine Benachrichtigung, wenn eine Mannschaft, der Du folgst, ein neues Ergebnis hat.",
           ],
           cancel: "Schließen",

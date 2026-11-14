@@ -77,7 +77,7 @@ if (ONLINE) setOnlineHref(buildOnlineBundle(DIST));
 function buildTeam(d: Dataset): number {
   setLineups(ownLineups(d));
   const players = ownPlayers(d);
-  setRoster(pickablePlayers(d, players).map((p) => ({ person: p.person, name: p.name, href: p.href, role: p.role })));
+  setRoster(pickablePlayers(d, players).map((p) => ({ person: p.person, name: p.name, href: p.href })));
   const dir = join(DIST, d.own.slug);
   for (const sub of ["bericht", "vorschau", "spieler"]) mkdirSync(join(dir, sub), { recursive: true });
   const write = (file: string, content: string) => writeFileSync(join(dir, file), content);

@@ -34,8 +34,6 @@ export interface RosterEntry {
   name: string;
   /** Player page, relative to the team folder */
   href: string | null;
-  /** "team" = Stammspieler; anyone else is listed as Ersatzspieler */
-  role?: string;
 }
 let roster: RosterEntry[] = [];
 export function setRoster(r: RosterEntry[]): void {

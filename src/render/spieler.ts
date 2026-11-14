@@ -82,10 +82,6 @@ function mePicker(players: Pickable[]): string {
     html`<li><button type="button" class="me-option" data-person="${p.person}" data-name="${esc(p.name)}"${p.href ? ` data-href="${esc(p.href)}"` : ""}>
       <span class="team-label">${esc(displayName(p.name))}</span>
     </button></li>`;
-  const groups: [string, Pickable[]][] = [
-    ["Stammspieler", players.filter((p) => p.role === "team")],
-    ["Ersatzspieler", players.filter((p) => p.role !== "team")],
-  ];
   return html`<section class="next me-card" id="me-card">
       <button type="button" class="hint-btn" aria-label="Hinweis zur Speicherung" aria-expanded="false" aria-controls="me-hint">${BULB_ICON}</button>
       <div class="me-body">
@@ -99,9 +95,7 @@ function mePicker(players: Pickable[]): string {
         <h2 id="me-dialog-h">Wer bist Du?</h2>
         <button type="button" class="dialog-close" aria-label="Schließen">×</button>
       </div>
-      ${groups.filter(([, list]) => list.length).map(
-        ([heading, list]) => html`<h3>${heading}</h3><ul class="team-list">${list.map(option)}</ul>`,
-      )}
+      <ul class="team-list">${players.map(option)}</ul>
     </dialog>`;
 }
 

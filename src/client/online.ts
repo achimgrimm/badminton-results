@@ -532,7 +532,7 @@ function lastAttempt(): { person: number; ok: boolean } | null {
 }
 
 /** The roster the build embeds in team pages: the players one can be matched with. */
-function pageRoster(): { person: number; name: string; href: string | null; role?: string }[] {
+function pageRoster(): { person: number; name: string; href: string | null }[] {
   try { return JSON.parse(document.getElementById("me-roster")?.textContent ?? "[]"); } catch { return []; }
 }
 
@@ -602,28 +602,22 @@ async function askPlayer(me: MeApi, s: Session, canApprove: boolean, run: number
   const current = me.get()?.person;
   // A list of buttons like the lineup's picker (a native select with this many names closes right after the first click in Chromium).
   const body = document.createElement("div");
-  const group = (heading: string | null) => {
-    if (heading) body.append(Object.assign(document.createElement("h3"), { textContent: heading }));
-    const ul = Object.assign(document.createElement("ul"), { className: "team-list" });
-    body.append(ul);
-    return (value: string, label: string, isHit = false) => {
-      const b = Object.assign(document.createElement("button"), { type: "button", className: "me-option" });
-      b.append(Object.assign(document.createElement("span"), { className: "team-label", textContent: label }));
-      if (isHit) b.setAttribute("aria-current", "true");
-      b.addEventListener("click", () => (b.closest("dialog") as HTMLDialogElement).close(`pick:${value}`));
-      const li = document.createElement("li");
-      li.append(b);
-      ul.append(li);
-    };
+  const ul = Object.assign(document.createElement("ul"), { className: "team-list" });
+  body.append(ul);
+  const option = (value: string, label: string, isHit = false) => {
+    const b = Object.assign(document.createElement("button"), { type: "button", className: "me-option" });
+    b.append(Object.assign(document.createElement("span"), { className: "team-label", textContent: label }));
+    if (isHit) b.setAttribute("aria-current", "true");
+    b.addEventListener("click", () => (b.closest("dialog") as HTMLDialogElement).close(`pick:${value}`));
+    const li = document.createElement("li");
+    li.append(b);
+    ul.append(li);
   };
   // For members who don't play; also the way out of an existing pick ("Ich bin nicht …" asks for a new player).
-  group(null)(NOT_A_PLAYER, "Nicht aktiver Spieler");
-  // The same groups as the page's own list ("Wer bist Du?" in the menu).
-  const sorted = [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de")).filter((r) => !(replacing && r.person === current));
-  for (const [heading, list] of [["Stammspieler", sorted.filter((r) => r.role === "team")], ["Ersatzspieler", sorted.filter((r) => r.role !== "team")]] as const) {
-    if (!list.length) continue;
-    const add = group(heading);
-    for (const r of list) add(String(r.person), shownName(r.name), hit?.person === r.person);
+  option(NOT_A_PLAYER, "Nicht aktiver Spieler");
+  for (const r of [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de"))) {
+    if (replacing && r.person === current) continue;
+    option(String(r.person), shownName(r.name), hit?.person === r.person);
   }
   let chosen: (typeof roster)[number] | undefined;
   while (!chosen) {

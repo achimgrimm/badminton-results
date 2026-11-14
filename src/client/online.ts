@@ -54,19 +54,21 @@ const state = {
   permissions: new Set<string>(),
   /** The name from public.profiles (editable by the user) and the user's role names; empty until loaded. */
   displayName: null as string | null,
+  /** The account said it is no active player (profiles.not_a_player): the player dialog stays away. */
+  notAPlayer: false,
   roles: [] as string[],
   claim: null as ClaimRow | null,
   pending: [] as PendingClaim[],
 };
 /** The part of the state that supabase-js doesn't persist itself. */
-interface Saved { uid: string; displayName: string | null; roles: string[]; permissions: string[]; claim: ClaimRow | null; pending: PendingClaim[] }
+interface Saved { uid: string; displayName: string | null; notAPlayer?: boolean; roles: string[]; permissions: string[]; claim: ClaimRow | null; pending: PendingClaim[] }
 const SAVED_KEY = `${STORAGE_KEY}-account`;
 
 function save(): void {
   const s = state.session;
   try {
     if (!s) { localStorage.removeItem(SAVED_KEY); return; }
-    const saved: Saved = { uid: s.user.id, displayName: state.displayName, roles: state.roles, permissions: [...state.permissions], claim: state.claim, pending: state.pending };
+    const saved: Saved = { uid: s.user.id, displayName: state.displayName, notAPlayer: state.notAPlayer, roles: state.roles, permissions: [...state.permissions], claim: state.claim, pending: state.pending };
     localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
   } catch { /* the saved copy is optional */ }
 }
@@ -77,6 +79,7 @@ function hydrate(uid: string): void {
   try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) ?? "null"); } catch { /* ignore */ }
   const ok = !!saved && saved.uid === uid && Array.isArray(saved.roles) && Array.isArray(saved.permissions) && Array.isArray(saved.pending);
   state.displayName = ok ? saved!.displayName : null;
+  state.notAPlayer = ok ? !!saved!.notAPlayer : false;
   state.roles = ok ? saved!.roles : [];
   state.permissions = new Set(ok ? saved!.permissions : []);
   // An older saved copy had a list of claims (one per team and season); the next load fetches the account's claim.
@@ -365,7 +368,7 @@ function renderAccount(): void {
     const claim = state.claim;
     // A confirmed player is shown by the check mark next to the name, so only the waiting state needs words.
     const waiting = pick && claim?.person === pick.person && claim.status !== "approved";
-    if (!pick) lines.push("Kein Spieler gewählt");
+    if (!pick) lines.push(state.notAPlayer ? "Kein aktiver Spieler" : "Kein Spieler gewählt");
     else if (waiting) lines.push("Spieler wartet auf Bestätigung");
   }
   const who = block(pick ? nameLine(shownName(pick.name)) : nameLine(accountName), ...lines);
@@ -556,7 +559,21 @@ async function loadClaims(s: Session, run: number): Promise<void> {
     writeNote(ATTEMPT_NOTE, null);
     me.set(null);
     alert(`Deine Anfrage für ${shownName(result.pick.name)} wurde nicht bestätigt. Die Auswahl wurde zurückgesetzt.`);
-  } else if (!local && !server) await confirmPlayer(me, s, canApprove, run);
+  } else if (!local && !server && !state.notAPlayer) await confirmPlayer(me, s, canApprove, run);
+}
+
+const NOT_A_PLAYER = "none";
+
+/** "Nicht aktiver Spieler": remembered on the account, which drops its claim (and the player role). */
+async function setNotAPlayer(me: MeApi): Promise<void> {
+  const { error } = await supabase.rpc("set_not_a_player", { flag: true });
+  if (error) { console.error("set_not_a_player failed", error); alert("Das konnte nicht gespeichert werden. Bitte versuche es später noch einmal."); return; }
+  state.notAPlayer = true;
+  state.claim = null;
+  writeNote(ATTEMPT_NOTE, null);
+  me.set(null);
+  track("claim", { action: "not-a-player" });
+  commit();
 }
 
 /**
@@ -576,6 +593,8 @@ async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: nu
   select.className = "select";
   select.setAttribute("aria-label", "Spieler");
   select.append(Object.assign(document.createElement("option"), { value: "", textContent: "Bitte wählen …", selected: !hit, disabled: true }));
+  // For members who don't play; not offered when replacing an existing pick (that has its own "Ich bin nicht …").
+  if (!replacing) select.append(Object.assign(document.createElement("option"), { value: NOT_A_PLAYER, textContent: "Nicht aktiver Spieler" }));
   for (const r of [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de"))) {
     if (replacing && r.person === current) continue;
     select.append(Object.assign(document.createElement("option"), { value: String(r.person), textContent: shownName(r.name), selected: hit?.person === r.person }));
@@ -584,7 +603,7 @@ async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: nu
   body.append(select);
   let chosen: (typeof roster)[number] | undefined;
   while (!chosen) {
-    // Signed in there is always a player: the dialog is left by choosing one, or by signing out (when replacing: by cancelling, which changes nothing).
+    // Signed in the dialog is left by choosing a player, "Nicht aktiver Spieler", or by signing out (when replacing: by cancelling, which changes nothing).
     const answer = await decideDialog({
       title: replacing ? "Neuen Spieler wählen" : "Wer bist Du?",
       text: replacing ? "Wähle den Spieler, der Du stattdessen bist. Erst damit wird die Auswahl geändert." : hit ? "Ist das Dein Name in der Mannschaft? Wähle Deinen Spieler aus." : "Wähle Deinen Spieler aus der Mannschaft.",
@@ -593,6 +612,10 @@ async function confirmPlayer(me: MeApi, s: Session, canApprove: boolean, run: nu
     });
     if (answer === "leave") {
       if (!replacing) await Online.signOut();
+      return;
+    }
+    if (select.value === NOT_A_PLAYER) {
+      await setNotAPlayer(me);
       return;
     }
     chosen = roster.find((r) => String(r.person) === select.value);
@@ -649,6 +672,7 @@ async function saveClaim(pick: Pick | null, status: "pending" | "approved" = "pe
       }
     } else {
       state.claim = data as ClaimRow;
+      state.notAPlayer = false; // the database resets the flag with a new claim
       writeNote(ATTEMPT_NOTE, `ok:${pick.person}`);
       // Tell the approvers about a new account (#49); the function notifies once per account and skips approvers.
       if (status === "pending") void supabase.functions.invoke("notify-new-user", { body: { team: document.getElementById("me-roster")?.dataset.team ?? "" } }).catch(() => {});
@@ -849,14 +873,16 @@ function apply(s: Session | null): void {
   const load = async () => {
     const [perms, profile, userRoles] = await Promise.all([
       supabase.rpc("my_permissions"),
-      supabase.from("profiles").select("display_name").eq("id", s.user.id).maybeSingle(),
+      supabase.from("profiles").select("display_name, not_a_player").eq("id", s.user.id).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", s.user.id),
     ]);
     if (run !== applied) return;
     // Only a fully successful load replaces what is shown (and cached); on failure keep the cached values.
     if (!perms.error && !profile.error && !userRoles.error) {
       state.permissions = new Set(Array.isArray(perms.data) ? (perms.data as string[]) : []);
-      state.displayName = (profile.data as { display_name: string | null } | null)?.display_name ?? null;
+      const prof = profile.data as { display_name: string | null; not_a_player?: boolean } | null;
+      state.displayName = prof?.display_name ?? null;
+      state.notAPlayer = !!prof?.not_a_player;
       state.roles = Array.isArray(userRoles.data) ? (userRoles.data as { role: string }[]).map((r) => r.role) : [];
     }
     await loadClaims(s, run);

@@ -22,3 +22,14 @@ test("canRevokeRole mirrors the database guards", () => {
   assert.equal(canRevokeRole("a", "b", "admin", 1), false);
   assert.equal(canRevokeRole("a", "b", "admin", 2), true);
 });
+
+test("roleLabel: player ranks between team lead and member", () => {
+  assert.equal(roleLabel(["member", "player"]), "Spieler");
+  assert.equal(roleLabel(["member", "player", "team_lead"]), "Mannschaftsführer");
+});
+
+test("sortUsers: players come before plain members", () => {
+  const u = (id: string, name: string, roles: string[]) => ({ user_id: id, display_name: name, email: null, roles });
+  const sorted = sortUsers([u("1", "Anna", ["member"]), u("2", "Zora", ["member", "player"])]);
+  assert.deepEqual(sorted.map((x) => x.user_id), ["2", "1"]);
+});

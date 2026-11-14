@@ -43,7 +43,8 @@
   - Approvers use the "Anfragen prüfen" dialog.
 
 ## Roles and permissions
-- Roles are `admin`, `team_lead` and `member`. Every new account gets `member`. Roles are global, not per team.
+- Roles are `admin`, `team_lead`, `player` and `member`. Every new account gets `member`. Roles are global, not per team.
+- `player` is assigned by a trigger on `player_claims` as soon as a claim is approved and removed again when it goes away. It grants no permission and can't be set by hand. An account that says "Nicht aktiver Spieler" in the "Wer bist Du?" dialog has `profiles.not_a_player` (set via `set_not_a_player`), so the app stops asking.
 - `player.link` (admin, team_lead): approve or reject claims.
 - `answers.read_all` (admin, team_lead): see the team's yes/maybe/no answers.
 - `lineup.write`: publish lineups.

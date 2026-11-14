@@ -2,6 +2,7 @@
 export const ROLE_LABELS: Record<string, string> = {
   admin: "Administrator",
   team_lead: "Mannschaftsführer",
+  player: "Spieler",
   member: "Mitglied",
 };
 

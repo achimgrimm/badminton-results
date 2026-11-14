@@ -10,5 +10,7 @@ export function signinText(who: string | null, player: string): { title: string;
   return { title: "Neue Anmeldung", body: `${name} möchte ${player} sein. Tippen zum Bestätigen.` };
 }
 
-/** Opens the approval dialog of the app. */
-export const SIGNIN_PATH = "spieler.html#anfragen";
+/** The team's player page, which opens the approval dialog of the app; null for anything but a plain team slug. */
+export function signinPath(team: unknown): string | null {
+  return typeof team === "string" && /^[a-z0-9][a-z0-9-]{0,99}$/.test(team) ? `${team}/spieler.html#anfragen` : null;
+}

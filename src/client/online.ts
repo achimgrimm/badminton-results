@@ -651,7 +651,7 @@ async function saveClaim(pick: Pick | null, status: "pending" | "approved" = "pe
       state.claim = data as ClaimRow;
       writeNote(ATTEMPT_NOTE, `ok:${pick.person}`);
       // Tell the approvers about a new account (#49); the function notifies once per account and skips approvers.
-      if (status === "pending") void supabase.functions.invoke("notify-new-user").catch(() => {});
+      if (status === "pending") void supabase.functions.invoke("notify-new-user", { body: { team: document.getElementById("me-roster")?.dataset.team ?? "" } }).catch(() => {});
     }
   } else {
     writeNote(ATTEMPT_NOTE, null);

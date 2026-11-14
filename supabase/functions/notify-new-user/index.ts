@@ -3,7 +3,7 @@
 // Each account notifies at most once (admin_signin_notices). Secrets as for notify-lineup.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
-import { shouldNotify, signinText, SIGNIN_PATH } from "../_shared/signin-push.ts";
+import { shouldNotify, signinPath, signinText } from "../_shared/signin-push.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +27,10 @@ Deno.serve(async (req) => {
   const { data: user } = await asUser.auth.getUser();
   if (!user.user) return reply(401, { error: "sign in first" });
   const me = user.user.id;
+  let input: Record<string, unknown> = {};
+  try { input = await req.json(); } catch { /* no body */ }
+  const path = signinPath(input.team);
+  if (!path) return reply(400, { error: "bad team" });
   const { data: perms } = await asUser.rpc("my_permissions");
 
   const db = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -61,7 +65,7 @@ Deno.serve(async (req) => {
   await Promise.all(subs.map(async (s) => {
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        JSON.stringify({ title, body, path: SIGNIN_PATH }), { TTL: 60 * 60 * 24 });
+        JSON.stringify({ title, body, path }), { TTL: 60 * 60 * 24 });
       sent++;
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode;

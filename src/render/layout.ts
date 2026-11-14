@@ -787,7 +787,7 @@ ${o.body}
 ${team ? teamDialog(team, assets) : ""}
 ${team ? NEW_DIALOG : ""}
 ${menuDialog(assets, team ? o.root : null)}
-${team ? `<script type="application/json" id="me-roster">${JSON.stringify(rosterEntries()).replace(/</g, "\\u003c")}</script>` : ""}
+${team ? `<script type="application/json" id="me-roster" data-team="${team.slug}">${JSON.stringify(rosterEntries()).replace(/</g, "\\u003c")}</script>` : ""}
 ${releaseDialog()}
 <dialog class="install-help" id="install-help" aria-labelledby="install-help-h">
   <h2 id="install-help-h">App installieren</h2>

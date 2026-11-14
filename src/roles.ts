@@ -1,3 +1,5 @@
+import { displayName } from "./names.ts";
+
 /** Role names as stored in public.roles (supabase/migrations), strongest first, with their German labels. */
 export const ROLE_LABELS: Record<string, string> = {
   admin: "Administrator",
@@ -14,16 +16,30 @@ export interface RoleUser {
   display_name: string | null;
   email: string | null;
   roles: string[];
+  /** The account's chosen player ("Nachname, Vorname"), when it has one. */
+  player_name?: string | null;
 }
 
-/** Strongest role first, then by name (email as fallback). Does not mutate the input. */
+/** What the admin list shows for an account: the player's name, else the login name, else the email. */
+export function userLabel(u: RoleUser): string {
+  return (u.player_name ? displayName(u.player_name) : u.display_name || u.email) || "Unbekannt";
+}
+
+/** Strongest role first, then by first and last name (login name or email as fallback). Does not mutate the input. */
 export function sortUsers<T extends RoleUser>(users: readonly T[]): T[] {
   const rank = (u: T) => {
     const i = Object.keys(ROLE_LABELS).findIndex((r) => u.roles.includes(r));
     return i < 0 ? Object.keys(ROLE_LABELS).length : i;
   };
-  const name = (u: T) => (u.display_name || u.email || "").toLowerCase();
-  return [...users].sort((a, b) => rank(a) - rank(b) || name(a).localeCompare(name(b), "de"));
+  const parts = (u: T): [string, string] => {
+    const words = (u.player_name ? displayName(u.player_name) : u.display_name || u.email || "").trim().split(/\s+/);
+    return words.length > 1 ? [words.slice(0, -1).join(" "), words[words.length - 1]] : [words[0], ""];
+  };
+  const cmp = (x: string, y: string) => x.localeCompare(y, "de", { sensitivity: "base" });
+  return [...users].sort((a, b) => {
+    const [fa, la] = parts(a), [fb, lb] = parts(b);
+    return rank(a) - rank(b) || cmp(fa, fb) || cmp(la, lb);
+  });
 }
 
 /** Mirrors the guards of set_user_role in the database, so the UI can disable the button. */

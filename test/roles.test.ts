@@ -33,3 +33,9 @@ test("sortUsers: players come before plain members", () => {
   const sorted = sortUsers([u("1", "Anna", ["member"]), u("2", "Zora", ["member", "player"])]);
   assert.deepEqual(sorted.map((x) => x.user_id), ["2", "1"]);
 });
+
+test("sortUsers sorts by first name, then last name, using the player name when there is one", () => {
+  const u = (id: string, display_name: string, player_name: string | null = null) => ({ user_id: id, display_name, email: null, roles: ["member"], player_name });
+  const sorted = sortUsers([u("1", "x", "Meier, Anna"), u("2", "Anna Becker"), u("3", "Zed Zoe", "Adler, Bernd")]);
+  assert.deepEqual(sorted.map((x) => x.user_id), ["2", "1", "3"]);
+});

@@ -4,7 +4,7 @@
  * replaced at build time (see buildOnlineBundle in src/build.ts).
  */
 import { createClient, type Session } from "@supabase/supabase-js";
-import { ASSIGNABLE_ROLES, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, type RoleUser } from "../roles.ts";
+import { ASSIGNABLE_ROLES, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, userLabel, type RoleUser } from "../roles.ts";
 import { displayName as shownName, matchPlayer } from "../names.ts";
 import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
@@ -912,8 +912,8 @@ async function openRoles(): Promise<void> {
       const row = document.createElement("div");
       row.className = "claim-row";
       const text = document.createElement("p");
-      text.append(Object.assign(document.createElement("b"), { textContent: u.display_name || u.email || "Unbekannt" }));
-      if (u.email && u.display_name) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
+      text.append(Object.assign(document.createElement("b"), { textContent: userLabel(u) }));
+      if (u.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
       text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small", textContent: roleLabel(u.roles) ?? "" }));
       const buttons = document.createElement("div");
       buttons.className = "btn-row";
@@ -927,7 +927,7 @@ async function openRoles(): Promise<void> {
         b.setAttribute("aria-pressed", String(has));
         if (has && !canRevokeRole(selfId, u.user_id, role, adminCount)) b.disabled = true;
         b.addEventListener("click", async () => {
-          if (has && role === "admin" && !(await ask({ title: "Administrator entziehen?", text: `${u.display_name || u.email} verliert die Administratorrechte.`, cancel: "Abbrechen", ok: "Entziehen", danger: true }))) return;
+          if (has && role === "admin" && !(await ask({ title: "Administrator entziehen?", text: `${userLabel(u)} verliert die Administratorrechte.`, cancel: "Abbrechen", ok: "Entziehen", danger: true }))) return;
           const { error } = await supabase.rpc("set_user_role", { target: u.user_id, role_name: role, on_: !has });
           if (error) { alert("Das hat nicht geklappt. Bitte versuche es später noch einmal."); return; }
           track("role-change", { role, granted: String(!has) });
@@ -938,9 +938,9 @@ async function openRoles(): Promise<void> {
         buttons.append(b);
       }
       if (u.user_id !== selfId) {
-        const del = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-secondary", textContent: "Konto löschen" });
+        const del = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-danger", textContent: "Konto löschen" });
         del.addEventListener("click", async () => {
-          if (!(await ask({ title: "Konto löschen?", text: `Das Konto von ${u.display_name || u.email} und alle zugehörigen Daten werden unwiderruflich gelöscht.`, cancel: "Abbrechen", ok: "Löschen", danger: true }))) return;
+          if (!(await ask({ title: "Konto löschen?", text: `Das Konto von ${userLabel(u)} und alle zugehörigen Daten werden unwiderruflich gelöscht.`, cancel: "Abbrechen", ok: "Löschen", danger: true }))) return;
           const { error } = await supabase.rpc("admin_delete_user", { target: u.user_id });
           if (error) { alert("Das hat nicht geklappt. Bitte versuche es später noch einmal."); return; }
           track("admin-delete-user");
@@ -955,9 +955,10 @@ async function openRoles(): Promise<void> {
   };
   render();
   d.showModal();
-  const { data, error } = await supabase.rpc("list_users_with_roles");
-  failed = !!error;
-  users = Array.isArray(data) ? (data as RoleUser[]) : [];
+  const [list, players] = await Promise.all([supabase.rpc("list_users_with_roles"), supabase.rpc("list_user_players")]);
+  failed = !!list.error;
+  const names = new Map(((players.data ?? []) as { user_id: string; player_name: string }[]).map((p) => [p.user_id, p.player_name]));
+  users = Array.isArray(list.data) ? (list.data as RoleUser[]).map((u) => ({ ...u, player_name: names.get(u.user_id) ?? null })) : [];
   render();
 }
 

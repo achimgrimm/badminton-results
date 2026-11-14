@@ -426,6 +426,7 @@ function menuDialog(assets: string, root: string | null): string {
     <button type="button" class="menu-item" id="install-btn" data-menu-close hidden>${INSTALL_ICON}<span>App installieren</span></button>
     <button type="button" class="menu-item" id="share-btn" hidden>${SHARE_BTN_ICON}<span>App teilen</span></button>
     <button type="button" class="menu-item theme-toggle" id="theme-toggle">${MOON}${SUN}<span>Dunkles Design</span></button>
+    ${ONLINE ? `<div id="account-push"></div>` : ""}
     ${releaseNotes().length ? `<a class="menu-item" href="#" id="release-link" data-menu-close>${RELEASE_ICON}<span>Was ist neu?</span></a>` : ""}
     <a class="menu-item" href="${assets}datenschutz.html">${LOCK_ICON}<span>Datenschutz</span></a>
   </div>

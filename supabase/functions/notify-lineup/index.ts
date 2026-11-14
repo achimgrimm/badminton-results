@@ -1,11 +1,11 @@
 // Sends a Web Push to the players whose place in a published lineup is new, changed or gone (#47).
 // Called by the app right after a team lead published (body: { team, season, game, match, path }).
-// Only holders of lineup.write may call it; recipients are accounts with an approved player claim.
+// Only holders of lineup.write may call it; recipients are accounts with an approved player claim, plus the publisher (confirmation).
 // Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto: or https: contact); the Supabase
 // URL, anon key and service role key are provided by the platform.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
-import { lineupNotices, noticeText, type Lineup } from "../_shared/lineup-push.ts";
+import { confirmText, lineupNotices, noticeText, type Lineup } from "../_shared/lineup-push.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -48,26 +48,31 @@ Deno.serve(async (req) => {
     .eq("team_slug", team).eq("season", season).eq("game_key", game).maybeSingle();
   if (!row) return done({ sent: 0, reason: "no published lineup" }); // withdrawn meanwhile
   const notices = lineupNotices(row.previous_lineup as Lineup | null, row.lineup as Lineup);
-  if (!notices.length) return done({ sent: 0, reason: "lineup unchanged for everyone" });
 
-  const { data: claims } = await db.from("player_claims").select("user_id, person")
-    .eq("team_slug", team).eq("season", season).eq("status", "approved")
-    .in("person", notices.map((n) => Number(n.person)));
+  // Players with an approved claim get their own text. The publisher is not skipped: placed in the lineup they get
+  // their player text too, otherwise a short confirmation, so they see that the push works.
+  const me = user.user.id;
   const byUser = new Map<string, (typeof notices)[number]>();
-  for (const c of claims ?? []) {
-    const n = notices.find((x) => Number(x.person) === c.person);
-    if (n && c.user_id !== user.user.id) byUser.set(c.user_id, n);
+  if (notices.length) {
+    const { data: claims } = await db.from("player_claims").select("user_id, person")
+      .eq("team_slug", team).eq("season", season).eq("status", "approved")
+      .in("person", notices.map((n) => Number(n.person)));
+    for (const c of claims ?? []) {
+      const n = notices.find((x) => Number(x.person) === c.person);
+      if (n) byUser.set(c.user_id, n);
+    }
   }
-  if (!byUser.size) return done({ sent: 0, reason: "no approved claim for the placed players", notices: notices.length, claims: claims?.length ?? 0 });
 
-  const { data: subs } = await db.from("push_subscriptions").select("id, user_id, endpoint, p256dh, auth").in("user_id", [...byUser.keys()]);
-  if (!subs?.length) return done({ sent: 0, reason: "recipients have no push subscription", recipients: byUser.size });
+  const { data: subs } = await db.from("push_subscriptions").select("id, user_id, endpoint, p256dh, auth").in("user_id", [...new Set([...byUser.keys(), me])]);
+  if (!subs?.length) return done({ sent: 0, reason: "no push subscription for recipients or publisher", recipients: byUser.size });
   webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT")!, Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
+  const notified = new Set(subs.map((s) => s.user_id).filter((id) => id !== me && byUser.has(id))).size;
 
   let sent = 0, failed = 0;
   const gone: string[] = [];
-  await Promise.all((subs ?? []).map(async (s) => {
-    const { title, body: msg } = noticeText(byUser.get(s.user_id)!, match);
+  await Promise.all(subs.map(async (s) => {
+    const notice = byUser.get(s.user_id);
+    const { title, body: msg } = notice ? noticeText(notice, match) : confirmText(match, notified);
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         JSON.stringify({ title, body: msg, path }), { TTL: 60 * 60 * 24 });
@@ -81,5 +86,5 @@ Deno.serve(async (req) => {
     }
   }));
   if (gone.length) await db.from("push_subscriptions").delete().in("id", gone);
-  return done({ sent, failed, recipients: byUser.size, subscriptions: subs.length });
+  return done({ sent, failed, recipients: byUser.size, notified, subscriptions: subs.length });
 });

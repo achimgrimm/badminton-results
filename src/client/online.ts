@@ -311,6 +311,8 @@ function renderAccount(): void {
   if (!whoEl || !el) return;
   whoEl.textContent = "";
   el.textContent = "";
+  const pushEl = document.getElementById("account-push"); // in the app section of the menu, filled below when signed in
+  if (pushEl) pushEl.textContent = "";
   // Items that open a prompt or a page close the menu first (data-menu-close, see MENU in layout.ts).
   const item = (text: string, onClick: () => void, danger = false, icon = "") => {
     const b = document.createElement("button");
@@ -392,7 +394,6 @@ function renderAccount(): void {
       return b;
     })()] : []),
     ...(state.permissions.has("role.manage") ? [item("Rollen verwalten", () => void openRoles(), false, ROLES_ICON)] : []),
-    ...(Online.pushSupported() ? [pushItem(item)] : []),
     item("Abmelden", () => void Online.signOut().then(offerClearLocalData), false, SIGN_OUT_ICON),
     item("Konto löschen", () => {
       void confirmDeleteAccount().then((yes) => {
@@ -400,24 +401,50 @@ function renderAccount(): void {
       });
     }, true, TRASH_ICON),
   );
+  if (pushEl && Online.pushSupported()) pushEl.append(pushItem(item));
 }
 
 /** The menu switch for push notifications; its label follows the state of this device once known. */
 function pushItem(item: (text: string, onClick: () => void, danger?: boolean, icon?: string) => HTMLButtonElement): HTMLButtonElement {
   let on = false;
-  const b = item("Benachrichtigungen", () => {
-    void (on ? Online.disablePush().then(() => alert("Benachrichtigungen sind auf diesem Gerät aus."))
-      : Online.enablePush().then((r) => alert(r === "on"
-        ? "Du bekommst jetzt eine Nachricht, wenn Deine Aufstellung veröffentlicht oder geändert wird."
-        : r === "denied"
-          ? "Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Einstellungen der Seite."
-          : "Das hat nicht geklappt. Bist Du online?")));
-  }, false, BELL_ICON);
-  void Online.pushState().then((st) => {
+  // The label follows the real state of this device; read it again after every switch (the menu isn't re-rendered then).
+  const refresh = () => Online.pushState().then((st) => {
     on = st === "on";
     b.querySelector("span")!.textContent = on ? "Benachrichtigungen ausschalten" : "Benachrichtigungen einschalten";
   });
+  const b = item("Benachrichtigungen", () => {
+    const title = "Benachrichtigungen";
+    void (on ? Online.disablePush().then(() => notice({ title, text: "Benachrichtigungen sind auf diesem Gerät aus." }))
+      : Online.enablePush().then((r) => notice({ title, text: r === "on"
+        ? "Du bekommst jetzt eine Nachricht, wenn Deine Aufstellung veröffentlicht oder geändert wird."
+        : r === "denied"
+          ? "Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Einstellungen der Seite."
+          : "Das hat nicht geklappt. Bist Du online?" }))).then(refresh, refresh);
+  }, false, BELL_ICON);
+  void refresh();
   return b;
+}
+
+/** A small message dialog with one button, in place of alert(); resolves when it is closed (button, Escape or click outside). */
+function notice(o: { title: string; text: string; ok?: string }): Promise<void> {
+  return new Promise((resolve) => {
+    const dlg = document.createElement("dialog");
+    dlg.className = "team-dialog confirm-dialog";
+    dlg.setAttribute("aria-labelledby", "notice-h");
+    const h = Object.assign(document.createElement("h2"), { id: "notice-h", textContent: o.title });
+    const p = Object.assign(document.createElement("p"), { textContent: o.text });
+    const row = document.createElement("div");
+    row.className = "btn-row";
+    const ok = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-primary", textContent: o.ok ?? "OK" });
+    ok.addEventListener("click", () => dlg.close());
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", () => { dlg.remove(); resolve(); });
+    row.append(ok);
+    dlg.append(h, p, row);
+    document.body.append(dlg);
+    dlg.showModal();
+    ok.focus();
+  });
 }
 
 /** A small confirmation dialog; resolves true only on the confirm button, false on cancel, Escape or a click outside. */

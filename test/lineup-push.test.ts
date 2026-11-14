@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { lineupNotices, noticeText } from "../supabase/functions/_shared/lineup-push.ts";
+import { confirmText, lineupNotices, noticeText } from "../supabase/functions/_shared/lineup-push.ts";
 
 const pick = (...n: ReturnType<typeof lineupNotices>) => n.map((x) => `${x.person}:${x.kind}:${x.games.join("+")}`).sort();
 
@@ -24,4 +24,10 @@ test("texts say what happened", () => {
   assert.ok(noticeText({ person: "1", kind: "changed", games: ["1.HD"] }, "X").body.includes("jetzt 1.HD"));
   assert.ok(noticeText({ person: "1", kind: "removed", games: ["1.HD"] }, "X").body.includes("nicht mehr"));
   assert.equal(noticeText({ person: "1", kind: "removed", games: [] }, "x".repeat(300)).title.length, 100);
+});
+
+test("publisher confirmation tells how many players were notified", () => {
+  assert.equal(confirmText("X", 0).body, "Aufstellung veröffentlicht. Niemand wurde neu benachrichtigt.");
+  assert.equal(confirmText("X", 1).body, "Aufstellung veröffentlicht. 1 Spieler wurde benachrichtigt.");
+  assert.equal(confirmText("X", 5).body, "Aufstellung veröffentlicht. 5 Spieler wurden benachrichtigt.");
 });

@@ -73,11 +73,28 @@ rmSync(DIST, { recursive: true, force: true });
 mkdirSync(join(DIST, "icons"), { recursive: true });
 if (ONLINE) setOnlineHref(buildOnlineBundle(DIST));
 
+/** Every team's pickable players by person: the "Wer bist Du?" choice is global, so each page lists all teams' players. */
+const datasets = new Map<string, Dataset>();
+const pickable = new Map<string, Map<number, { name: string; href: string | null }>>();
+const everyone = new Map<number, string>();
+for (const team of teams) {
+  setTeam(team, teams);
+  const d = loadDataset(team);
+  datasets.set(team.slug, d);
+  const own = new Map<number, { name: string; href: string | null }>();
+  for (const p of pickablePlayers(d, ownPlayers(d))) {
+    own.set(p.person, { name: p.name, href: p.href });
+    if (!everyone.has(p.person)) everyone.set(p.person, p.name);
+  }
+  pickable.set(team.slug, own);
+}
+
 /** Renders one team's pages into dist/<slug>/; returns the page count. */
 function buildTeam(d: Dataset): number {
   setLineups(ownLineups(d));
   const players = ownPlayers(d);
-  setRoster(pickablePlayers(d, players).map((p) => ({ person: p.person, name: p.name, href: p.href })));
+  // A player's page link only exists for this team's own players.
+  setRoster([...everyone].map(([person, name]) => ({ person, name: pickable.get(d.own.slug)!.get(person)?.name ?? name, href: pickable.get(d.own.slug)!.get(person)?.href ?? null })));
   const dir = join(DIST, d.own.slug);
   for (const sub of ["bericht", "vorschau", "spieler"]) mkdirSync(join(dir, sub), { recursive: true });
   const write = (file: string, content: string) => writeFileSync(join(dir, file), content);
@@ -123,7 +140,7 @@ const nextMatches = new Map<string, Meeting | undefined>();
 const today = todayInBremen(new Date());
 for (const team of teams) {
   setTeam(team, teams);
-  const d = loadDataset(team);
+  const d = datasets.get(team.slug)!;
   if (d.table.length === 0) throw new Error(`no table for ${team.label} – run \`npm run scrape\` first`);
   const count = buildTeam(d);
   console.log(`${team.label}: ${count} pages`);

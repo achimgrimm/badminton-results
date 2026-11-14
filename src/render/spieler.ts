@@ -3,6 +3,7 @@ import { isDoubles, playerStats, type PlayerGame, type PlayerStats, type Tally }
 import { playerGenders } from "../lineup.ts";
 import type { Gender, Player, RosterPlayer } from "../types.ts";
 import { CHECK, reportHref } from "./components.ts";
+import { rosterEntries, type RosterEntry } from "./context.ts";
 import { layout } from "./layout.ts";
 import { displayName, esc, formatDate, html, outcomeBadge, slug } from "./util.ts";
 
@@ -76,9 +77,9 @@ export function pickablePlayers(d: Dataset, pages: PlayerPage[]): Pickable[] {
 const BULB_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2V16h5v-.1c0-.9.5-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg>`;
 
 /** "Wer bist Du?" card and the dialog with the names to pick from (see ME in layout.ts). */
-function mePicker(players: Pickable[]): string {
+function mePicker(players: RosterEntry[]): string {
   if (!players.length) return "";
-  const option = (p: Pickable) =>
+  const option = (p: RosterEntry) =>
     html`<li><button type="button" class="me-option" data-person="${p.person}" data-name="${esc(p.name)}"${p.href ? ` data-href="${esc(p.href)}"` : ""}>
       <span class="team-label">${esc(displayName(p.name))}</span>
     </button></li>`;
@@ -169,7 +170,7 @@ export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
   const genders = playerGenders(d);
   const body = html`
     <h1 class="visually-hidden">Spieler</h1>
-    ${mePicker(pickablePlayers(d, pages))}
+    ${mePicker([...rosterEntries()].sort(byName))}
     <p class="small muted">Alle Einsätze für ${esc(d.own.name)} in dieser Saison, aus den Spielberichten.</p>
     ${pages.length
       ? `<div id="player-list">${[...pages].sort((a, b) => byName(a.stats, b.stats)).map(

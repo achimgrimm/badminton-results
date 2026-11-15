@@ -25,6 +25,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { storageKey: STORAGE_KEY, flowType: "pkce", detectSessionInUrl: true, persistSession: true, autoRefreshToken: true },
 });
 
+/** True while this page signs the user out on purpose; any other sign-out is unexpected (see onAuthStateChange). */
+let signingOut = false;
+
 const track = (name: string, data?: Record<string, string>) => {
   try { otTrack(name, data); } catch { /* tracking is optional */ }
 };
@@ -142,6 +145,7 @@ export const Online = {
     await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: callback } });
   },
   signOut: async () => {
+    signingOut = true;
     track("logout");
     // The pick belongs to the account: signing out clears it (and the sign-in notes, so the next login matches afresh).
     // Answers given offline are sent first (best effort), so they are on the account when signing in elsewhere.
@@ -149,14 +153,15 @@ export const Online = {
     await Online.disablePush().catch(() => {});
     writeNote(ATTEMPT_NOTE, null);
     meApi()?.set(null);
-    await supabase.auth.signOut();
+    try { await supabase.auth.signOut(); } finally { signingOut = false; }
   },
   /** Deletes the account and all its data on the server. */
   deleteAccount: async () => {
     const { error } = await supabase.rpc("delete_account");
     if (error) throw error;
     track("delete-account");
-    await supabase.auth.signOut();
+    signingOut = true;
+    try { await supabase.auth.signOut(); } finally { signingOut = false; }
   },
   onChange: (fn: (s: Session | null) => void) => { listeners.add(fn); fn(state.session); },
   /**
@@ -1013,12 +1018,22 @@ function apply(s: Session | null): void {
 // Fires once with the stored session and again on every sign-in, sign-out and token refresh.
 // Until then the session persisted by supabase-js is shown (see storedSession).
 const initial = storedSession();
+// The account copy is still here but the session is gone: the browser dropped part of the site data.
+if (!initial && (() => { try { return localStorage.getItem(SAVED_KEY) !== null; } catch { return false; } })()) {
+  document.addEventListener("DOMContentLoaded", () => loggedOutUnexpectedly("session-missing"), { once: true });
+}
 if (initial) {
   try { otIdentify({ storage: "cloud" }); } catch { /* tracking is optional */ }
   apply(initial);
 }
+/** The session vanished without the user signing out: tell them and record why, to find the cause. */
+function loggedOutUnexpectedly(cause: string): void {
+  track("unexpected-logout", { cause, online: String(navigator.onLine) });
+  void notice({ title: "Du wurdest abgemeldet", text: "Deine Anmeldung ist abgelaufen oder wurde beendet. Bitte melde Dich erneut an." });
+}
 supabase.auth.onAuthStateChange((event, s) => {
   state.loading = false;
+  if (!s && state.session && !signingOut && event === "SIGNED_OUT") loggedOutUnexpectedly("event");
   // Offline, a failed token refresh must not look like signing out; only an explicit sign-out does.
   if (!s && event !== "SIGNED_OUT" && state.session && !navigator.onLine) return;
   try { otIdentify({ storage: s ? "cloud" : "local" }); } catch { /* tracking is optional */ }
@@ -1026,3 +1041,16 @@ supabase.auth.onAuthStateChange((event, s) => {
 });
 // Signed out: show the local state now, also if no event ever arrives.
 if (!initial) setTimeout(() => { if (state.loading) { state.loading = false; renderAccount(); } }, 3000);
+
+// Ask the browser not to evict this site's data (and with it the sign-in) under storage pressure.
+// Installed apps are usually granted this at once; tracked once per device when it is not.
+void (async () => {
+  try {
+    if (!navigator.storage?.persist || (await navigator.storage.persisted())) return;
+    const granted = await navigator.storage.persist();
+    if (!localStorage.getItem(`${STORAGE_KEY}-persist-asked`)) {
+      localStorage.setItem(`${STORAGE_KEY}-persist-asked`, "1");
+      track("storage-persist", { granted: String(granted) });
+    }
+  } catch { /* optional */ }
+})();

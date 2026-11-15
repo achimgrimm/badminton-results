@@ -243,14 +243,6 @@ export const Online = {
       return !error;
     } catch { return false; }
   },
-  /** Whether the reminders before marked matches are on for this account (the default); null when signed out or offline. */
-  remindersOn: async (): Promise<boolean | null> => {
-    if (!state.session) return null;
-    try {
-      const { data, error } = await supabase.from("reminder_settings").select("enabled").maybeSingle();
-      return error ? null : data?.enabled !== false;
-    } catch { return null; }
-  },
   setReminders: async (on: boolean): Promise<boolean> => {
     if (!state.session) return false;
     try {
@@ -398,7 +390,10 @@ function renderAccount(): void {
     return p;
   };
   if (!state.session) {
-    if (state.loading) return; // not known yet: show neither "signed in" nor "local" options
+    if (state.loading) { // not known yet: show neither "signed in" nor "local" options, only that we are waiting
+      whoEl.append(Object.assign(document.createElement("p"), { className: "loading", textContent: "Lädt …" }));
+      return;
+    }
     // A player chosen without an account stays on this device; signed in, the account keeps it.
     if (pick) whoEl.append(block(nameLine(shownName(pick.name)), "Spieler nur auf diesem Gerät"));
     // The explanation only appears when this item is opened, never by itself.
@@ -468,44 +463,34 @@ function renderAccount(): void {
       });
     }, true, TRASH_ICON),
   );
-  if (pushEl && Online.pushSupported()) pushEl.append(pushItem(item), reminderItem(item));
+  if (pushEl && Online.pushSupported()) pushEl.append(notificationItem(item));
 }
 
-/** The menu switch for push notifications; its label follows the state of this device once known. */
-function pushItem(item: (text: string, onClick: () => void, danger?: boolean, icon?: string) => HTMLButtonElement): HTMLButtonElement {
+/** The one menu switch for notifications: push on this device, with the reminders before "Ich spiele" matches (#21) following it. */
+function notificationItem(item: (text: string, onClick: () => void, danger?: boolean, icon?: string) => HTMLButtonElement): HTMLButtonElement {
   let on = false;
+  const label = (text: string) => { b.querySelector("span")!.textContent = text; };
   // The label follows the real state of this device; read it again after every switch (the menu isn't re-rendered then).
   const refresh = () => Online.pushState().then((st) => {
     on = st === "on";
-    b.querySelector("span")!.textContent = on ? "Benachrichtigungen ausschalten" : "Benachrichtigungen einschalten";
+    b.disabled = false;
+    label(on ? "Benachrichtigungen ausschalten" : "Benachrichtigungen einschalten");
   });
   const b = item("Benachrichtigungen", () => {
     const title = "Benachrichtigungen";
-    void (on ? Online.disablePush().then(() => notice({ title, text: "Benachrichtigungen sind auf diesem Gerät aus." }))
-      : Online.enablePush().then((r) => notice({ title, text: r === "on"
-        ? "Du bekommst jetzt eine Nachricht, wenn Deine Aufstellung veröffentlicht oder geändert wird."
-        : r === "denied"
-          ? "Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Einstellungen der Seite."
-          : "Das hat nicht geklappt. Bist Du online?" }))).then(refresh, refresh);
+    void (on ? Online.disablePush().then(() => Online.setReminders(false)).then(() => notice({ title, text: "Benachrichtigungen sind auf diesem Gerät aus." }))
+      : Online.enablePush().then(async (r) => {
+        if (r === "on") await Online.setReminders(true);
+        await notice({ title, text: r === "on"
+          ? "Du bekommst jetzt eine Nachricht, wenn Deine Aufstellung veröffentlicht oder geändert wird, und 24 Stunden vor einem Spiel, bei dem Du „Ich spiele“ gewählt hast, eine Erinnerung."
+          : r === "denied"
+            ? "Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Einstellungen der Seite."
+            : "Das hat nicht geklappt. Bist Du online?" });
+      })).then(refresh, refresh);
   }, false, BELL_ICON);
-  void refresh();
-  return b;
-}
-
-/** The menu switch for the reminders before matches marked "Ich spiele" (#21); the label follows the account's setting. */
-function reminderItem(item: (text: string, onClick: () => void, danger?: boolean, icon?: string) => HTMLButtonElement): HTMLButtonElement {
-  let on = true;
-  const refresh = () => Online.remindersOn().then((v) => {
-    on = v !== false;
-    b.querySelector("span")!.textContent = on ? "Spiel-Erinnerungen ausschalten" : "Spiel-Erinnerungen einschalten";
-  });
-  const b = item("Spiel-Erinnerungen", () => {
-    const title = "Spiel-Erinnerungen";
-    void Online.setReminders(!on).then((ok) => notice({ title, text: !ok ? "Das hat nicht geklappt. Bist Du online?"
-      : on ? "Du bekommst keine Erinnerung mehr vor Deinen Spielen."
-        : "Du bekommst 24 Stunden vor einem Spiel, bei dem Du „Ich spiele“ gewählt hast, eine Benachrichtigung." })).then(refresh, refresh);
-  }, false, BELL_ICON);
-  void refresh();
+  b.disabled = true;
+  label("Lädt …");
+  void refresh().catch(() => { b.disabled = false; label("Benachrichtigungen"); });
   return b;
 }
 
@@ -896,6 +881,7 @@ async function openRoles(): Promise<void> {
   const selfId = state.session?.user.id ?? "";
   let users: RoleUser[] = [];
   let failed = false;
+  let loading = true;
   const render = () => {
     d.textContent = "";
     const head = document.createElement("div");
@@ -906,6 +892,7 @@ async function openRoles(): Promise<void> {
     close.addEventListener("click", () => d.close());
     head.append(h, close);
     d.append(head);
+    if (loading) d.append(Object.assign(document.createElement("p"), { className: "loading", textContent: "Lädt …" }));
     if (failed) d.append(Object.assign(document.createElement("p"), { textContent: "Die Nutzer konnten nicht geladen werden. Bitte versuche es später noch einmal." }));
     const adminCount = users.filter((u) => u.roles.includes("admin")).length;
     for (const u of sortUsers(users)) {
@@ -956,6 +943,7 @@ async function openRoles(): Promise<void> {
   render();
   d.showModal();
   const [list, players] = await Promise.all([supabase.rpc("list_users_with_roles"), supabase.rpc("list_user_players")]);
+  loading = false;
   failed = !!list.error;
   const names = new Map(((players.data ?? []) as { user_id: string; player_name: string }[]).map((p) => [p.user_id, p.player_name]));
   users = Array.isArray(list.data) ? (list.data as RoleUser[]).map((u) => ({ ...u, player_name: names.get(u.user_id) ?? null })) : [];

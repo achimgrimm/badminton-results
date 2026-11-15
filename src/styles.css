@@ -86,6 +86,10 @@ main.container { padding-bottom: 32px; }
 .muted { color: var(--ot-text-muted); }
 .small { font-size: .875rem; }
 .num { font-variant-numeric: tabular-nums; }
+.loading { display: flex; align-items: center; gap: 8px; color: var(--ot-text-muted); font-size: .875rem; }
+.loading::before { content: ""; width: 14px; height: 14px; border: 2px solid var(--ot-border); border-top-color: var(--ot-primary); border-radius: 50%; animation: ot-spin .8s linear infinite; }
+@keyframes ot-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .loading::before { animation-duration: 3s; } }
 
 /* Header */
 /* Test stages only: a strip above the header, so a test build is never mistaken for the live app. */

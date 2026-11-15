@@ -225,7 +225,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
     if (pub.hidden) return;
     var body = pub.querySelector(".pub-body"), meta = pub.querySelector(".pub-meta"), me = window.otMe && otMe.get();
     body.innerHTML = "";
-    if (!published) { meta.textContent = published === null ? "Noch keine Aufstellung veröffentlicht." : "Die Aufstellung konnte nicht geladen werden."; return; }
+    if (!published) { meta.textContent = pubLoading ? "Lädt …" : published === null ? "Noch keine Aufstellung veröffentlicht." : "Die Aufstellung konnte nicht geladen werden."; return; }
     meta.textContent = "Veröffentlicht am " + when(published.at) + " (nur lesen).";
     rows.forEach(function (r) {
       var list = published.lineup[r.dataset.discipline];
@@ -249,10 +249,13 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
       body.appendChild(row);
     });
   }
+  var pubLoading = false;
   function loadPublished() {
     if (!window.Online || !Online.publishedLineup) return;
+    if (!published) { pubLoading = true; renderPublished(); }
     Online.publishedLineup(GAME.team, GAME.season, GAME.game).then(function (res) {
-      if (res === undefined) return;
+      pubLoading = false;
+      if (res === undefined) { renderPublished(); return; }
       published = res;
       try { if (res) localStorage.setItem(PUB_KEY, JSON.stringify(res)); else localStorage.removeItem(PUB_KEY); } catch (e) {}
       /* The draft lives on one device: a team lead on a new device starts from what they published. */
@@ -267,7 +270,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
         return;
       }
       renderPublished();
-    }, function () {});
+    }, function () { pubLoading = false; renderPublished(); });
   }
   function publishNow(withdraw) {
     var action = withdraw ? "unpublish" : "publish", l = read();

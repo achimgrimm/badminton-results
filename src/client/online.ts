@@ -912,7 +912,7 @@ async function openRoles(): Promise<void> {
       const text = document.createElement("p");
       text.className = "user-info";
       text.append(Object.assign(document.createElement("b"), { textContent: userLabel(u) }));
-      if (u.email) text.append(" ", Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
+      if (u.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
       const buttons = document.createElement("div");
       buttons.className = "user-actions";
       for (const role of ASSIGNABLE_ROLES) {

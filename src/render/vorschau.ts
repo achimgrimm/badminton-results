@@ -159,11 +159,15 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
   if (any(read())) root.open = true;
   render();
   root.querySelector(".lineup-clear").addEventListener("click", function () {
-    if (!any(read()) || !confirm("Aufstellung leeren?")) return;
-    root.querySelectorAll("select").forEach(function (s) { s.value = ""; });
-    try { localStorage.removeItem(KEY); } catch (e) {}
-    render();
-    otTrack("lineup", { action: "clear" });
+    if (!any(read())) return;
+    var clear = function () {
+      root.querySelectorAll("select").forEach(function (s) { s.value = ""; });
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      render();
+      otTrack("lineup", { action: "clear" });
+    };
+    if (window.Online && Online.ask) Online.ask({ title: "Aufstellung leeren?", text: "Alle Spieler werden aus Deinem Entwurf entfernt.", cancel: "Abbrechen", ok: "Leeren", danger: true }).then(function (yes) { if (yes) clear(); });
+    else if (confirm("Aufstellung leeren?")) clear();
   });
   var suggest = root.querySelector(".lineup-suggest");
   if (suggest) {

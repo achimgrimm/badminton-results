@@ -10,10 +10,10 @@ test("roleLabel picks the strongest role", () => {
   assert.equal(roleLabel(["unknown"]), null);
 });
 
-test("sortUsers puts the strongest role first, then sorts by name", () => {
+test("sortUsers sorts by name regardless of role", () => {
   const u = (id: string, name: string, roles: string[]) => ({ user_id: id, display_name: name, email: null, roles });
   const sorted = sortUsers([u("1", "Zora", ["member"]), u("2", "Bea", ["member", "team_lead"]), u("3", "Max", ["admin"]), u("4", "Anna", ["member"])]);
-  assert.deepEqual(sorted.map((x) => x.user_id), ["3", "2", "4", "1"]);
+  assert.deepEqual(sorted.map((x) => x.user_id), ["4", "2", "3", "1"]);
 });
 
 test("canRevokeRole mirrors the database guards", () => {
@@ -28,10 +28,13 @@ test("roleLabel: player ranks between team lead and member", () => {
   assert.equal(roleLabel(["member", "player", "team_lead"]), "Mannschaftsführer");
 });
 
-test("sortUsers: players come before plain members", () => {
-  const u = (id: string, name: string, roles: string[]) => ({ user_id: id, display_name: name, email: null, roles });
-  const sorted = sortUsers([u("1", "Anna", ["member"]), u("2", "Zora", ["member", "player"])]);
-  assert.deepEqual(sorted.map((x) => x.user_id), ["2", "1"]);
+test("sortUsers falls back to the login name, then the email", () => {
+  const sorted = sortUsers([
+    { user_id: "1", display_name: null, email: "zoe@x.de", roles: [] },
+    { user_id: "2", display_name: "Bea", email: null, roles: [] },
+    { user_id: "3", display_name: null, email: "anna@x.de", roles: [] },
+  ]);
+  assert.deepEqual(sorted.map((x) => x.user_id), ["3", "2", "1"]);
 });
 
 test("sortUsers sorts by first name, then last name, using the player name when there is one", () => {

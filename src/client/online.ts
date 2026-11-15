@@ -125,6 +125,9 @@ window.addEventListener("online", syncNow);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
 
 export const Online = {
+  /** The app's own message and confirm dialogs, for the inline page scripts (instead of alert / confirm). */
+  notice,
+  ask,
   get session() { return state.session; },
   get permissions() { return state.permissions; },
   get displayName() { return state.displayName; },
@@ -302,6 +305,9 @@ const SIGN_OUT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const HELP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>`;
 const ROLES_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>`;
 const BELL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
+const TEAM_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a5 5 0 0 1 10 0v1M16 5a3 3 0 0 1 0 6M21 20v-1a5 5 0 0 0-3-4.5"/></svg>`;
+/** The icon of each role switch in the roles dialog. */
+const ROLE_ICONS: Record<(typeof ASSIGNABLE_ROLES)[number], string> = { team_lead: TEAM_ICON, admin: ROLES_ICON };
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`;
 
 /** Appends the check mark after the name of every verified player on the page (own side only: they carry data-person). */
@@ -459,7 +465,7 @@ function renderAccount(): void {
     item("Abmelden", () => void Online.signOut().then(offerClearLocalData), false, SIGN_OUT_ICON),
     item("Konto löschen", () => {
       void confirmDeleteAccount().then((yes) => {
-        if (yes) Online.deleteAccount().then(offerClearLocalData).catch(() => alert("Das Konto konnte nicht gelöscht werden. Bitte versuche es später noch einmal."));
+        if (yes) Online.deleteAccount().then(offerClearLocalData).catch(() => notice({ title: "Konto löschen", text: "Das Konto konnte nicht gelöscht werden. Bitte versuche es später noch einmal." }));
       });
     }, true, TRASH_ICON),
   );
@@ -640,7 +646,7 @@ async function loadClaims(s: Session, run: number): Promise<void> {
   else if (result.action === "rejected") {
     writeNote(ATTEMPT_NOTE, null);
     me.set(null);
-    alert(`Deine Anfrage für ${shownName(result.pick.name)} wurde nicht bestätigt. Die Auswahl wurde zurückgesetzt.`);
+    await notice({ title: "Anfrage nicht bestätigt", text: `Deine Anfrage für ${shownName(result.pick.name)} wurde nicht bestätigt. Die Auswahl wurde zurückgesetzt.` });
   } else if (!local && !server && !state.notAPlayer) await confirmPlayer(me, s, canApprove, run);
 }
 
@@ -649,7 +655,7 @@ const NOT_A_PLAYER = "none";
 /** "Nicht aktiver Spieler": remembered on the account, which drops its claim (and the player role). */
 async function setNotAPlayer(me: MeApi): Promise<void> {
   const { error } = await supabase.rpc("set_not_a_player", { flag: true });
-  if (error) { console.error("set_not_a_player failed", error); alert("Das konnte nicht gespeichert werden. Bitte versuche es später noch einmal."); return; }
+  if (error) { console.error("set_not_a_player failed", error); await notice({ title: "Nicht gespeichert", text: "Das konnte nicht gespeichert werden. Bitte versuche es später noch einmal." }); return; }
   state.notAPlayer = true;
   state.claim = null;
   writeNote(ATTEMPT_NOTE, null);
@@ -765,7 +771,7 @@ async function saveClaim(pick: Pick | null, status: "pending" | "approved" = "pe
     if (error) {
       if (error.code === "23505") {
         writeNote(ATTEMPT_NOTE, `taken:${pick.person}`);
-        alert("Dieser Spieler ist schon mit einem anderen Konto verknüpft. Die Auswahl gilt nur auf diesem Gerät.");
+        await notice({ title: "Spieler schon verknüpft", text: "Dieser Spieler ist schon mit einem anderen Konto verknüpft. Die Auswahl gilt nur auf diesem Gerät." });
       } else {
         // e.g. the table is missing (migration not applied) or a policy refused the row; the pick stays on this device.
         console.error("player_claims insert failed", error);
@@ -785,13 +791,13 @@ async function saveClaim(pick: Pick | null, status: "pending" | "approved" = "pe
 }
 
 // The ME script reports every pick made on this device; signed in, it becomes the account's claim.
-(window as unknown as { otMeChanged: (pick: Pick | null) => void }).otMeChanged = (pick) => {
+(window as unknown as { otMeChanged: (pick: Pick | null) => void }).otMeChanged = async (pick) => {
   const me = meApi();
   if (!state.session) { renderAccount(); return; }
   if (!me) return;
   const current = state.claim;
   if (current && current.status === "approved" && pick?.person !== current.person && !state.permissions.has("player.link")) {
-    if (!confirm("Dein bestätigter Spieler wird ersetzt und muss neu bestätigt werden. Fortfahren?")) {
+    if (!(await ask({ title: "Spieler ersetzen?", text: "Dein bestätigter Spieler wird ersetzt und muss neu bestätigt werden.", cancel: "Abbrechen", ok: "Fortfahren" }))) {
       me.set({ person: current.person, name: current.player_name });
       return;
     }
@@ -847,7 +853,7 @@ function openApprovals(): void {
         const { error } = approve
           ? await supabase.from("player_claims").update({ status: "approved" }).eq("id", c.id)
           : await supabase.from("player_claims").delete().eq("id", c.id);
-        if (error) { alert("Das hat nicht geklappt. Bitte versuche es später noch einmal."); return; }
+        if (error) { await notice({ title: "Das hat nicht geklappt", text: "Bitte versuche es später noch einmal." }); return; }
         track("claim-decision", { decision: approve ? "approve" : "reject" });
         state.pending = state.pending.filter((x) => x.id !== c.id);
         commit();
@@ -897,26 +903,28 @@ async function openRoles(): Promise<void> {
     const adminCount = users.filter((u) => u.roles.includes("admin")).length;
     for (const u of sortUsers(users)) {
       const row = document.createElement("div");
-      row.className = "claim-row";
+      row.className = "claim-row user-row";
       const text = document.createElement("p");
+      text.className = "user-info";
       text.append(Object.assign(document.createElement("b"), { textContent: userLabel(u) }));
-      if (u.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
-      text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small", textContent: roleLabel(u.roles) ?? "" }));
+      if (u.email) text.append(" ", Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
       const buttons = document.createElement("div");
-      buttons.className = "btn-row";
+      buttons.className = "user-actions";
       for (const role of ASSIGNABLE_ROLES) {
         const has = u.roles.includes(role);
         const b = Object.assign(document.createElement("button"), {
           type: "button",
-          className: has ? "btn btn-primary" : "btn btn-secondary",
-          textContent: ROLE_LABELS[role],
+          className: has ? "btn btn-icon btn-primary" : "btn btn-icon btn-secondary",
+          title: ROLE_LABELS[role],
+          innerHTML: ROLE_ICONS[role],
         });
+        b.setAttribute("aria-label", ROLE_LABELS[role]);
         b.setAttribute("aria-pressed", String(has));
         if (has && !canRevokeRole(selfId, u.user_id, role, adminCount)) b.disabled = true;
         b.addEventListener("click", async () => {
           if (has && role === "admin" && !(await ask({ title: "Administrator entziehen?", text: `${userLabel(u)} verliert die Administratorrechte.`, cancel: "Abbrechen", ok: "Entziehen", danger: true }))) return;
           const { error } = await supabase.rpc("set_user_role", { target: u.user_id, role_name: role, on_: !has });
-          if (error) { alert("Das hat nicht geklappt. Bitte versuche es später noch einmal."); return; }
+          if (error) { await notice({ title: "Das hat nicht geklappt", text: "Bitte versuche es später noch einmal." }); return; }
           track("role-change", { role, granted: String(!has) });
           u.roles = has ? u.roles.filter((r) => r !== role) : [...u.roles, role];
           if (u.user_id === selfId) { state.roles = u.roles; commit(); }
@@ -924,18 +932,21 @@ async function openRoles(): Promise<void> {
         });
         buttons.append(b);
       }
-      if (u.user_id !== selfId) {
-        const del = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-danger", textContent: "Konto löschen" });
-        del.addEventListener("click", async () => {
-          if (!(await ask({ title: "Konto löschen?", text: `Das Konto von ${userLabel(u)} und alle zugehörigen Daten werden unwiderruflich gelöscht.`, cancel: "Abbrechen", ok: "Löschen", danger: true }))) return;
-          const { error } = await supabase.rpc("admin_delete_user", { target: u.user_id });
-          if (error) { alert("Das hat nicht geklappt. Bitte versuche es später noch einmal."); return; }
-          track("admin-delete-user");
-          users = users.filter((x) => x.user_id !== u.user_id);
-          render();
-        });
-        buttons.append(del);
-      }
+      const own = u.user_id === selfId;
+      const del = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-icon btn-danger", innerHTML: TRASH_ICON });
+      // Your own account can't be deleted here (use "Konto löschen" in the menu); the disabled button says why.
+      del.title = own ? "Dein eigenes Konto kann hier nicht gelöscht werden. Nutze dafür „Konto löschen“ im Menü." : "Konto löschen";
+      del.setAttribute("aria-label", del.title);
+      del.disabled = own;
+      del.addEventListener("click", async () => {
+        if (!(await ask({ title: "Konto löschen?", text: `Das Konto von ${userLabel(u)} und alle zugehörigen Daten werden unwiderruflich gelöscht.`, cancel: "Abbrechen", ok: "Löschen", danger: true }))) return;
+        const { error } = await supabase.rpc("admin_delete_user", { target: u.user_id });
+        if (error) { await notice({ title: "Das hat nicht geklappt", text: "Bitte versuche es später noch einmal." }); return; }
+        track("admin-delete-user");
+        users = users.filter((x) => x.user_id !== u.user_id);
+        render();
+      });
+      buttons.append(del);
       row.append(text, buttons);
       d.append(row);
     }

@@ -113,6 +113,7 @@ main.container { padding-bottom: 32px; }
 .menu-count { margin-left: auto; }
 /* The header menu: a dialog panel at the top right (base look from .team-dialog) */
 .menu-dialog { margin: 56px 8px auto auto; width: min(92vw, 320px); padding: 8px 12px 12px; }
+@media (min-width: 600px) { .team-dialog.menu-dialog { width: min(92vw, 360px); padding: 8px 12px 12px; } }
 .menu-dialog .dialog-head { padding: 0 0 0 8px; }
 .menu-dialog h2 { font-size: 1.125rem; }
 .menu-section { border-top: 1px solid var(--ot-border); padding: 6px 0; }
@@ -134,6 +135,13 @@ main.container { padding-bottom: 32px; }
 .claim-row { border-top: 1px solid var(--ot-border); padding: 12px 0 4px; }
 .claim-row p { margin: 0 0 8px; }
 .claim-row .btn-row { margin-bottom: 8px; }
+/* Roles dialog: name and email on one line, the actions as icon buttons beside it */
+.user-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.user-row .user-info { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-actions { display: flex; flex: none; gap: 6px; }
+.btn.btn-icon { justify-content: center; width: 40px; height: 40px; padding: 0; }
+.btn.btn-icon svg { width: 20px; height: 20px; }
+@media (pointer: coarse) { .btn.btn-icon { width: 44px; height: 44px; } }
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
@@ -168,6 +176,7 @@ main.container { padding-bottom: 32px; }
 .btn-secondary:hover { background: var(--ot-primary); color: var(--ot-on-primary); text-decoration: none; }
 .btn-danger { background: var(--ot-error); color: #fff; border-color: var(--ot-error); }
 .btn-danger:hover { filter: brightness(.9); text-decoration: none; }
+.btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 .confirm-dialog .btn-row { justify-content: flex-end; margin-bottom: 0; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 
@@ -393,7 +402,11 @@ body.only-mine.no-playing .mine-empty { display: block; }
 /* Team chooser */
 .team-card .card-meta { margin: 2px 0 0; }
 .team-dialog { border: 0; border-radius: var(--ot-radius); box-shadow: var(--ot-shadow-hover); background: var(--ot-bg); color: var(--ot-text);
-               padding: 16px 20px 12px; width: min(92vw, 400px); max-height: 85vh; }
+               padding: 16px 20px 12px; width: min(92vw, 400px); max-height: 85vh; max-height: min(85vh, 85dvh); }
+/* Tablets: wider dialogs. Short messages and the menu panel stay compact. */
+@media (min-width: 600px) { .team-dialog { width: min(85vw, 560px); padding: 20px 28px 16px; } }
+@media (min-width: 900px) { .team-dialog { width: min(70vw, 680px); } }
+@media (min-width: 600px) { .team-dialog.confirm-dialog { width: min(92vw, 440px); } }
 .team-dialog::backdrop { background: rgba(0,0,0,.5); }
 /* A modal must not let the page behind it scroll. */
 html:has(dialog:modal) { overflow: hidden; }

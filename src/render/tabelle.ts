@@ -30,7 +30,7 @@ document.querySelectorAll(".follow").forEach(function (b) {
     var done = function (ok, msg) {
       b.disabled = false;
       if (ok) { if (on) followed.delete(g + "|" + t); else followed.add(g + "|" + t); paintFollow(); }
-      else if (msg) alert(msg);
+      else if (msg) O.notice({ title: "Mannschaft folgen", text: msg });
     };
     if (on) O.unfollowTeam(g, t).then(function (ok) { done(ok, "Das hat nicht geklappt. Bist Du online?"); });
     else O.followTeam(g, t, location.pathname.split("/").slice(-2).join("/")).then(function (r) {

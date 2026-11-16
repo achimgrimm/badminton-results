@@ -1,0 +1,15 @@
+<!-- Supabase Auth e-mail template for the login code.
+     Use in Dashboard -> Authentication -> Email Templates for "Magic Link" and "Confirm signup".
+     Subject: Dein Anmeldecode: {{ .Token }} -->
+<div style="background:#f4f6fa;padding:24px 12px;font-family:'Source Sans 3','Source Sans Pro',Arial,sans-serif;color:#1b2430">
+  <div style="max-width:440px;margin:0 auto;background:#ffffff;border-radius:5px;box-shadow:0 2px 8px rgba(10,64,159,.12);overflow:hidden">
+    <div style="background:#0a409f;color:#ffffff;padding:16px 24px;font-size:18px;font-weight:600">Badminton Ergebnisse</div>
+    <div style="padding:24px">
+      <p style="margin:0 0 16px;font-size:16px">Hallo,</p>
+      <p style="margin:0 0 16px;font-size:16px">Dein Code zum Anmelden lautet:</p>
+      <p style="margin:0 0 20px;text-align:center;font-size:34px;font-weight:700;letter-spacing:6px;color:#0a409f">{{ .Token }}</p>
+      <p style="margin:0 0 8px;font-size:14px;color:#5b6675">Gib ihn in der App ein. Er ist nur kurz gültig und kann nur einmal benutzt werden.</p>
+      <p style="margin:0;font-size:14px;color:#5b6675">Wenn Du die Anmeldung nicht angefordert hast, kannst Du diese E-Mail ignorieren.</p>
+    </div>
+  </div>
+</div>

@@ -513,10 +513,12 @@ a.stat:hover { text-decoration: none; box-shadow: var(--ot-shadow-hover); }
 .following { margin: 0 0 8px; font-size: .9rem; }
 
 /* Login dialog (e-mail code or Google) */
-.login-dialog .login-input { display: block; width: 100%; box-sizing: border-box; margin: 0 0 12px; padding: 10px 12px; font: inherit; border: 1px solid var(--border, #c9d2e3); border-radius: 5px; background: var(--surface, #fff); color: inherit; }
+.login-dialog .login-input { display: block; width: 100%; box-sizing: border-box; margin: 0 0 12px; padding: 10px 12px; font: inherit; border: 1px solid var(--ot-border); border-radius: 5px; background: var(--ot-bg-alt); color: var(--ot-text); }
+.login-dialog .login-input::placeholder { color: var(--ot-text-muted); opacity: 1; }
+.login-dialog .login-input:focus { outline: 2px solid var(--ot-primary); outline-offset: 1px; }
 .login-dialog .login-code { font-size: 1.4rem; letter-spacing: .3em; text-align: center; }
 .login-dialog > .btn { display: flex; width: 100%; justify-content: center; align-items: center; margin-bottom: 8px; }
-.login-dialog .login-error { margin: 0 0 8px; color: var(--danger, #b3261e); }
+.login-dialog .login-error { margin: 0 0 8px; color: var(--ot-error); }
 .login-dialog .login-or { text-align: center; margin: 12px 0; }
 .login-dialog .login-google-icon { display: inline-flex; background: #fff; border-radius: 50%; padding: 3px; margin-right: 8px; }
 .login-dialog .login-google-icon svg { width: 16px; height: 16px; }

@@ -511,3 +511,14 @@ a.stat:hover { text-decoration: none; box-shadow: var(--ot-shadow-hover); }
 .follow.on { color: var(--ot-primary); }
 .follow.on svg path { fill: currentColor; }
 .following { margin: 0 0 8px; font-size: .9rem; }
+
+/* Login dialog (e-mail code or Google) */
+.login-dialog .login-input { display: block; width: 100%; box-sizing: border-box; margin: 0 0 12px; padding: 10px 12px; font: inherit; border: 1px solid var(--border, #c9d2e3); border-radius: 5px; background: var(--surface, #fff); color: inherit; }
+.login-dialog .login-code { font-size: 1.4rem; letter-spacing: .3em; text-align: center; }
+.login-dialog > .btn { display: flex; width: 100%; justify-content: center; align-items: center; margin-bottom: 8px; }
+.login-dialog .login-error { margin: 0 0 8px; color: var(--danger, #b3261e); }
+.login-dialog .login-or { text-align: center; margin: 12px 0; }
+.login-dialog .login-google-icon { display: inline-flex; background: #fff; border-radius: 50%; padding: 3px; margin-right: 8px; }
+.login-dialog .login-google-icon svg { width: 16px; height: 16px; }
+.login-dialog .login-why { margin-top: 12px; }
+.login-dialog .login-row { justify-content: space-between; margin-top: 8px; }

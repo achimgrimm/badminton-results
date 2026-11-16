@@ -8,6 +8,7 @@ import { ASSIGNABLE_ROLES, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, use
 import { displayName as shownName, matchPlayer } from "../names.ts";
 import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
+import { cleanCode, cleanEmail, loginProblem } from "./login.ts";
 import { VERIFIED_ICON } from "../icons.ts";
 import { statusMap } from "../answers.ts";
 import { parsePublished, type PublishedLineup } from "../lineup.ts";
@@ -155,6 +156,8 @@ export const Online = {
     meApi()?.set(null);
     try { await supabase.auth.signOut(); } finally { signingOut = false; }
   },
+  /** Opens the login dialog: e-mail code or Google. */
+  openLogin: () => openLogin(),
   /** Deletes the account and all its data on the server. */
   deleteAccount: async () => {
     const { error } = await supabase.rpc("delete_account");
@@ -307,6 +310,7 @@ export const Online = {
 const GOOGLE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/></svg>`;
 
 const SIGN_OUT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>`;
+const LOGIN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>`;
 const HELP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>`;
 const ROLES_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>`;
 const BELL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
@@ -407,28 +411,7 @@ function renderAccount(): void {
     }
     // A player chosen without an account stays on this device; signed in, the account keeps it.
     if (pick) whoEl.append(block(nameLine(shownName(pick.name)), "Spieler nur auf diesem Gerät"));
-    // The explanation only appears when this item is opened, never by itself.
-    el.append(
-      item("Warum anmelden?", () => {
-        void ask({
-          title: "Warum anmelden?",
-          text: "Ohne Konto bleibt alles auf diesem Gerät. Mit Anmeldung:",
-          items: [
-            "Deine Spielerwahl und „Ich spiele“-Antworten gelten auf allen Geräten.",
-            "Du siehst die Aufstellung vom Mannschaftsführer.",
-            "Dein Mannschaftsführer sieht bei der Planung Deinen „Ich spiele“-Status.",
-            "Du bekommst eine Benachrichtigung, wenn Deine Aufstellung veröffentlicht oder geändert wird.",
-            "Du bekommst 24 Stunden vor einem Spiel, bei dem Du „Ich spiele“ gewählt hast, eine Erinnerung.",
-            "Du kannst Mannschaften folgen und siehst sie in der Übersicht oben unter „Du folgst“.",
-            "Du bekommst eine Benachrichtigung, wenn eine Mannschaft, der Du folgst, ein neues Ergebnis hat.",
-          ],
-          cancel: "Schließen",
-          ok: "Mit Google anmelden",
-          okIcon: GOOGLE_ICON,
-        }).then((yes) => { if (yes) void Online.signIn(); });
-      }, false, HELP_ICON),
-      item("Mit Google anmelden", () => void Online.signIn(), false, GOOGLE_ICON),
-    );
+    el.append(item("Anmelden", () => void openLogin(), false, LOGIN_ICON));
     return;
   }
   // With a chosen player the menu shows that player (linked to the player page); otherwise the Google name.
@@ -503,6 +486,100 @@ function notificationItem(item: (text: string, onClick: () => void, danger?: boo
   label("Lädt …");
   void refresh().catch(() => { b.disabled = false; label("Benachrichtigungen"); });
   return b;
+}
+
+const LOGIN_BENEFITS = [
+  "Deine Spielerwahl und „Ich spiele“-Antworten gelten auf allen Geräten.",
+  "Du siehst die Aufstellung vom Mannschaftsführer.",
+  "Dein Mannschaftsführer sieht bei der Planung Deinen „Ich spiele“-Status.",
+  "Du bekommst eine Benachrichtigung, wenn Deine Aufstellung veröffentlicht oder geändert wird.",
+  "Du bekommst 24 Stunden vor einem Spiel, bei dem Du „Ich spiele“ gewählt hast, eine Erinnerung.",
+  "Du kannst Mannschaften folgen und siehst sie in der Übersicht oben unter „Du folgst“.",
+  "Du bekommst eine Benachrichtigung, wenn eine Mannschaft, der Du folgst, ein neues Ergebnis hat.",
+];
+
+/** The login dialog: an e-mail address gets a 6-digit code to type in, or sign in with Google. */
+function openLogin(): void {
+  const dlg = document.createElement("dialog");
+  dlg.className = "team-dialog confirm-dialog login-dialog";
+  dlg.setAttribute("aria-labelledby", "login-h");
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener("close", () => dlg.remove());
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, unknown> = {}, ...kids: (Node | string)[]) => {
+    const n = Object.assign(document.createElement(tag), props);
+    n.append(...kids);
+    return n;
+  };
+  const btn = (text: string, cls: string, onClick: () => void) => {
+    const b = el("button", { type: "button", className: `btn ${cls}`, textContent: text });
+    b.addEventListener("click", onClick);
+    return b;
+  };
+  const problem = el("p", { className: "login-error", hidden: true });
+  problem.setAttribute("role", "alert");
+  const show = (text: string) => { problem.textContent = text; problem.hidden = !text; };
+  const close = el("button", { type: "button", className: "dialog-close", textContent: "×" });
+  close.setAttribute("aria-label", "Schließen");
+  close.addEventListener("click", () => dlg.close());
+  const head = el("div", { className: "dialog-head" }, el("h2", { id: "login-h", textContent: "Anmelden" }), close);
+
+  const emailStep = () => {
+    const input = el("input", { type: "email", autocomplete: "email", inputMode: "email", placeholder: "Deine E-Mail-Adresse", className: "login-input" });
+    input.setAttribute("aria-label", "E-Mail-Adresse");
+    const send = btn("Code senden", "btn-primary", () => void request(input.value, send));
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") send.click(); });
+    const google = btn("Mit Google anmelden", "btn-secondary login-google", () => { dlg.close(); void Online.signIn(); });
+    const badge = el("span", { className: "login-google-icon" });
+    badge.insertAdjacentHTML("afterbegin", GOOGLE_ICON); // a constant SVG, never user input
+    google.prepend(badge);
+    const why = el("details", { className: "login-why" }, el("summary", { textContent: "Warum anmelden?" }),
+      el("p", { textContent: "Ohne Konto bleibt alles auf diesem Gerät. Mit Anmeldung:" }),
+      el("ul", {}, ...LOGIN_BENEFITS.map((t) => el("li", { textContent: t }))));
+    dlg.replaceChildren(head,
+      el("p", { textContent: "Wir schicken Dir einen Code per E-Mail. Ein Passwort brauchst Du nicht." }),
+      input, send, problem,
+      el("p", { className: "login-or muted small", textContent: "oder" }), google, why);
+    show("");
+    input.focus();
+  };
+
+  const codeStep = (email: string) => {
+    const input = el("input", { type: "text", autocomplete: "one-time-code", inputMode: "numeric", maxLength: 12, placeholder: "6-stelliger Code", className: "login-input login-code" });
+    input.setAttribute("aria-label", "Code aus der E-Mail");
+    const done = btn("Anmelden", "btn-primary", async () => {
+      const token = cleanCode(input.value);
+      if (!token) { show("Bitte gib den 6-stelligen Code aus der E-Mail ein."); return; }
+      done.disabled = true;
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+      done.disabled = false;
+      if (error) { show(loginProblem(error).text); return; }
+      dlg.close(); // onAuthStateChange has the session and refreshes the menu
+    });
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") done.click(); });
+    const again = btn("Neuen Code anfordern", "btn-secondary", () => void request(email, again, true));
+    const other = btn("Andere E-Mail-Adresse", "btn-secondary", emailStep);
+    dlg.replaceChildren(head,
+      el("p", { textContent: `Wir haben einen Code an ${email} geschickt. Gib ihn hier ein; schau auch im Spam-Ordner nach.` }),
+      input, done, problem, el("div", { className: "btn-row login-row" }, again, other));
+    show("");
+    input.focus();
+  };
+
+  const request = async (raw: string, button: HTMLButtonElement, resend = false) => {
+    const email = cleanEmail(raw);
+    if (!email) { show("Bitte gib eine gültige E-Mail-Adresse ein."); return; }
+    button.disabled = true;
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    button.disabled = false;
+    if (error) { show(loginProblem(error).text); return; }
+    if (!resend) track("login", { provider: "email" });
+    codeStep(email);
+    if (resend) show("Ein neuer Code ist unterwegs.");
+  };
+
+  emailStep();
+  document.body.append(dlg);
+  dlg.showModal();
 }
 
 /** A small message dialog with one button, in place of alert(); resolves when it is closed (button, Escape or click outside). */

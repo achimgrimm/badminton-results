@@ -411,7 +411,19 @@ function renderAccount(): void {
     }
     // A player chosen without an account stays on this device; signed in, the account keeps it.
     if (pick) whoEl.append(block(nameLine(shownName(pick.name)), "Spieler nur auf diesem Gerät"));
-    el.append(item("Anmelden", () => void openLogin(), false, LOGIN_ICON));
+    // The explanation only appears when this item is opened, never by itself.
+    el.append(
+      item("Warum anmelden?", () => {
+        void ask({
+          title: "Warum anmelden?",
+          text: "Ohne Konto bleibt alles auf diesem Gerät. Mit Anmeldung:",
+          items: LOGIN_BENEFITS,
+          cancel: "Schließen",
+          ok: "Anmelden",
+        }).then((yes) => { if (yes) openLogin(); });
+      }, false, HELP_ICON),
+      item("Anmelden", () => openLogin(), false, LOGIN_ICON),
+    );
     return;
   }
   // With a chosen player the menu shows that player (linked to the player page); otherwise the Google name.
@@ -532,13 +544,10 @@ function openLogin(): void {
     const badge = el("span", { className: "login-google-icon" });
     badge.insertAdjacentHTML("afterbegin", GOOGLE_ICON); // a constant SVG, never user input
     google.prepend(badge);
-    const why = el("details", { className: "login-why" }, el("summary", { textContent: "Warum anmelden?" }),
-      el("p", { textContent: "Ohne Konto bleibt alles auf diesem Gerät. Mit Anmeldung:" }),
-      el("ul", {}, ...LOGIN_BENEFITS.map((t) => el("li", { textContent: t }))));
     dlg.replaceChildren(head,
       el("p", { textContent: "Wir schicken Dir einen Code per E-Mail. Ein Passwort brauchst Du nicht." }),
       input, send, problem,
-      el("p", { className: "login-or muted small", textContent: "oder" }), google, why);
+      el("p", { className: "login-or muted small", textContent: "oder" }), google);
     show("");
     input.focus();
   };

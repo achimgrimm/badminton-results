@@ -565,6 +565,8 @@ function openLogin(): void {
       dlg.close(); // onAuthStateChange has the session and refreshes the menu
     });
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") done.click(); });
+    // Typing or pasting the sixth digit checks the code right away.
+    input.addEventListener("input", () => { if (cleanCode(input.value) && !done.disabled) done.click(); });
     const again = btn("Neuen Code anfordern", "btn-secondary", () => void request(email, again, true));
     const other = btn("Andere E-Mail-Adresse", "btn-secondary", emailStep);
     dlg.replaceChildren(head,

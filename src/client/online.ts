@@ -571,7 +571,7 @@ function openLogin(): void {
     const other = btn("Andere E-Mail-Adresse", "btn-secondary", emailStep);
     dlg.replaceChildren(head,
       el("p", { textContent: `Wir haben einen Code an ${email} geschickt. Gib ihn hier ein; schau auch im Spam-Ordner nach.` }),
-      input, done, problem, el("div", { className: "btn-row login-row" }, again, other));
+      input, done, problem, again, other);
     show("");
     input.focus();
   };

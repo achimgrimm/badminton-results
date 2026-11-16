@@ -538,6 +538,8 @@ function openLogin(): void {
   const emailStep = () => {
     const input = el("input", { type: "email", autocomplete: "email", inputMode: "email", placeholder: "Deine E-Mail-Adresse", className: "login-input" });
     input.setAttribute("aria-label", "E-Mail-Adresse");
+    // Mobile keyboard with "@" and ".", no auto-capitalising or auto-correcting of the address.
+    for (const [k, v] of Object.entries({ name: "email", autocapitalize: "none", autocorrect: "off", spellcheck: "false", enterkeyhint: "send" })) input.setAttribute(k, v);
     const send = btn("Code senden", "btn-primary", () => void request(input.value, send));
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") send.click(); });
     const google = btn("Mit Google anmelden", "btn-secondary login-google", () => { dlg.close(); void Online.signIn(); });

@@ -553,7 +553,7 @@ function openLogin(): void {
   };
 
   const codeStep = (email: string) => {
-    const input = el("input", { type: "text", autocomplete: "one-time-code", inputMode: "numeric", maxLength: 12, placeholder: "6-stelliger Code", className: "login-input login-code" });
+    const input = el("input", { type: "text", autocomplete: "one-time-code", inputMode: "numeric", pattern: "[0-9]*", enterKeyHint: "done", placeholder: "6-stelliger Code", className: "login-input login-code" });
     input.setAttribute("aria-label", "Code aus der E-Mail");
     const done = btn("Anmelden", "btn-primary", async () => {
       const token = cleanCode(input.value);
@@ -566,7 +566,10 @@ function openLogin(): void {
     });
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") done.click(); });
     // Typing or pasting the sixth digit checks the code right away.
-    input.addEventListener("input", () => { if (cleanCode(input.value) && !done.disabled) done.click(); });
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/\D/g, "").slice(0, 6); // digits only, also when pasted with spaces
+      if (cleanCode(input.value) && !done.disabled) done.click();
+    });
     const again = btn("Neuen Code anfordern", "btn-secondary", () => void request(email, again, true));
     const other = btn("Andere E-Mail-Adresse", "btn-secondary", emailStep);
     dlg.replaceChildren(head,

@@ -570,7 +570,7 @@ function openLogin(): void {
     const again = btn("Neuen Code anfordern", "btn-secondary", () => void request(email, again, true));
     const other = btn("Andere E-Mail-Adresse", "btn-secondary", emailStep);
     dlg.replaceChildren(head,
-      el("p", { textContent: `Wir haben einen Code an ${email} geschickt. Gib ihn hier ein; schau auch im Spam-Ordner nach.` }),
+      el("p", {}, "Wir haben einen Code an ", el("b", { className: "login-email", textContent: email }), " geschickt. Gib ihn hier ein; schau auch im Spam-Ordner nach."),
       input, done, problem, again, other);
     show("");
     input.focus();

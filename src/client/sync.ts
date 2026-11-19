@@ -90,9 +90,9 @@ export function createSync(deps: SyncDeps) {
       { onConflict: "user_id,team_slug,season,game_key" },
     );
     if (error) return false;
-    // A cancellation after publication tells the team lead (#57); the function waits and re-checks, best effort.
+    // A cancellation or "maybe" after publication tells the team lead (#57); the function waits and re-checks, best effort.
     for (const { scope, change } of batch) {
-      if (change.state === "no") void supabase.functions.invoke("notify-cancellation", { body: { team: scope.team, season: scope.season, game: change.key } }).catch(() => {});
+      if (change.state === "no" || change.state === "maybe") void supabase.functions.invoke("notify-cancellation", { body: { team: scope.team, season: scope.season, game: change.key } }).catch(() => {});
     }
     for (const scope of scopes) {
       const synced = readSynced(uid, scope);

@@ -15,6 +15,7 @@ export function inLineup(lineup: Record<string, (string | null)[]> | null, perso
   return Object.values(lineup ?? {}).some((ps) => ps.some((p) => p != null && Number(p) === person));
 }
 
-export function cancellationText(player: string, game: string): { title: string; body: string } {
+export function cancellationText(player: string, game: string, state: "no" | "maybe" = "no"): { title: string; body: string } {
+  if (state === "maybe") return { title: `Unsicher: ${player}`.slice(0, 100), body: `${player} ist beim ${matchLabel(game)} nur noch unsicher. Die Aufstellung ist bereits veröffentlicht.` };
   return { title: `Absage: ${player}`.slice(0, 100), body: `${player} hat für das ${matchLabel(game)} abgesagt. Die Aufstellung ist bereits veröffentlicht.` };
 }

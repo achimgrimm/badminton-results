@@ -1,6 +1,6 @@
-// Sends a Web Push to the team leads when a player cancels ("no") a match whose lineup is already published (#57).
+// Sends a Web Push to the team leads when a player cancels ("no") or is unsure ("maybe") about a match whose lineup is already published (#57).
 // Called by the app after it synced a "no" (body: { team, season, game }). It waits CANCEL_DELAY_MS and only goes on
-// if the answer is still "no" and unchanged, so clicking through the states doesn't spam. Nothing is trusted from the body:
+// if the answer is still the same, so clicking through the states doesn't spam. Nothing is trusted from the body:
 // the answer, the claim and the lineup are read from the database. Recipient: the team lead who published the lineup (published_lineups.published_by).
 // Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT; Supabase URL and keys come from the platform.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -39,10 +39,10 @@ Deno.serve(async (req) => {
     .eq("user_id", me).eq("team_slug", team).eq("season", season).eq("game_key", game).maybeSingle();
 
   const first = (await answer()).data;
-  if (first?.state !== "no") return done({ sent: 0, reason: "not cancelled" });
+  if (first?.state !== "no" && first?.state !== "maybe") return done({ sent: 0, reason: "not cancelled" });
   await new Promise((r) => setTimeout(r, CANCEL_DELAY_MS));
   const row = (await answer()).data;
-  if (row?.state !== "no" || row.updated_at !== first.updated_at) return done({ sent: 0, reason: "answer changed" });
+  if (row?.state !== first.state || row.updated_at !== first.updated_at) return done({ sent: 0, reason: "answer changed" });
 
   const { data: lineup } = await db.from("published_lineups").select("lineup, published_by")
     .eq("team_slug", team).eq("season", season).eq("game_key", game).maybeSingle();
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
   if (!subs?.length) return done({ sent: 0, reason: "no push subscription for the publisher" });
 
   webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT")!, Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
-  const { title, body: msg } = cancellationText(claim.player_name, game);
+  const { title, body: msg } = cancellationText(claim.player_name, game, first.state as "no" | "maybe");
   const path = `${team}/vorschau/${game}.html`;
   let sent = 0, failed = 0;
   const gone: string[] = [];

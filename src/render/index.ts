@@ -2,9 +2,10 @@ import { storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle } from "./components.ts";
+import { mineScript } from "./mine.ts";
 import { layout } from "./layout.ts";
 import { ownPlayers, pickablePlayers } from "./spieler.ts";
-import { esc, formatDate, html, involvesOwn, isOwn, postponedLabel, previewHref, todayInBremen } from "./util.ts";
+import { esc, formatDate, html, involvesOwn, isOwn, postponedLabel, previewHref, previewName, todayInBremen } from "./util.ts";
 
 const ME_HINT_KEY = storageKey("meHintDismissed");
 
@@ -78,6 +79,7 @@ function nextHero(d: Dataset, m: Meeting, i: number, today: string): string {
     ${m.hall ? `<div>${esc(m.hall.name ?? m.hall.code)}</div>` : ""}
     ${m.hall?.location ? `<div class="small">${hallAddress(d.halls[m.hall.location])}</div>` : ""}
     ${m.postponed ? `<p class="small"><span class="badge">${esc(postponedLabel(m))}</span></p>` : ""}
+    <p class="pub-mine" data-game="${esc(previewName(m))}" hidden></p>
     <div class="btn-row">
       <a class="btn btn-on-dark" href="${previewHref("", m)}">Zur Vorschau</a>
       ${playToggle(m, "hero")}
@@ -144,5 +146,5 @@ export function renderIndex(d: Dataset, now: Date): string {
     ${matchList("more", "Weitere Spiele", more, upcoming.length < 2)}
   </div>`;
 
-  return layout({ title: "Übersicht", root: "", nav: "index", checkedAt: d.meta.checkedAt, body, script: PERSONAL });
+  return layout({ title: "Übersicht", root: "", nav: "index", checkedAt: d.meta.checkedAt, body, script: PERSONAL + "\n" + mineScript(d) });
 }

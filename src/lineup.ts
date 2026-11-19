@@ -289,3 +289,20 @@ export const SUGGEST_LINEUP = `function suggestLineup(games, history, genders, b
   }
   return out.map(function (g) { return g.persons; });
 }`;
+
+/**
+ * Client-side "my position" text as JS source, shared by the preview page and the overview hero.
+ * myPosition(lineup, me, names, disciplines): lineup = { discipline: [person|null, …] }, me = { person } or null,
+ * names = { person: "Name" }, disciplines = order to list; returns { text, out } (out = not in the lineup).
+ */
+export const MY_POSITION = `function myPosition(lineup, me, names, order) {
+  if (!me) return { text: "Wähle Deinen Spieler, dann siehst Du hier Deine Position.", out: false };
+  var slots = [];
+  order.forEach(function (d) {
+    var list = lineup[d];
+    if (!list || list.indexOf(String(me.person)) < 0) return;
+    var mates = list.filter(function (p) { return p && String(p) !== String(me.person); }).map(function (p) { return names[p] || "Person " + p; });
+    slots.push(d + (mates.length ? " mit " + mates.join(" / ") : ""));
+  });
+  return slots.length ? { text: "Du spielst: " + slots.join(", ") + ".", out: false } : { text: "Du spielst in dieser Begegnung nicht.", out: true };
+}`;

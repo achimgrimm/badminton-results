@@ -2,7 +2,7 @@ import { STATUS_BADGE, STATUS_LABEL } from "../answers.ts";
 import { VERIFIED_ICON } from "../icons.ts";
 import { SEASON_KEY, storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
-import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, probableOpponents, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
+import { disciplines, kind, LINEUP_ISSUES, lineupHistory, lineupPlayers, MY_POSITION, probableOpponents, requiredGender, slots, SUGGEST_LINEUP } from "../lineup.ts";
 import { headToHead, lineup, teamForm, type DisciplineLineup, type Tally } from "../stats.ts";
 import type { Meeting } from "../types.ts";
 import { hallAddress, matchCard, playToggle, teamLogo } from "./components.ts";
@@ -16,6 +16,7 @@ import { displayName, esc, formatDate, html, isOwn, opponentOf, outcomeBadge, ou
  */
 const LINEUP = (key: string, game: { team: string; season: string; game: string; match: string; path: string }) => `(function () {
   ${LINEUP_ISSUES}
+  ${MY_POSITION}
   ${SUGGEST_LINEUP}
   var KEY = "${key}", root = document.getElementById("lineup");
   var rows = Array.prototype.slice.call(root.querySelectorAll(".lineup-row"));
@@ -225,9 +226,12 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
         : "Veröffentlicht am " + when(published.at) + (samePublished() ? "." : ". Dein Entwurf weicht ab, veröffentliche ihn erneut.");
     }
     if (!pub) return;
+    renderMine();
+    /* Team leads have the editor: they don't get the read-only list. */
     pub.hidden = !session || canWrite;
     if (pub.hidden) return;
-    var body = pub.querySelector(".pub-body"), meta = pub.querySelector(".pub-meta"), me = window.otMe && otMe.get();
+    var me = window.otMe && otMe.get();
+    var body = pub.querySelector(".pub-body"), meta = pub.querySelector(".pub-meta");
     body.innerHTML = "";
     if (!published) { meta.textContent = pubLoading ? "Lädt …" : published === null ? "Noch keine Aufstellung veröffentlicht." : "Die Aufstellung konnte nicht geladen werden."; return; }
     meta.textContent = "Veröffentlicht am " + when(published.at) + " (nur lesen).";
@@ -239,6 +243,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
       tag.className = "badge badge--primary";
       tag.textContent = r.dataset.discipline;
       who.className = "pub-who";
+      if (me && list.indexOf(String(me.person)) >= 0) row.classList.add("pub-mine-row");
       list.forEach(function (p, i) {
         var s = document.createElement("span");
         s.textContent = p ? (names[p] || "Person " + p) : "offen";
@@ -252,6 +257,16 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
       if (opp) row.appendChild(opp.cloneNode(true)); /* the opponent's usual players, as in the editor */
       body.appendChild(row);
     });
+  }
+  /* The own position sits in the hero box at the top of the page, for everyone signed in once a lineup is published. */
+  function renderMine() {
+    var mine = document.querySelector(".pub-mine");
+    if (!mine) return;
+    mine.hidden = !session || !published;
+    if (mine.hidden) return;
+    var res = myPosition(published.lineup, window.otMe && otMe.get(), names, rows.map(function (r) { return r.dataset.discipline; }));
+    mine.classList.toggle("pub-mine--out", res.out);
+    mine.textContent = res.text;
   }
   var pubLoading = false;
   function loadPublished() {
@@ -293,6 +308,9 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
     root.addEventListener("change", renderPublished);
   }
   renderPublished();
+  /* Picking or clearing the player (menu or account sync) refreshes the own position. */
+  var prevPlaying = window.otPlayingRender;
+  window.otPlayingRender = function () { if (prevPlaying) prevPlaying(); renderPublished(); };
 
   /* The statuses come from the account (team leads only); without them everything works as before. */
   var loading = false;
@@ -545,6 +563,7 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
       <div class="vs">${home ? "<b>Heim</b> gegen" : "<b>Auswärts</b> bei"} ${teamLogo(d.clubs, opponent, "../../")}${esc(opponent)}</div>
       ${m.postponed ? `<p class="small"><span class="badge">${esc(postponedLabel(m))}</span></p>` : ""}
       ${heroFacts}
+      ${editor ? `<p class="pub-mine" hidden></p>` : ""}
       <div class="btn-row">${playToggle(m, "hero")}</div>
     </section>
 

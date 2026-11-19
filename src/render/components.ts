@@ -26,6 +26,8 @@ export interface MatchCardOptions {
   toggle?: boolean;
   /** Clubs with their logos; given, each team name gets its club's logo (the Spielplan). */
   clubs?: Club[];
+  /** Upcoming own matches show the player's position in the published lineup (see mineScript in lineup.ts). */
+  position?: boolean;
 }
 
 /** A meeting as a card: teams stacked, score or time on the right. */
@@ -57,7 +59,7 @@ export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {})
 
   // The selected team's results can be flagged "Neu" on the device (see NEW_RESULTS in layout.ts).
   const markable = own && played;
-  const inner = html`<div class="card-meta"><span>${meta.join(" · ")}</span>${badges || own ? `<span class="badges">${badges}</span>` : ""}</div>${body}`;
+  const inner = html`<div class="card-meta"><span>${meta.join(" · ")}</span>${badges || own ? `<span class="badges">${badges}</span>` : ""}</div>${body}${opts.position && own && !played ? `<p class="pub-mine pub-mine--card" data-game="${esc(previewName(m))}" hidden></p>` : ""}`;
   const cls = `card match-card${own ? " is-own" : ""}`;
   const key = (markable
     ? ` data-result-key="${esc(resultKey(m))}" data-result-text="${esc(`${m.home} ${h}:${g} ${m.guest}`)}" data-result-date="${esc(formatDate(m.date))}"`

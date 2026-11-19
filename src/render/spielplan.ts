@@ -2,6 +2,7 @@ import type { Dataset } from "../data.ts";
 import type { Meeting } from "../types.ts";
 import { matchCard } from "./components.ts";
 import { CLUB_NAME, storageKey } from "../config.ts";
+import { mineScript } from "./mine.ts";
 import { layout, SHARE_BTN_ICON } from "./layout.ts";
 import { esc, formatDate, html, involvesOwn, todayInBremen } from "./util.ts";
 
@@ -93,7 +94,7 @@ export function renderSpielplan(d: Dataset, now: Date): string {
     const cls = ["day", meetings.some(involvesOwn) && "has-own", date >= today && "upcoming"].filter(Boolean).join(" ");
     return html`<section class="${cls}">
         <h2${date === today ? ' class="is-today"' : ""}>${esc(formatDate(date, true))}${date === today ? " · Heute" : ""}</h2>
-        ${meetings.map((m) => matchCard(m, "", { pending: !m.result && m.date < today, toggle: true, clubs: d.clubs }))}
+        ${meetings.map((m) => matchCard(m, "", { pending: !m.result && m.date < today, toggle: true, clubs: d.clubs, position: true }))}
       </section>`;
   });
 
@@ -118,5 +119,5 @@ export function renderSpielplan(d: Dataset, now: Date): string {
     ${days}
   `;
 
-  return layout({ title: "Spielplan", root: "", nav: "spielplan", checkedAt: d.meta.checkedAt, body, script: SCRIPT + CALENDAR });
+  return layout({ title: "Spielplan", root: "", nav: "spielplan", checkedAt: d.meta.checkedAt, body, script: SCRIPT + CALENDAR + "\n" + mineScript(d) });
 }

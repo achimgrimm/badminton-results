@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     .eq("team_slug", team).eq("season", season).eq("game_key", game).maybeSingle();
   if (!lineup) return done({ sent: 0, reason: "no published lineup" });
   const { data: claim } = await db.from("player_claims").select("person, player_name")
-    .eq("user_id", me).eq("team_slug", team).eq("season", season).eq("status", "approved").maybeSingle();
+    .eq("user_id", me).eq("status", "approved").maybeSingle();
   if (!claim || !inLineup(lineup.lineup, claim.person)) return done({ sent: 0, reason: "not in lineup" });
 
   // Claim first: a retry can't send twice.

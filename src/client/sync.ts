@@ -90,6 +90,10 @@ export function createSync(deps: SyncDeps) {
       { onConflict: "user_id,team_slug,season,game_key" },
     );
     if (error) return false;
+    // A cancellation after publication tells the team lead (#57); the function waits and re-checks, best effort.
+    for (const { scope, change } of batch) {
+      if (change.state === "no") void supabase.functions.invoke("notify-cancellation", { body: { team: scope.team, season: scope.season, game: change.key } }).catch(() => {});
+    }
     for (const scope of scopes) {
       const synced = readSynced(uid, scope);
       for (const { scope: s, change } of batch) if (scopeId(s) === scopeId(scope)) synced[change.key] = change.at;

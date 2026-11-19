@@ -37,6 +37,7 @@ jobs:
           npx --no-install supabase functions deploy notify-new-user --remote="$PROJECT_REF" --yes
           npx --no-install supabase functions deploy notify-results --remote="$PROJECT_REF" --yes
           npx --no-install supabase functions deploy notify-reminders --remote="$PROJECT_REF" --yes
+          npx --no-install supabase functions deploy notify-cancellation --remote="$PROJECT_REF" --yes
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           PROJECT_REF: jfsjjkfrhkaothradjiy

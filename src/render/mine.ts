@@ -1,4 +1,4 @@
-import { SEASON_KEY } from "../config.ts";
+import { SEASON_KEY, storageKey } from "../config.ts";
 import type { Dataset } from "../data.ts";
 import { disciplines, lineupPlayers, MY_POSITION } from "../lineup.ts";
 import { displayName } from "./util.ts";
@@ -10,7 +10,7 @@ export function mineScript(d: Dataset): string {
   for (const s of lineupPlayers(d)) for (const p of s.players) names[p.person] = displayName(p.name);
   return `(function () {
   ${MY_POSITION}
-  var NAMES = ${JSON.stringify(names)}, ORDER = ${JSON.stringify(disciplines(d))}, TEAM = ${JSON.stringify(d.own.slug)}, SEASON = ${JSON.stringify(SEASON_KEY)};
+  var NAMES = ${JSON.stringify(names)}, ORDER = ${JSON.stringify(disciplines(d))}, TEAM = ${JSON.stringify(d.own.slug)}, SEASON = ${JSON.stringify(SEASON_KEY)}, PLAY_KEY = ${JSON.stringify(storageKey(`playing-${d.own.slug}-${SEASON_KEY}`))};
   var boxes = Array.prototype.slice.call(document.querySelectorAll(".pub-mine[data-game]")), session = null, lineups = {};
   function render() {
     var me = window.otMe && otMe.get();
@@ -18,8 +18,9 @@ export function mineScript(d: Dataset): string {
       var l = session && lineups[box.dataset.game];
       box.hidden = !l;
       if (!l) return;
-      var res = myPosition(l, me, NAMES, ORDER);
+      var res = myPosition(l, me, NAMES, ORDER, myAnswer(PLAY_KEY, box.dataset.game));
       box.classList.toggle("pub-mine--out", res.out);
+      box.classList.toggle("pub-mine--warn", res.warn);
       box.textContent = res.text;
     });
   }

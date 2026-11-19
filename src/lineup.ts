@@ -295,8 +295,15 @@ export const SUGGEST_LINEUP = `function suggestLineup(games, history, genders, b
  * myPosition(lineup, me, names, disciplines): lineup = { discipline: [person|null, …] }, me = { person } or null,
  * names = { person: "Name" }, disciplines = order to list; returns { text, out } (out = not in the lineup).
  */
-export const MY_POSITION = `function myPosition(lineup, me, names, order) {
-  if (!me) return { text: "Wähle Deinen Spieler, dann siehst Du hier Deine Position.", out: false };
+export const MY_POSITION = `function myAnswer(playKey, game) {
+  try {
+    var raw = JSON.parse(localStorage.getItem(playKey) || "{}");
+    if (Array.isArray(raw)) return raw.indexOf(game) >= 0 ? "yes" : "";
+    return raw && (raw[game] === "yes" || raw[game] === "maybe" || raw[game] === "no") ? raw[game] : "";
+  } catch (e) { return ""; }
+}
+function myPosition(lineup, me, names, order, answer) {
+  if (!me) return { text: "Wähle Deinen Spieler, dann siehst Du hier Deine Position.", out: false, warn: false };
   var slots = [];
   order.forEach(function (d) {
     var list = lineup[d];
@@ -304,5 +311,9 @@ export const MY_POSITION = `function myPosition(lineup, me, names, order) {
     var mates = list.filter(function (p) { return p && String(p) !== String(me.person); }).map(function (p) { return names[p] || "Person " + p; });
     slots.push(d + (mates.length ? " mit " + mates.join(" / ") : ""));
   });
-  return slots.length ? { text: "Du spielst: " + slots.join(", ") + ".", out: false } : { text: "Du spielst in dieser Begegnung nicht.", out: true };
+  if (!slots.length) return { text: "Du spielst in dieser Begegnung nicht.", out: true, warn: false };
+  var text = "Du spielst: " + slots.join(", ") + ".";
+  if (answer === "yes") return { text: text, out: false, warn: false };
+  var why = answer === "maybe" ? "Du hast nur „Vielleicht“ angegeben" : answer === "no" ? "Du hast „Kann nicht“ angegeben" : "Du hast noch nicht zugesagt";
+  return { text: text + " " + why + ": Bitte bestätige Dein Spiel.", out: false, warn: true };
 }`;

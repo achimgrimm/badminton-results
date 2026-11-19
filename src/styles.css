@@ -367,6 +367,7 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .pub-mine { margin: 12px 0 0; padding: 8px 12px; border-radius: 5px; background: rgba(255, 255, 255, .14); border-left: 4px solid #fff; font-weight: 600; }
 .pub-mine--card { margin: 8px 0 0; background: rgba(10, 64, 159, .08); border-left-color: var(--ot-primary); font-size: .875rem; }
 .pub-mine--card.pub-mine--out { background: none; color: var(--ot-text-muted); border-left-color: var(--ot-border); }
+.pub-mine--warn, .pub-mine--card.pub-mine--warn { background: var(--ot-warning-bg); color: var(--ot-warning); border-left-color: var(--ot-warning); opacity: 1; font-weight: 600; }
 .pub-mine[hidden] { display: none; }
 .pub-mine--out { border-left-color: rgba(255, 255, 255, .4); font-weight: 400; opacity: .85; }
 .lineup-row.pub-mine-row { background: rgba(10, 64, 159, .06); }

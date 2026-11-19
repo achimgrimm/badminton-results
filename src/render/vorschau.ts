@@ -14,7 +14,7 @@ import { displayName, esc, formatDate, html, isOwn, opponentOf, outcomeBadge, ou
  * Lineup editor: one select per player slot, stored per match on the device as { discipline: [person, …] }
  * (saved on every change, errors or not). Warnings come from lineupIssues; sharing sends plain text.
  */
-const LINEUP = (key: string, game: { team: string; season: string; game: string; match: string; path: string }) => `(function () {
+const LINEUP = (key: string, game: { team: string; season: string; game: string; play: string; match: string; path: string }) => `(function () {
   ${LINEUP_ISSUES}
   ${MY_POSITION}
   ${SUGGEST_LINEUP}
@@ -264,8 +264,9 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
     if (!mine) return;
     mine.hidden = !session || !published;
     if (mine.hidden) return;
-    var res = myPosition(published.lineup, window.otMe && otMe.get(), names, rows.map(function (r) { return r.dataset.discipline; }));
+    var res = myPosition(published.lineup, window.otMe && otMe.get(), names, rows.map(function (r) { return r.dataset.discipline; }), myAnswer(GAME.play, GAME.game));
     mine.classList.toggle("pub-mine--out", res.out);
+    mine.classList.toggle("pub-mine--warn", res.warn);
     mine.textContent = res.text;
   }
   var pubLoading = false;
@@ -309,8 +310,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
   }
   renderPublished();
   /* Picking or clearing the player (menu or account sync) refreshes the own position. */
-  var prevPlaying = window.otPlayingRender;
-  window.otPlayingRender = function () { if (prevPlaying) prevPlaying(); renderPublished(); };
+  document.addEventListener("ot-playing", renderMine);
 
   /* The statuses come from the account (team leads only); without them everything works as before. */
   var loading = false;
@@ -599,5 +599,5 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
         }</p>`}
   `;
 
-  return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: "spielplan", back: { href: `${root}spielplan.html`, label: "Spielplan" }, checkedAt: d.meta.checkedAt, body, script: LINEUP(storageKey(`lineup-${d.own.slug}-${SEASON_KEY}-${previewName(m)}`), { team: d.own.slug, season: SEASON_KEY, game: previewName(m), match: `${m.home} – ${m.guest}`, path: `${d.own.slug}/vorschau/${previewName(m)}.html` }) });
+  return layout({ title: `Vorschau ${m.home} – ${m.guest}`, root, nav: "spielplan", back: { href: `${root}spielplan.html`, label: "Spielplan" }, checkedAt: d.meta.checkedAt, body, script: LINEUP(storageKey(`lineup-${d.own.slug}-${SEASON_KEY}-${previewName(m)}`), { team: d.own.slug, season: SEASON_KEY, game: previewName(m), play: storageKey(`playing-${d.own.slug}-${SEASON_KEY}`), match: `${m.home} – ${m.guest}`, path: `${d.own.slug}/vorschau/${previewName(m)}.html` }) });
 }

@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
   if (!claimed?.length) return done({ sent: 0, reason: "already sent" });
 
   // Only the team lead who published the lineup hears of it.
-  const ids = lineup.published_by && lineup.published_by !== me ? [lineup.published_by as string] : [];
+  const ids = lineup.published_by ? [lineup.published_by as string] : [];
   if (!ids.length) return done({ sent: 0, reason: "no publisher to notify" });
   const { data: subs } = await db.from("push_subscriptions").select("id, endpoint, p256dh, auth").in("user_id", ids);
   if (!subs?.length) return done({ sent: 0, reason: "no push subscription for the publisher" });

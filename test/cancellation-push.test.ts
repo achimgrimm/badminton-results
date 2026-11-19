@@ -26,3 +26,13 @@ test("cancellationText for maybe", () => {
   assert.equal(t.title, "Unsicher: Max M.");
   assert.match(t.body, /nur noch unsicher/);
 });
+
+test("matchLabel uses the app's match name as it is", () => {
+  assert.equal(matchLabel("SV Foo – SV Bar"), "Spiel SV Foo – SV Bar");
+});
+
+test("cancellationText shows the player as 'Vorname Nachname'", () => {
+  const t = cancellationText("Böse, Frank", "SV Foo – SV Bar");
+  assert.equal(t.title, "Absage: Frank Böse");
+  assert.match(t.body, /Frank Böse hat für das Spiel SV Foo – SV Bar abgesagt/);
+});

@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
   const row = (await answer()).data;
   if (row?.state !== first.state || row.updated_at !== first.updated_at) return done({ sent: 0, reason: "answer changed" });
 
-  const { data: lineup } = await db.from("published_lineups").select("lineup, published_by")
+  const { data: lineup } = await db.from("published_lineups").select("lineup, published_by, match_label")
     .eq("team_slug", team).eq("season", season).eq("game_key", game).maybeSingle();
   if (!lineup) return done({ sent: 0, reason: "no published lineup" });
   const { data: claim } = await db.from("player_claims").select("person, player_name")
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
   if (!subs?.length) return done({ sent: 0, reason: "no push subscription for the publisher" });
 
   webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT")!, Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
-  const { title, body: msg } = cancellationText(claim.player_name, game, first.state as "no" | "maybe");
+  const { title, body: msg } = cancellationText(claim.player_name, lineup.match_label ?? game, first.state as "no" | "maybe");
   const path = `${team}/vorschau/${game}.html`;
   let sent = 0, failed = 0;
   const gone: string[] = [];

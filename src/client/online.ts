@@ -208,7 +208,7 @@ export const Online = {
     if (!state.session || !state.permissions.has("lineup.write")) return false;
     try {
       const { error } = await supabase.from("published_lineups").upsert(
-        { team_slug: team, season, game_key: gameKey, lineup, published_by: state.session.user.id, published_at: new Date().toISOString() },
+        { team_slug: team, season, game_key: gameKey, lineup, published_by: state.session.user.id, published_at: new Date().toISOString(), match_label: notify?.match ?? null },
         { onConflict: "team_slug,season,game_key" },
       );
       // Tell the affected players by push (best effort: the lineup is published either way).

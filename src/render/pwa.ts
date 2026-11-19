@@ -11,7 +11,7 @@ export function renderManifest(): string {
       id: "./",
       name: STAGE ? `${CLUB_NAME} Badminton (Test: ${STAGE})` : `${CLUB_NAME} Badminton`,
       short_name: APP_SHORT_NAME,
-      description: `Tabellen, Spielpläne, Spielberichte und Spielerstatistiken aller ${CLUB_NAME}-Mannschaften`,
+      description: `Tabellen, Spielpläne, Spielberichte und Statistiken der Spielenden aller ${CLUB_NAME}-Mannschaften`,
       lang: "de",
       // The chooser at the root forwards to the last selected team.
       start_url: "./",

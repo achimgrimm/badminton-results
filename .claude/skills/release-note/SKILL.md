@@ -7,6 +7,8 @@ description: Write a release note for this project (release-notes/*.md) and tag 
 
 Notes live in `release-notes/YYYY-MM-DD-<slug>.md` (today's date, lowercase slug with dashes). See README "Release notes" for how they are shown.
 
+Write in gender-neutral German ("Spielende", "Mannschaftsführung", "Admin", "Personen").
+
 ## 1. Decide whether a note is needed
 
 Small tweaks get no note. If an unreleased note for the same feature exists, extend it instead of adding a new one (one note per feature).

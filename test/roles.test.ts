@@ -4,8 +4,8 @@ import { canRevokeRole, roleLabel, sortUsers } from "../src/roles.ts";
 
 test("roleLabel picks the strongest role", () => {
   assert.equal(roleLabel(["member"]), "Mitglied");
-  assert.equal(roleLabel(["member", "team_lead"]), "Mannschaftsführer");
-  assert.equal(roleLabel(["team_lead", "admin", "member"]), "Administrator");
+  assert.equal(roleLabel(["member", "team_lead"]), "Mannschaftsführung");
+  assert.equal(roleLabel(["team_lead", "admin", "member"]), "Admin");
   assert.equal(roleLabel([]), null);
   assert.equal(roleLabel(["unknown"]), null);
 });
@@ -24,8 +24,8 @@ test("canRevokeRole mirrors the database guards", () => {
 });
 
 test("roleLabel: player ranks between team lead and member", () => {
-  assert.equal(roleLabel(["member", "player"]), "Spieler");
-  assert.equal(roleLabel(["member", "player", "team_lead"]), "Mannschaftsführer");
+  assert.equal(roleLabel(["member", "player"]), "Spielende");
+  assert.equal(roleLabel(["member", "player", "team_lead"]), "Mannschaftsführung");
 });
 
 test("sortUsers falls back to the login name, then the email", () => {

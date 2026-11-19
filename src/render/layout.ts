@@ -32,7 +32,7 @@ const NAV: { key: Exclude<NavKey, null>; href: string; label: string }[] = [
   { key: "index", href: "index.html", label: "Übersicht" },
   { key: "tabelle", href: "tabelle.html", label: "Tabelle" },
   { key: "spielplan", href: "spielplan.html", label: "Spielplan" },
-  { key: "spieler", href: "spieler.html", label: "Spieler" },
+  { key: "spieler", href: "spieler.html", label: "Spielende" },
 ];
 
 const THEME_KEY = storageKey("theme");
@@ -779,7 +779,7 @@ ${o.body}
 <footer class="site-footer">
   <div class="container">
     <p>Inoffizielle Ansicht. Daten: <a href="${esc(o.sourceUrl ?? (team ? urls.groupPage(team) : urls.clubTeams()))}">nuLiga</a> / Bremer Badminton-Verband.</p>
-    ${TRACKING ? `<p>Anonyme Nutzungsstatistik mit Umami, ohne Cookies und ohne persönliche Daten. Erfasst wird auch, ob die App installiert ist, ob ein Team und ein Spieler gewählt sind und ob Angaben lokal oder im Konto liegen (nur Ja/Nein, keine Namen).</p>` : ""}
+    ${TRACKING ? `<p>Anonyme Nutzungsstatistik mit Umami, ohne Cookies und ohne persönliche Daten. Erfasst wird auch, ob die App installiert ist, ob ein Team und ein Name gewählt sind und ob Angaben lokal oder im Konto liegen (nur Ja/Nein, keine Namen).</p>` : ""}
     ${footerStatus(o.checkedAt)}
     <p><a href="${assets}datenschutz.html">Datenschutz</a></p>
   </div>

@@ -27,7 +27,7 @@ export function ownPlayers(d: Dataset): PlayerPage[] {
   });
 }
 
-/** The players another team fielded, for the "Spieler des Gegners" pages (gegner/<team>/<player>.html). */
+/** The players another team fielded, for the "Spielende der Gegenseite" pages (gegner/<team>/<player>.html). */
 export function opponentPlayers(d: Dataset, team: string): PlayerPage[] {
   const reports = Object.values(d.reports).filter((r) => r.home === team || r.guest === team);
   const taken = new Set<string>();
@@ -88,7 +88,7 @@ function mePicker(players: RosterEntry[]): string {
       <div class="me-body">
         <h2>Wer bist Du?</h2>
         <p>Wähle Deinen Namen über das Menü oben rechts, dann hebt die App Deine Spiele hervor.</p>
-        <p class="small me-hint" id="me-hint" hidden>Ohne Anmeldung bleibt Deine Auswahl auf diesem Gerät. Angemeldet wird sie mit Deinem Konto gespeichert und, sobald ein Mannschaftsführer sie bestätigt hat, auf allen Deinen Geräten übernommen.</p>
+        <p class="small me-hint" id="me-hint" hidden>Ohne Anmeldung bleibt Deine Auswahl auf diesem Gerät. Angemeldet wird sie mit Deinem Konto gespeichert und, sobald die Mannschaftsführung sie bestätigt hat, auf allen Deinen Geräten übernommen.</p>
       </div>
     </section>
     <dialog class="team-dialog me-dialog" id="me-dialog" aria-labelledby="me-dialog-h">
@@ -169,7 +169,7 @@ export function playerCard(s: PlayerStats, href: string, genders?: Map<number, G
 export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
   const genders = playerGenders(d);
   const body = html`
-    <h1 class="visually-hidden">Spieler</h1>
+    <h1 class="visually-hidden">Spielende</h1>
     ${mePicker([...rosterEntries()].sort(byName))}
     <p class="small muted">Alle Einsätze für ${esc(d.own.name)} in dieser Saison, aus den Spielberichten.</p>
     ${pages.length
@@ -178,7 +178,7 @@ export function renderSpielerListe(d: Dataset, pages: PlayerPage[]): string {
         ).join("")}</div>`
       : `<p class="muted">Noch keine Spielberichte.</p>`}
   `;
-  return layout({ title: "Spieler", root: "", nav: "spieler", checkedAt: d.meta.checkedAt, noindex: true, body });
+  return layout({ title: "Spielende", root: "", nav: "spieler", checkedAt: d.meta.checkedAt, noindex: true, body });
 }
 
 /** Where an opponent's player page sits and where it leads back to (the match preview). */
@@ -195,7 +195,7 @@ export function renderSpieler(d: Dataset, { stats: s, slug }: PlayerPage, oppone
   const body = html`
     <h1${s.person != null && !opponent ? ` data-person="${s.person}"` : ""}>${esc(displayName(s.name))}</h1>
     ${gender ? `<p class="small muted">${GENDER_LABEL[gender]}</p>` : ""}
-    ${opponent ? `<p class="small muted">Spieler von ${esc(s.team)}</p>` : ""}
+    ${opponent ? `<p class="small muted">Spielende von ${esc(s.team)}</p>` : ""}
     ${s.person != null && !opponent
       ? html`<div class="btn-row"><button type="button" class="btn btn-secondary me-toggle" data-person="${s.person}" data-name="${esc(s.name)}" data-href="spieler/${esc(slug)}.html" aria-pressed="false">${CHECK}<span>Das bin ich</span></button></div>`
       : ""}
@@ -248,5 +248,5 @@ export function renderSpieler(d: Dataset, { stats: s, slug }: PlayerPage, oppone
     ${groupByMeeting(s.log).map((games) => meetingLog(games, root))}
   `;
 
-  return layout({ title: displayName(s.name), root, nav: opponent ? "spielplan" : "spieler", back: opponent?.back ?? { href: `${root}spieler.html`, label: "Spieler" }, checkedAt: d.meta.checkedAt, noindex: true, body });
+  return layout({ title: displayName(s.name), root, nav: opponent ? "spielplan" : "spieler", back: opponent?.back ?? { href: `${root}spieler.html`, label: "Spielende" }, checkedAt: d.meta.checkedAt, noindex: true, body });
 }

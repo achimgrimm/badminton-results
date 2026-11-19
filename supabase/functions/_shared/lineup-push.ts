@@ -46,6 +46,6 @@ export function noticeText(n: Notice, match: string): { title: string; body: str
 /** The publisher's own confirmation when they are not placed in the lineup: how many players were notified. */
 export function confirmText(match: string, notified: number): { title: string; body: string } {
   const title = `Aufstellung ${match}`.slice(0, 100);
-  const who = notified === 0 ? "Niemand wurde neu benachrichtigt" : notified === 1 ? "1 Spieler wurde benachrichtigt" : `${notified} Spieler wurden benachrichtigt`;
+  const who = notified === 0 ? "Niemand wurde neu benachrichtigt" : notified === 1 ? "1 Person wurde benachrichtigt" : `${notified} Personen wurden benachrichtigt`;
   return { title, body: `Aufstellung veröffentlicht. ${who}.` };
 }

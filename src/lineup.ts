@@ -128,7 +128,7 @@ export function lineupPlayers(d: Dataset): LineupSection[] {
 export const LINEUP_ISSUES = `function lineupIssues(games, names, genders) {
   var per = {}, out = [];
   genders = genders || {};
-  function name(p) { return names[p] || "Spieler " + p; }
+  function name(p) { return names[p] || "Person " + p; }
   games.forEach(function (g) {
     var seen = {};
     g.persons.forEach(function (p) {

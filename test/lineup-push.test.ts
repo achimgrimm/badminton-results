@@ -28,6 +28,6 @@ test("texts say what happened", () => {
 
 test("publisher confirmation tells how many players were notified", () => {
   assert.equal(confirmText("X", 0).body, "Aufstellung veröffentlicht. Niemand wurde neu benachrichtigt.");
-  assert.equal(confirmText("X", 1).body, "Aufstellung veröffentlicht. 1 Spieler wurde benachrichtigt.");
-  assert.equal(confirmText("X", 5).body, "Aufstellung veröffentlicht. 5 Spieler wurden benachrichtigt.");
+  assert.equal(confirmText("X", 1).body, "Aufstellung veröffentlicht. 1 Person wurde benachrichtigt.");
+  assert.equal(confirmText("X", 5).body, "Aufstellung veröffentlicht. 5 Personen wurden benachrichtigt.");
 });

@@ -22,7 +22,7 @@ const FORWARD = `(function () {
 export function renderChooser(teams: ClubTeam[], standings: Map<string, Standing | undefined>, nextMatches: Map<string, Meeting | undefined>, checkedAt: string | null): string {
   const body = html`
     <h1>Mannschaft wählen</h1>
-    <p class="small muted">Tabellen, Spielpläne, Spielberichte und Spielerstatistiken aller ${esc(CLUB_NAME)}-Mannschaften in der Saison ${esc(SEASON_LABEL)}. Deine Auswahl wird gemerkt.</p>
+    <p class="small muted">Tabellen, Spielpläne, Spielberichte und Statistiken der Spielenden aller ${esc(CLUB_NAME)}-Mannschaften in der Saison ${esc(SEASON_LABEL)}. Deine Auswahl wird gemerkt.</p>
     ${teamGroups(teams).map(
       ([heading, list]) => html`<h2>${heading}</h2>
         ${list.map((t) => {

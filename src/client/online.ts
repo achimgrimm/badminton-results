@@ -410,7 +410,7 @@ function renderAccount(): void {
       return;
     }
     // A player chosen without an account stays on this device; signed in, the account keeps it.
-    if (pick) whoEl.append(block(nameLine(shownName(pick.name)), "Spieler nur auf diesem Gerät"));
+    if (pick) whoEl.append(block(nameLine(shownName(pick.name)), "Nur auf diesem Gerät"));
     // The explanation only appears when this item is opened, never by itself.
     el.append(
       item("Warum anmelden?", () => {
@@ -436,17 +436,17 @@ function renderAccount(): void {
     const claim = state.claim;
     // A confirmed player is shown by the check mark next to the name, so only the waiting state needs words.
     const waiting = pick && claim?.person === pick.person && claim.status !== "approved";
-    if (!pick) lines.push(state.notAPlayer ? "Kein aktiver Spieler" : "Kein Spieler gewählt");
-    else if (waiting) lines.push("Spieler wartet auf Bestätigung");
+    if (!pick) lines.push(state.notAPlayer ? "Nicht aktiv" : "Keine Person gewählt");
+    else if (waiting) lines.push("Wartet auf Bestätigung");
   }
   const who = block(pick ? nameLine(shownName(pick.name)) : nameLine(accountName), ...lines);
   // A check mark next to the name tells that the chosen player is confirmed.
   if (pick && approved?.status === "approved" && approved.person === pick.person) {
     const mark = document.createElement("span");
     mark.className = "verified";
-    mark.title = "Spieler bestätigt";
+    mark.title = "Bestätigt";
     mark.setAttribute("role", "img");
-    mark.setAttribute("aria-label", "Spieler bestätigt");
+    mark.setAttribute("aria-label", "Bestätigt");
     mark.insertAdjacentHTML("afterbegin", VERIFIED_ICON); // a constant SVG, never user input
     who.firstElementChild?.after(" ", mark);
   }
@@ -501,9 +501,9 @@ function notificationItem(item: (text: string, onClick: () => void, danger?: boo
 }
 
 const LOGIN_BENEFITS = [
-  "Deine Spielerwahl und „Ich spiele“-Antworten gelten auf allen Geräten.",
-  "Du siehst die Aufstellung vom Mannschaftsführer.",
-  "Dein Mannschaftsführer sieht bei der Planung Deinen „Ich spiele“-Status.",
+  "Deine Namenswahl und „Ich spiele“-Antworten gelten auf allen Geräten.",
+  "Du siehst die Aufstellung der Mannschaftsführung.",
+  "Deine Mannschaftsführung sieht bei der Planung Deinen „Ich spiele“-Status.",
   "Du bekommst eine Benachrichtigung, wenn Deine Aufstellung veröffentlicht oder geändert wird.",
   "Du bekommst 24 Stunden vor einem Spiel, bei dem Du „Ich spiele“ gewählt hast, eine Erinnerung.",
   "Du kannst Mannschaften folgen und siehst sie in der Übersicht oben unter „Du folgst“.",
@@ -682,7 +682,7 @@ function decideDialog(o: { title: string; text: string; body?: HTMLElement; /** 
 
 const confirmDeleteAccount = () => ask({
   title: "Konto löschen?",
-  text: "Dein Konto und alle damit gespeicherten Daten (Profil, Rolle, gewählter Spieler, Antworten zu Spielen) werden sofort und endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
+  text: "Dein Konto und alle damit gespeicherten Daten (Profil, Rolle, gewählter Name, Antworten zu Spielen) werden sofort und endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
   cancel: "Abbrechen", ok: "Konto löschen", danger: true,
 });
 
@@ -750,7 +750,7 @@ async function loadClaims(s: Session, run: number): Promise<void> {
 
 const NOT_A_PLAYER = "none";
 
-/** "Nicht aktiver Spieler": remembered on the account, which drops its claim (and the player role). */
+/** "Nicht aktiv": remembered on the account, which drops its claim (and the player role). */
 async function setNotAPlayer(me: MeApi): Promise<void> {
   const { error } = await supabase.rpc("set_not_a_player", { flag: true });
   if (error) { console.error("set_not_a_player failed", error); await notice({ title: "Nicht gespeichert", text: "Das konnte nicht gespeichert werden. Bitte versuche es später noch einmal." }); return; }
@@ -798,17 +798,17 @@ async function askPlayer(me: MeApi, s: Session, canApprove: boolean, run: number
     ul.append(li);
   };
   // For members who don't play; also the way out of an existing pick ("Ich bin nicht …" asks for a new player).
-  option(NOT_A_PLAYER, "Nicht aktiver Spieler");
+  option(NOT_A_PLAYER, "Nicht aktiv");
   for (const r of [...roster].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), "de"))) {
     if (replacing && r.person === current) continue;
     option(String(r.person), shownName(r.name), hit?.person === r.person);
   }
   let chosen: (typeof roster)[number] | undefined;
   while (!chosen) {
-    // Signed in the dialog is left by choosing a player, "Nicht aktiver Spieler", or by signing out (when replacing: by cancelling, which changes nothing).
+    // Signed in the dialog is left by choosing a player, "Nicht aktiv", or by signing out (when replacing: by cancelling, which changes nothing).
     const answer = await decideDialog({
-      title: replacing ? "Neuen Spieler wählen" : "Wer bist Du?",
-      text: replacing ? "Wähle den Spieler, der Du stattdessen bist, oder „Nicht aktiver Spieler“. Erst damit wird die Auswahl geändert." : hit ? "Ist das Dein Name in der Mannschaft? Tippe auf Deinen Spieler." : "Tippe auf Deinen Spieler aus der Mannschaft.",
+      title: replacing ? "Andere Person wählen" : "Wer bist Du?",
+      text: replacing ? "Wähle den Namen, der zu Dir gehört, oder „Nicht aktiv“. Erst damit wird die Auswahl geändert." : hit ? "Ist das Dein Name in der Mannschaft? Tippe auf Deinen Namen." : "Tippe auf Deinen Namen aus der Mannschaft.",
       body,
       headed: true,
       buttons: [{ label: replacing ? "Abbrechen" : "Abmelden", value: "leave" }],
@@ -869,7 +869,7 @@ async function saveClaim(pick: Pick | null, status: "pending" | "approved" = "pe
     if (error) {
       if (error.code === "23505") {
         writeNote(ATTEMPT_NOTE, `taken:${pick.person}`);
-        await notice({ title: "Spieler schon verknüpft", text: "Dieser Spieler ist schon mit einem anderen Konto verknüpft. Die Auswahl gilt nur auf diesem Gerät." });
+        await notice({ title: "Name schon verknüpft", text: "Dieser Name ist schon mit einem anderen Konto verknüpft. Die Auswahl gilt nur auf diesem Gerät." });
       } else {
         // e.g. the table is missing (migration not applied) or a policy refused the row; the pick stays on this device.
         console.error("player_claims insert failed", error);
@@ -895,7 +895,7 @@ async function saveClaim(pick: Pick | null, status: "pending" | "approved" = "pe
   if (!me) return;
   const current = state.claim;
   if (current && current.status === "approved" && pick?.person !== current.person && !state.permissions.has("player.link")) {
-    if (!(await ask({ title: "Spieler ersetzen?", text: "Dein bestätigter Spieler wird ersetzt und muss neu bestätigt werden.", cancel: "Abbrechen", ok: "Fortfahren" }))) {
+    if (!(await ask({ title: "Name ersetzen?", text: "Dein bestätigter Name wird ersetzt und muss neu bestätigt werden.", cancel: "Abbrechen", ok: "Fortfahren" }))) {
       me.set({ person: current.person, name: current.player_name });
       return;
     }
@@ -944,7 +944,7 @@ function openApprovals(): void {
       text.append(Object.assign(document.createElement("b"), { textContent: c.who }), ` möchte ${rosterName(c)} sein.`);
       if (c.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: c.email }));
       const others = competing.get(c.id);
-      if (others) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small", textContent: `Noch ${others === 1 ? "eine weitere Anfrage" : `${others} weitere Anfragen`} für diesen Spieler: mit Bestätigen ${others === 1 ? "wird sie" : "werden sie"} abgelehnt.` }));
+      if (others) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small", textContent: `Noch ${others === 1 ? "eine weitere Anfrage" : `${others} weitere Anfragen`} für diesen Spielende: mit Bestätigen ${others === 1 ? "wird sie" : "werden sie"} abgelehnt.` }));
       const buttons = document.createElement("div");
       buttons.className = "btn-row";
       const decide = (approve: boolean) => async () => {
@@ -997,7 +997,7 @@ async function openRoles(): Promise<void> {
     head.append(h, close);
     d.append(head);
     if (loading) d.append(Object.assign(document.createElement("p"), { className: "loading", textContent: "Lädt …" }));
-    if (failed) d.append(Object.assign(document.createElement("p"), { textContent: "Die Nutzer konnten nicht geladen werden. Bitte versuche es später noch einmal." }));
+    if (failed) d.append(Object.assign(document.createElement("p"), { textContent: "Die Konten konnten nicht geladen werden. Bitte versuche es später noch einmal." }));
     const adminCount = users.filter((u) => u.roles.includes("admin")).length;
     for (const u of sortUsers(users)) {
       const row = document.createElement("div");
@@ -1020,7 +1020,7 @@ async function openRoles(): Promise<void> {
         b.setAttribute("aria-pressed", String(has));
         if (has && !canRevokeRole(selfId, u.user_id, role, adminCount)) b.disabled = true;
         b.addEventListener("click", async () => {
-          if (has && role === "admin" && !(await ask({ title: "Administrator entziehen?", text: `${userLabel(u)} verliert die Administratorrechte.`, cancel: "Abbrechen", ok: "Entziehen", danger: true }))) return;
+          if (has && role === "admin" && !(await ask({ title: "Admin-Rolle entziehen?", text: `${userLabel(u)} verliert die Admin-Rechte.`, cancel: "Abbrechen", ok: "Entziehen", danger: true }))) return;
           const { error } = await supabase.rpc("set_user_role", { target: u.user_id, role_name: role, on_: !has });
           if (error) { await notice({ title: "Das hat nicht geklappt", text: "Bitte versuche es später noch einmal." }); return; }
           track("role-change", { role, granted: String(!has) });

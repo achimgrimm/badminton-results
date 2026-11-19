@@ -114,7 +114,7 @@ export function renderSpielplan(d: Dataset, now: Date): string {
     </div></div>
     <div><button type="button" class="btn btn-primary share-plan" data-share-title="${esc(`Meine Spiele · ${CLUB_NAME} ${d.own.label}`)}">${SHARE_BTN_ICON}<span>Meine Spiele teilen</span></button></div>
     ${calendar}
-    <p class="mine-empty muted">Noch keine Spiele ausgewählt. Tippe bei einem Spiel auf „Ich spiele“ oder wähle unter <a href="spieler.html">Spieler</a> Deinen Namen.</p>
+    <p class="mine-empty muted">Noch keine Spiele ausgewählt. Tippe bei einem Spiel auf „Ich spiele“ oder wähle unter <a href="spieler.html">Spielende</a> Deinen Namen.</p>
     ${days}
   `;
 

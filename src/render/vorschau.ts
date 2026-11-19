@@ -72,7 +72,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
     rows.forEach(function (r) {
       r.querySelectorAll(".lineup-slot").forEach(function (slot) {
         var sel = slot.querySelector("select"), pick = slot.querySelector(".lineup-pick");
-        pick.querySelector("span").textContent = sel.value ? names[sel.value] : "Spieler wählen";
+        pick.querySelector("span").textContent = sel.value ? names[sel.value] : "Person wählen";
         var ck = check(sel.value);
         if (ck) pick.querySelector("span").append(" ", ck);
         pick.classList.toggle("is-empty", !sel.value);
@@ -130,7 +130,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
     list.appendChild(ul);
   }
   function openPicker(sel, row) {
-    heading.textContent = row.dataset.discipline + ": Spieler wählen";
+    heading.textContent = row.dataset.discipline + ": Person wählen";
     list.innerHTML = "";
     Array.prototype.forEach.call(sel.children, function (c) {
       if (c.tagName === "OPTGROUP") section(sel, c.label, Array.prototype.slice.call(c.children));
@@ -166,7 +166,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
       render();
       otTrack("lineup", { action: "clear" });
     };
-    if (window.Online && Online.ask) Online.ask({ title: "Aufstellung leeren?", text: "Alle Spieler werden aus Deinem Entwurf entfernt.", cancel: "Abbrechen", ok: "Leeren", danger: true }).then(function (yes) { if (yes) clear(); });
+    if (window.Online && Online.ask) Online.ask({ title: "Aufstellung leeren?", text: "Alle Namen werden aus Deinem Entwurf entfernt.", cancel: "Abbrechen", ok: "Leeren", danger: true }).then(function (yes) { if (yes) clear(); });
     else if (confirm("Aufstellung leeren?")) clear();
   });
   var suggest = root.querySelector(".lineup-suggest");
@@ -194,7 +194,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
       });
       otTrack("lineup", { action: "suggest", filled: filled });
       if (!filled) {
-        suggest.textContent = open ? "Kein passender Spieler" : "Alles besetzt";
+        suggest.textContent = open ? "Keine passende Person" : "Alles besetzt";
         clearTimeout(suggestTimer);
         suggestTimer = setTimeout(function () { suggest.textContent = "Vorschlag"; }, 2500);
         return;
@@ -221,7 +221,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
       pubBtn.hidden = !canWrite;
       unpubBtn.hidden = !canWrite || !published;
       pubInfo.hidden = !canWrite;
-      pubInfo.textContent = !published ? "Nicht veröffentlicht: Spieler sehen noch keine Aufstellung."
+      pubInfo.textContent = !published ? "Nicht veröffentlicht: Spielende sehen noch keine Aufstellung."
         : "Veröffentlicht am " + when(published.at) + (samePublished() ? "." : ". Dein Entwurf weicht ab, veröffentliche ihn erneut.");
     }
     if (!pub) return;
@@ -241,7 +241,7 @@ const LINEUP = (key: string, game: { team: string; season: string; game: string;
       who.className = "pub-who";
       list.forEach(function (p, i) {
         var s = document.createElement("span");
-        s.textContent = p ? (names[p] || "Spieler " + p) : "offen";
+        s.textContent = p ? (names[p] || "Person " + p) : "offen";
         if (p && me && String(me.person) === p) s.className = "pub-me";
         if (i) who.appendChild(document.createTextNode(" / "));
         who.appendChild(s);
@@ -426,27 +426,27 @@ function lineupEditor(
     if (!first) return "";
     const entry = (e: (typeof first)) =>
       `<span class="opp-who">${e.players.map((p, i) => nameLink(p, e.persons[i])).join(" / ")}</span> <span class="rec num">${e.played}× · ${e.won}–${e.lost}</span>`;
-    return `<div class="lineup-opp"><span class="muted">Gegner</span> ${entry(first)}${more.length
+    return `<div class="lineup-opp"><span class="muted">Gegenseite</span> ${entry(first)}${more.length
       ? `<details><summary>weitere</summary>${more.map((e) => `<div>${entry(e)}</div>`).join("")}</details>`
       : ""}</div>`;
   };
   return html`<details class="card fold lineup-editor" id="lineup"${suggest ? ` data-history="${esc(JSON.stringify(history))}"` : ""}>
       <summary>Aufstellung planen</summary>
-      <p class="small muted">Unter jedem Spiel steht, wer beim Gegner dieses Spiel bisher meist gespielt hat (aus den Spielberichten). Wer spielt welches Spiel? Bei Herren- und Damenspielen siehst Du nur Herren bzw. Damen (aus den nuLiga-Ranglisten); Spieler ohne bekanntes Geschlecht stehen überall. Fehler werden nur angezeigt, gespeichert wird immer. Die Aufstellung bleibt auf diesem Gerät.</p>
-      ${suggest ? `<p class="small muted">„Vorschlag“ füllt freie Plätze mit den Spielern, die diese Spiele bisher meist gespielt haben; neuere Spiele zählen mehr.</p>` : ""}
+      <p class="small muted">Unter jedem Spiel steht, wer bei der Gegenseite dieses Spiel bisher meist gespielt hat (aus den Spielberichten). Wer spielt welches Spiel? Bei Herren- und Damenspielen siehst Du nur Herren bzw. Damen (aus den nuLiga-Ranglisten); Personen ohne bekanntes Geschlecht stehen überall. Fehler werden nur angezeigt, gespeichert wird immer. Die Aufstellung bleibt auf diesem Gerät.</p>
+      ${suggest ? `<p class="small muted">„Vorschlag“ füllt freie Plätze mit den Personen, die diese Spiele bisher meist gespielt haben; neuere Spiele zählen mehr.</p>` : ""}
       ${games.map(
         (g) => html`<div class="lineup-row" data-discipline="${esc(g)}" data-kind="${kind(g)}" data-need="${requiredGender(g) ?? ""}">
           <span class="badge badge--primary">${esc(g)}</span>
           <span class="lineup-selects">${Array.from({ length: slots(g) }, (_, i) =>
             `<span class="lineup-slot"><select hidden aria-hidden="true" tabindex="-1">${optionsFor(requiredGender(g))}</select>`
-            + `<button type="button" class="lineup-pick" aria-haspopup="dialog" aria-label="${esc(g)}, Spieler ${i + 1} wählen"><span>Spieler wählen</span></button></span>`)}</span>
+            + `<button type="button" class="lineup-pick" aria-haspopup="dialog" aria-label="${esc(g)}, Person ${i + 1} wählen"><span>Person wählen</span></button></span>`)}</span>
           ${opponentLine(g)}
         </div>`,
       )}
       <div class="lineup-issues" role="status" hidden></div>
       <dialog class="team-dialog lineup-dialog" aria-labelledby="lineup-dialog-h">
         <div class="dialog-head">
-          <h2 id="lineup-dialog-h">Spieler wählen</h2>
+          <h2 id="lineup-dialog-h">Person wählen</h2>
           <button type="button" class="dialog-close" aria-label="Schließen">×</button>
         </div>
         <div class="lineup-list"></div>
@@ -510,7 +510,7 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
   const editor = lineupEditor(d, m, home, lineups, nameLink);
   /** The opponent's lineup is part of the editor; the separate fold is only the fallback while no games are known. */
   const opponentLineup = editor ? "" : fold(
-    "Aufstellung des Gegners",
+    "Aufstellung der Gegenseite",
     lineups.length
       ? html`<p class="small muted">Aus ${opponentReports.length} Spielbericht${opponentReports.length === 1 ? "" : "en"}: wer in welcher Disziplin gespielt hat, mit Bilanz (S–N).</p>
         <div class="lineups">
@@ -531,9 +531,9 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
       : `<p class="small muted">Noch keine Spielberichte.</p>`,
   );
   const opponentRoster = fold(
-    "Spieler des Gegners",
+    "Spielende der Gegenseite",
     opponentPages.length
-      ? html`<p class="small muted">Alle ${opponentPages.length} Spieler, die ${esc(opponent)} bisher eingesetzt hat, nach Einsätzen. Tippe auf einen Namen für Details.</p>
+      ? html`<p class="small muted">Alle ${opponentPages.length} Personen, die ${esc(opponent)} bisher eingesetzt hat, nach Einsätzen. Tippe auf einen Namen für Details.</p>
         ${opponentPages.map((p) => playerCard(p.stats, `../${dir}${p.slug}.html`, undefined, vsUs(p)))}`
       : `<p class="small muted">Noch keine Spielberichte.</p>`,
   );
@@ -561,12 +561,12 @@ export function renderVorschau(d: Dataset, m: Meeting, opponentPages: PlayerPage
     </div>
 
     <h2>Aufstellung</h2>
-    ${editor ? `<section class="card published-lineup" id="published-lineup" hidden><h3>Aufstellung vom Mannschaftsführer</h3><p class="small muted pub-meta"></p><div class="pub-body"></div></section>` : ""}
+    ${editor ? `<section class="card published-lineup" id="published-lineup" hidden><h3>Aufstellung der Mannschaftsführung</h3><p class="small muted pub-meta"></p><div class="pub-body"></div></section>` : ""}
     ${editor}
     ${opponentLineup}
     ${opponentRoster}
 
-    <h2>Gegner: ${teamLogo(d.clubs, opponent, "../../")}${esc(opponent)}</h2>
+    <h2>Gegenseite: ${teamLogo(d.clubs, opponent, "../../")}${esc(opponent)}</h2>
     <h3>Letzte Ergebnisse</h3>
     ${form.length
       ? form.map((x) => matchCard(x, root, { showDate: true, perspective: opponent })).join("")

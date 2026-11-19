@@ -2,9 +2,9 @@ import { displayName } from "./names.ts";
 
 /** Role names as stored in public.roles (supabase/migrations), strongest first, with their German labels. */
 export const ROLE_LABELS: Record<string, string> = {
-  admin: "Administrator",
-  team_lead: "Mannschaftsführer",
-  player: "Spieler",
+  admin: "Admin",
+  team_lead: "Mannschaftsführung",
+  player: "Spielende",
   member: "Mitglied",
 };
 

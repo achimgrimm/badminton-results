@@ -62,7 +62,7 @@ Every pushed branch (except Dependabot's) gets its own test stage at `https://ac
 
 ## Manual
 
-`manual/` holds the user manual (page `handbuch.html`, menu item "Handbuch"): one Markdown file per role, `<number>-<role>.md` with front matter `role:` (`member`, `team_lead` or `admin`) and a `# Title`. Each role also does what the roles before it do, so a chapter lists only what the role adds. `permissions:` in the front matter lists the database permissions the chapter describes (e.g. `lineup.write`); `test/manual.test.ts` fails when the code checks a permission that no chapter lists. The build (`src/manual.ts`) fails on a bad file, and the page marks the reader's roles in the browser.
+`manual/` holds the user manual (page `handbuch.html`, menu item "Handbuch"): one Markdown file per role, `<number>-<role>.md` with front matter `role:` (`member` = signed out, `signed_in` = signed in without a chosen player, `player`, `team_lead` or `admin`) and a `# Title`. Each chapter builds on the ones before it, so it lists only what is added. `permissions:` in the front matter lists the database permissions the chapter describes (e.g. `lineup.write`); `test/manual.test.ts` fails when the code checks a permission that no chapter lists. The build (`src/manual.ts`) fails on a bad file, and the page marks the reader's roles in the browser.
 
 **Keep it current:** when a feature is added, changed or removed, update the chapter of the role it concerns (and the release note, see below).
 

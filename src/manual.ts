@@ -1,11 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marked } from "marked";
-import { ASSIGNABLE_ROLES, ROLE_LABELS } from "./roles.ts";
+import { ASSIGNABLE_ROLES } from "./roles.ts";
 
 /** One role's chapter of the manual, from manual/<n>-<role>.md */
 export interface ManualSection {
-  /** member, team_lead or admin */
+  /** One of MANUAL_ROLES */
   role: string;
   /** The first "# " line */
   title: string;
@@ -15,8 +15,11 @@ export interface ManualSection {
   permissions: string[];
 }
 
-/** The roles with a chapter: everyone (member) plus every role an admin can grant, weakest first. */
-export const MANUAL_ROLES = ["member", ...ASSIGNABLE_ROLES];
+/**
+ * The audiences with a chapter, weakest first: signed out (member), signed in without a chosen player
+ * (signed_in, not a database role), player, and every role an admin can grant.
+ */
+export const MANUAL_ROLES = ["member", "signed_in", "player", ...ASSIGNABLE_ROLES];
 
 const NAME = /^\d+-[a-z_]+\.md$/;
 
@@ -30,7 +33,7 @@ export function loadManual(dir: string): ManualSection[] {
     if (!front) throw new Error(`manual ${file}: needs front matter with "role:"`);
     const field = (key: string) => (new RegExp(`^${key}:(.*)$`, "m").exec(front[1])?.[1] ?? "").trim();
     const role = field("role");
-    if (!(role in ROLE_LABELS) || !MANUAL_ROLES.includes(role)) throw new Error(`manual ${file}: unknown role "${role}" (use ${MANUAL_ROLES.join(", ")})`);
+    if (!MANUAL_ROLES.includes(role)) throw new Error(`manual ${file}: unknown role "${role}" (use ${MANUAL_ROLES.join(", ")})`);
     const rest = text.slice(front[0].length).trim();
     const heading = /^# +(.+)$/m.exec(rest);
     if (!heading) throw new Error(`manual ${file}: needs a "# Title" line`);

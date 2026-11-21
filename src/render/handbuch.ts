@@ -1,19 +1,18 @@
 import { storageKey } from "../config.ts";
 import type { ManualSection } from "../manual.ts";
-import { ROLE_LABELS } from "../roles.ts";
 import { layout } from "./layout.ts";
 import { esc, html } from "./util.ts";
 
 /** Where the client saves the signed-in account (uid, roles); see SAVED_KEY in client/online.ts. */
 const ACCOUNT_KEY = `${storageKey("auth")}-account`;
 
-/** Marks the chapters of the reader's roles ("Für Dich"); everyone counts as a member, also when signed out. Runs again after sign-in via otManualRefilter. */
+/** Marks the chapters that apply to the reader ("Für Dich"): everyone is a member, a signed-in account also "signed_in", plus the account's roles. Runs again after sign-in via otManualRefilter. */
 const MARK_OWN = `(function () {
   function mark() {
     var mine = ["member"];
     try {
       var acc = JSON.parse(localStorage.getItem("${ACCOUNT_KEY}") || "null");
-      if (acc && acc.uid && Array.isArray(acc.roles)) mine = acc.roles.concat("member");
+      if (acc && acc.uid) mine = (Array.isArray(acc.roles) ? acc.roles : []).concat("member", "signed_in");
     } catch (e) {}
     document.querySelectorAll("[data-role]").forEach(function (s) {
       var own = mine.indexOf(s.dataset.role) >= 0;
@@ -39,7 +38,7 @@ export function renderHandbuch(sections: ManualSection[], checkedAt: string | nu
     .join("\n");
   const body = html`
     <h1>Handbuch</h1>
-    <p class="small muted">Was die App kann, nach Rolle: ${sections.map((s) => esc(ROLE_LABELS[s.role])).join(", ")}. Jede Rolle kann auch alles, was die Rollen davor können. Die Kapitel, die für Dich gelten, sind markiert.</p>
+    <p class="small muted">Was die App kann, je nachdem ob und als wer Du angemeldet bist. Jedes Kapitel baut auf den Kapiteln davor auf. Die Kapitel, die für Dich gelten, sind markiert.</p>
     <p class="small">${toc}</p>
     ${chapters}
   `;

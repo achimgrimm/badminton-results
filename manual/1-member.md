@@ -1,7 +1,7 @@
 ---
 role: member
 ---
-# Mitglied
+# Ohne Anmeldung (Mitglied)
 
 Das kann **jede Person**, auch ohne Anmeldung. Die App funktioniert ohne Konto; Einstellungen bleiben dann auf Deinem Gerät.
 
@@ -20,14 +20,3 @@ Das kann **jede Person**, auch ohne Anmeldung. Die App funktioniert ohne Konto; 
 - **Ich spiele**: Markiere Spiele mit „Dabei“, „Vielleicht“ oder „Kann nicht“. Das erscheint in der Übersicht als „Dein nächstes Spiel“.
 - **Vorschau** eines Spiels: Spielende der Gegenseite mit Bilanz, und eine **Aufstellung planen**, die nur auf Deinem Gerät bleibt. Du kannst sie z. B. per WhatsApp teilen.
 - **Menü** (oben rechts): Dunkles Design, App installieren, App teilen, „Was ist neu?“, Datenschutz sowie Feedback per Signal oder E-Mail.
-
-## Mit Anmeldung
-
-Anmelden geht mit Google oder mit einem Code per E-Mail. Dann bekommst Du zusätzlich:
-
-- Deine Namenswahl und „Ich spiele“-Antworten gelten **auf allen Geräten**.
-- Die **veröffentlichte Aufstellung** der Mannschaftsführung steht in der Vorschau. Darüber steht, wo Du spielst und mit wem.
-- **Benachrichtigungen** (im Menü einschalten, pro Gerät): wenn Deine Aufstellung veröffentlicht oder geändert wird, 24 Stunden vor einem Spiel mit „Ich spiele“ und bei neuen Ergebnissen gefolgter Mannschaften.
-- **Mannschaften folgen**: in der Tabelle; sie erscheinen in der Übersicht unter „Du folgst“.
-- Dein Name wird von der Mannschaftsführung oder einer Admin-Person **bestätigt**. Danach bekommst Du die Rolle **Spielende**.
-- **Abmelden** und **Konto löschen** im Menü. Beim Löschen verschwinden Konto und alle Daten sofort.

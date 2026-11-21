@@ -14,7 +14,7 @@ export const paths = {
   meta: "meta.json",
   /** Results that appeared in the last scrape; read by scripts/notify-results.ts */
   newResults: "new-results.json",
-  /** Matches starting within 24 hours; read by scripts/notify-reminders.ts */
+  /** Matches starting within the next days; read by scripts/sync-upcoming.ts */
   reminders: "reminders.json",
   table: (group: number) => `groups/${group}/table.json`,
   schedule: (group: number) => `groups/${group}/schedule.json`,

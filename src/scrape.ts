@@ -27,7 +27,7 @@ for (const legacy of ["table.json", "schedule.json", "team.json", "reports"]) {
 const changed: string[] = [];
 // Results that appeared in this run, for the push to followers (scripts/notify-results.ts).
 const fresh: NewResult[] = [];
-// Own matches in the next 24 hours, for the reminder push (scripts/notify-reminders.ts).
+// Own matches in the next days, synced for the reminder push (scripts/sync-upcoming.ts).
 const upcoming: Upcoming[] = [];
 
 // Club teams: which leagues to follow

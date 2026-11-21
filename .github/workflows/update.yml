@@ -80,10 +80,10 @@ jobs:
         run: npx tsx scripts/notify-results.ts
         env:
           NOTIFY_SECRET: ${{ secrets.NOTIFY_SECRET }}
-      # Reminds the players of matches they marked, 24 hours ahead (#21); same secret.
+      # Stores the upcoming matches for the reminder push (#21); pg_cron sends it (#62). Same secret.
       - if: ${{ matrix.site.stage == '' }}
         continue-on-error: true
-        run: npx tsx scripts/notify-reminders.ts
+        run: npx tsx scripts/sync-upcoming.ts
         env:
           NOTIFY_SECRET: ${{ secrets.NOTIFY_SECRET }}
       # Only reached when scrape and build succeeded, so bad data is never cached.

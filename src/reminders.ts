@@ -2,7 +2,7 @@ import { SEASON_KEY } from "./config.ts";
 import type { ClubTeam, Meeting } from "./types.ts";
 import { slug } from "./render/util.ts";
 
-/** An own match starting within the next 24 hours, for the reminder push (#21). */
+/** An own match in the next days, stored for the reminder push (#21, #62). */
 export interface Upcoming { team: string; season: string; game: string; home: string; guest: string; start: string }
 
 /** The instant of a Europe/Berlin wall-clock date ("2026-11-15") and time ("15:00"). */
@@ -14,13 +14,16 @@ export function berlinInstant(date: string, time: string): Date {
   return new Date(guess.getTime() - offset * 60_000);
 }
 
-/** Matches of the team without a result that start within the next 24 hours (a match marked later still gets one reminder). */
+/** How far ahead matches are synced; the 24 h reminder window is applied by notify-reminders. */
+export const SYNC_WINDOW_DAYS = 7;
+
+/** Matches of the team without a result that start within the next days. */
 export function upcomingMatches(team: ClubTeam, schedule: Meeting[], now = new Date()): Upcoming[] {
   return schedule.flatMap((m) => {
     if ((m.home !== team.name && m.guest !== team.name) || m.result || !m.time || !/^\d{1,2}:\d{2}$/.test(m.time)) return [];
     const start = berlinInstant(m.date, m.time.padStart(5, "0"));
     const ahead = start.getTime() - now.getTime();
-    if (!(ahead > 0 && ahead <= 24 * 3600_000)) return [];
+    if (!(ahead > 0 && ahead <= SYNC_WINDOW_DAYS * 24 * 3600_000)) return [];
     const home = m.home === team.name;
     return [{ team: team.slug, season: SEASON_KEY, game: `${home ? "heim" : "auswaerts"}-${slug(home ? m.guest : m.home)}`, home: m.home, guest: m.guest, start: start.toISOString() }];
   });

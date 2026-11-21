@@ -2,7 +2,7 @@
 
 export interface Upcoming { team: string; season: string; game: string; home: string; guest: string; start: string }
 
-/** The scraper's list of matches in the next 24 hours, or null when it is not well-formed. */
+/** The scraper's list of matches in the next days, or null when it is not well-formed. */
 export function parseUpcoming(input: unknown): Upcoming[] | null {
   if (!Array.isArray(input) || input.length > 200) return null;
   const out: Upcoming[] = [];

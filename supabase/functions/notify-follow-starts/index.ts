@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT")!, Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
   const now = Date.now();
-  const { data: rows, error } = await db.from("upcoming_meetings").select("group_id, meeting, home, guest, start")
+  const { data: rows, error } = await db.from("upcoming_meetings").select("group_id, home, guest, start")
     .gt("start", new Date(now).toISOString()).lte("start", new Date(now + 24 * 3600_000).toISOString());
   if (error) return reply(500, { error: error.message });
   const { data: own } = await db.from("upcoming_matches").select("team_slug, season, game_key, home, guest, start")
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   let sent = 0, failed = 0, notified = 0;
   const gone = new Set<string>();
   for (const r of rows ?? []) {
-    const m = { group: r.group_id as number, meeting: r.meeting as number, home: r.home as string, guest: r.guest as string, start: new Date(r.start).toISOString() };
+    const m = { group: r.group_id as number, home: r.home as string, guest: r.guest as string, start: new Date(r.start).toISOString() };
     // user -> [path, team] of the first followed team
     const follows = new Map<string, { path: string; team: string }>();
     for (const team of new Set([m.home, m.guest])) {
@@ -44,8 +44,8 @@ Deno.serve(async (req) => {
     if (!ids.length) continue;
     // Claim first: a retry or the next cron run can't send twice.
     const { data: claimed } = await db.from("sent_follow_starts")
-      .upsert(ids.map((id) => ({ user_id: id, group_id: m.group, meeting: m.meeting, start: m.start })),
-        { onConflict: "user_id,group_id,meeting,start", ignoreDuplicates: true })
+      .upsert(ids.map((id) => ({ user_id: id, group_id: m.group, home: m.home, guest: m.guest, start: m.start })),
+        { onConflict: "user_id,group_id,home,guest,start", ignoreDuplicates: true })
       .select("user_id");
     const todo = (claimed ?? []).map((c) => c.user_id as string);
     if (!todo.length) continue;

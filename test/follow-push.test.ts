@@ -4,16 +4,16 @@ import { followStartText, ownMatchFor, parseMeetings } from "../supabase/functio
 import { upcomingMeetings } from "../src/reminders.ts";
 import type { Meeting } from "../src/types.ts";
 
-const m = (o: Partial<Meeting>): Meeting => ({ date: "2026-11-15", time: "15:00", note: null, postponed: false, hall: null, home: "A", guest: "B", result: null, meeting: 7, approved: false, ...o });
+const m = (o: Partial<Meeting>): Meeting => ({ date: "2026-11-15", time: "15:00", note: null, postponed: false, hall: null, home: "A", guest: "B", result: null, approved: false, ...o, meeting: o.meeting ?? null });
 
-test("upcomingMeetings lists open meetings of any teams in the next 7 days", () => {
+test("upcomingMeetings lists open meetings (without a meeting number) of any teams in the next 7 days", () => {
   const now = new Date("2026-11-14T15:00:00Z");
-  const got = upcomingMeetings(3, [m({}), m({ meeting: 8, date: "2026-11-30" }), m({ meeting: 9, result: [5, 3] }), m({ meeting: null }), m({ meeting: 10, time: null }), m({ meeting: 11, date: "2026-11-10" })], now);
-  assert.deepEqual(got, [{ group: 3, meeting: 7, home: "A", guest: "B", start: "2026-11-15T14:00:00.000Z" }]);
+  const got = upcomingMeetings(3, [m({}), m({ guest: "C", date: "2026-11-30" }), m({ guest: "D", result: [5, 3] }), m({ guest: "E", time: null }), m({ guest: "F", date: "2026-11-10" })], now);
+  assert.deepEqual(got, [{ group: 3, home: "A", guest: "B", start: "2026-11-15T14:00:00.000Z" }]);
 });
 
 test("parseMeetings accepts the scraper's list and refuses the rest", () => {
-  const u = { group: 3, meeting: 7, home: "A", guest: "B", start: "2026-11-15T14:00:00.000Z" };
+  const u = { group: 3, home: "A", guest: "B", start: "2026-11-15T14:00:00.000Z" };
   assert.deepEqual(parseMeetings([u]), [u]);
   for (const bad of [null, {}, [{ ...u, start: "nope" }], [{ ...u, group: "3" }], [{ ...u, home: "" }]]) assert.equal(parseMeetings(bad), null);
 });
@@ -27,7 +27,7 @@ test("ownMatchFor finds the own match of a meeting by teams and kick-off", () =>
 });
 
 test("followStartText names the team, the match and the Berlin time", () => {
-  const t = followStartText({ group: 3, meeting: 7, home: "A", guest: "B", start: "2026-11-15T14:00:00.000Z" }, "A");
+  const t = followStartText({ group: 3, home: "A", guest: "B", start: "2026-11-15T14:00:00.000Z" }, "A");
   assert.equal(t.title, "Spiel von A");
   assert.match(t.body, /A – B, .*15:00 Uhr/);
 });

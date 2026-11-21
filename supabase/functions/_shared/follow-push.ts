@@ -1,18 +1,18 @@
 /** Input check, matching and text for the push before a match of a followed team (#61). Pure, tested with the app's tests. */
 
-export interface UpcomingMeeting { group: number; meeting: number; home: string; guest: string; start: string }
+export interface UpcomingMeeting { group: number; home: string; guest: string; start: string }
 
 /** The scraper's list of open meetings, or null when it is not well-formed. */
 export function parseMeetings(input: unknown): UpcomingMeeting[] | null {
   if (!Array.isArray(input) || input.length > 2000) return null;
   const out: UpcomingMeeting[] = [];
   for (const r of input as Record<string, unknown>[]) {
-    if (!Number.isInteger(r?.group) || !Number.isInteger(r?.meeting)) return null;
+    if (!Number.isInteger(r?.group)) return null;
     for (const k of ["home", "guest", "start"]) {
       if (typeof r[k] !== "string" || !r[k] || (r[k] as string).length > 200) return null;
     }
     if (Number.isNaN(Date.parse(r.start as string))) return null;
-    out.push({ group: r.group as number, meeting: r.meeting as number, home: r.home as string, guest: r.guest as string, start: r.start as string });
+    out.push({ group: r.group as number, home: r.home as string, guest: r.guest as string, start: r.start as string });
   }
   return out;
 }

@@ -34,15 +34,15 @@ Deno.serve(async (req) => {
   }
 
   if (meetings) {
-    const mrows = meetings.map((x) => ({ group_id: x.group, meeting: x.meeting, home: x.home, guest: x.guest, start: x.start }));
+    const mrows = meetings.map((x) => ({ group_id: x.group, home: x.home, guest: x.guest, start: x.start }));
     for (let i = 0; i < mrows.length; i += 500) {
-      const { error } = await db.from("upcoming_meetings").upsert(mrows.slice(i, i + 500), { onConflict: "group_id,meeting" });
+      const { error } = await db.from("upcoming_meetings").upsert(mrows.slice(i, i + 500), { onConflict: "group_id,home,guest" });
       if (error) return reply(500, { error: error.message });
     }
-    const keepM = new Set(mrows.map((r) => `${r.group_id}|${r.meeting}`));
-    const { data: oldM } = await db.from("upcoming_meetings").select("group_id, meeting");
-    for (const o of (oldM ?? []).filter((o) => !keepM.has(`${o.group_id}|${o.meeting}`))) {
-      await db.from("upcoming_meetings").delete().eq("group_id", o.group_id).eq("meeting", o.meeting);
+    const keepM = new Set(mrows.map((r) => `${r.group_id}|${r.home}|${r.guest}`));
+    const { data: oldM } = await db.from("upcoming_meetings").select("group_id, home, guest");
+    for (const o of (oldM ?? []).filter((o) => !keepM.has(`${o.group_id}|${o.home}|${o.guest}`))) {
+      await db.from("upcoming_meetings").delete().eq("group_id", o.group_id).eq("home", o.home).eq("guest", o.guest);
     }
   }
   console.log("sync-upcoming", rows.length, meetings?.length ?? "-");

@@ -37,3 +37,7 @@ Omit the front matter block for notes meant for everyone. Valid roles: `admin`, 
 ## 4. Check
 
 Run the build/tests (`mise run`) so a bad name, title or role fails early.
+
+## 5. Update the manual
+
+If the note announces a feature (not a bug fix), add or change it in the chapter of the role it concerns in `manual/<n>-<role>.md` (see README "Manual"). Add new permissions to that chapter's `permissions:` front matter.

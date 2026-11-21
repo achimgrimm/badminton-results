@@ -452,6 +452,7 @@ function menuDialog(assets: string, root: string | null): string {
     <button type="button" class="menu-item theme-toggle" id="theme-toggle">${MOON}${SUN}<span>Dunkles Design</span></button>
     ${ONLINE ? `<div id="account-push"></div>` : ""}
     ${releaseNotes().length ? `<a class="menu-item" href="#" id="release-link" data-menu-close>${RELEASE_ICON}<span>Was ist neu?</span></a>` : ""}
+    <a class="menu-item" href="${assets}handbuch.html">${BOOK_ICON}<span>Handbuch</span></a>
     <a class="menu-item" href="${assets}datenschutz.html">${LOCK_ICON}<span>Datenschutz</span></a>
   </div>
   <div class="menu-section" id="menu-feedback">
@@ -652,6 +653,7 @@ const STATS_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const CLEAR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="4"/><path d="M2 21a8 8 0 0 1 12.5-6.6M17 14l5 5M22 14l-5 5"/></svg>`;
 const SIGNAL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5A8 8 0 1 1 21 12z"/></svg>`;
 const MAIL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`;
+const BOOK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5M9 7h6"/></svg>`;
 const LOCK_ICON =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
 
 /** Filled and opened by NEW_RESULTS when results appeared since the last visit. */

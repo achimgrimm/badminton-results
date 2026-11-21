@@ -60,6 +60,12 @@ Every pushed branch (except Dependabot's) gets its own test stage at `https://ac
 - `mise run release`, run on the branch, releases it. It checks that the branch is pushed and that its stage already shows that commit, fast-forwards `main` to it and deletes the branch in one atomic push. The push run on `main` deploys it live and already drops the stage, so `stage.yml` skips its own run for that delete. If `main` has moved on, rebase, push and test the stage again.
 - Local preview of a stage next to live: `npm run build && STAGE=my-branch npm run build && npm run serve`, then open `/stage/my-branch/`. A live build clears `dist/`, so build live first.
 
+## Manual
+
+`manual/` holds the user manual (page `handbuch.html`, menu item "Handbuch"): one Markdown file per role, `<number>-<role>.md` with front matter `role:` (`member`, `team_lead` or `admin`) and a `# Title`. Each role also does what the roles before it do, so a chapter lists only what the role adds. `permissions:` in the front matter lists the database permissions the chapter describes (e.g. `lineup.write`); `test/manual.test.ts` fails when the code checks a permission that no chapter lists. The build (`src/manual.ts`) fails on a bad file, and the page marks the reader's roles in the browser.
+
+**Keep it current:** when a feature is added, changed or removed, update the chapter of the role it concerns (and the release note, see below).
+
 ## Release notes
 
 Tell users about new features with a file in `release-notes/`, named `YYYY-MM-DD-<slug>.md` (lowercase, digits, dashes):

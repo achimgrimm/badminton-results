@@ -530,3 +530,11 @@ a.stat:hover { text-decoration: none; box-shadow: var(--ot-shadow-hover); }
 .login-dialog .login-google-icon { display: inline-flex; background: #fff; border-radius: 50%; padding: 3px; margin-right: 8px; }
 .login-dialog .login-google-icon svg { width: 16px; height: 16px; }
 .login-dialog .login-email { color: var(--ot-text-strong); overflow-wrap: anywhere; }
+
+/* Manual (handbuch.html): the chapters for the reader's roles are marked */
+.manual-section h2 { margin-top: 0; }
+.manual-section.is-own { box-shadow: var(--ot-shadow), inset 4px 0 0 var(--ot-primary); }
+.manual-section ul { padding-left: 1.25rem; }
+.manual-section .manual-own { margin-left: 6px; font-size: .75rem; }
+.manual-section .manual-own[hidden] { display: none; }
+.manual-section h2 + h2, .manual-section h3 { font-size: 1.125rem; }

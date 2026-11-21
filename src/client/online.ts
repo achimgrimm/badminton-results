@@ -1077,6 +1077,7 @@ function apply(s: Session | null): void {
     if (run !== applied) return;
     commit();
     (window as unknown as { otReleaseRefilter?: () => void }).otReleaseRefilter?.();
+    (window as unknown as { otManualRefilter?: () => void }).otManualRefilter?.();
     listeners.forEach((fn) => fn(state.session));
   };
   if (!s) {

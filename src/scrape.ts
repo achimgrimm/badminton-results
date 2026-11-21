@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { CLUB_REGIONS, urls, type PoolRound } from "./config.ts";
 import { DATA_DIR, loadClubTeams, loadHalls, loadReports, paths, readJson, writeJson } from "./data.ts";
 import { fetchBinary, fetchHtml, fetchHtmlWithCookie } from "./fetch.ts";
-import { upcomingMatches, type Upcoming } from "./reminders.ts";
+import { upcomingMatches, upcomingMeetings, type Upcoming, type UpcomingMeeting } from "./reminders.ts";
 import { newResults, type NewResult } from "./new-results.ts";
 import { logoExtension } from "./logos.ts";
 import { leagueName, parseClubTeams, teamSlug } from "./parse/club.ts";
@@ -29,6 +29,8 @@ const changed: string[] = [];
 const fresh: NewResult[] = [];
 // Own matches in the next days, synced for the reminder push (scripts/sync-upcoming.ts).
 const upcoming: Upcoming[] = [];
+// All open meetings of the leagues, for the push to followers 24 h before (#61).
+const meetings: UpcomingMeeting[] = [];
 
 // Club teams: which leagues to follow
 const rows = parseClubTeams(await fetchHtml(urls.clubTeams()));
@@ -57,6 +59,7 @@ for (const group of [...new Set(rows.map((r) => r.group))]) {
   if (writeJson(paths.table(group), table)) changed.push(`${tag} table`);
   if (writeJson(paths.schedule(group), schedule)) changed.push(`${tag} schedule`);
   schedules.push(...schedule);
+  meetings.push(...upcomingMeetings(group, schedule));
 
   for (const row of groupRows) {
     const name = leagueName(row.label);
@@ -171,6 +174,7 @@ try {
 // meta.json changes on every run, so it is not counted as a change.
 writeJson(paths.newResults, fresh);
 writeJson(paths.reminders, upcoming);
+writeJson(paths.upcomingMeetings, meetings);
 writeJson(paths.meta, { checkedAt: new Date().toISOString() });
 const summary = changed.length > 12 ? `${changed.slice(0, 12).join(", ")} and ${changed.length - 12} more` : changed.join(", ");
 log(changed.length ? `done, ${changed.length} updated: ${summary}` : "done, no changes");

@@ -16,6 +16,8 @@ export const paths = {
   newResults: "new-results.json",
   /** Matches starting within the next days; read by scripts/sync-upcoming.ts */
   reminders: "reminders.json",
+  /** Open meetings of all followed leagues in the next days; read by scripts/sync-upcoming.ts */
+  upcomingMeetings: "upcoming-meetings.json",
   table: (group: number) => `groups/${group}/table.json`,
   schedule: (group: number) => `groups/${group}/schedule.json`,
   reports: (group: number) => `groups/${group}/reports`,

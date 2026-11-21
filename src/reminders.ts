@@ -28,3 +28,17 @@ export function upcomingMatches(team: ClubTeam, schedule: Meeting[], now = new D
     return [{ team: team.slug, season: SEASON_KEY, game: `${home ? "heim" : "auswaerts"}-${slug(home ? m.guest : m.home)}`, home: m.home, guest: m.guest, start: start.toISOString() }];
   });
 }
+
+/** An open meeting of a league in the next days, stored for the push to followers of its teams (#61). */
+export interface UpcomingMeeting { group: number; meeting: number; home: string; guest: string; start: string }
+
+/** All meetings of the league without a result that start within the next days (any teams, not only the club's). */
+export function upcomingMeetings(group: number, schedule: Meeting[], now = new Date()): UpcomingMeeting[] {
+  return schedule.flatMap((m) => {
+    if (m.meeting == null || m.result || !m.time || !/^\d{1,2}:\d{2}$/.test(m.time)) return [];
+    const start = berlinInstant(m.date, m.time.padStart(5, "0"));
+    const ahead = start.getTime() - now.getTime();
+    if (!(ahead > 0 && ahead <= SYNC_WINDOW_DAYS * 24 * 3600_000)) return [];
+    return [{ group, meeting: m.meeting, home: m.home, guest: m.guest, start: start.toISOString() }];
+  });
+}

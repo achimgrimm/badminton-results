@@ -18,6 +18,20 @@ export interface RoleUser {
   roles: string[];
   /** The account's chosen player ("Nachname, Vorname"), when it has one. */
   player_name?: string | null;
+  /** Usage (#59, admins only): signed-in devices, last sign-in (ISO) and devices with notifications on. */
+  devices?: number;
+  last_sign_in_at?: string | null;
+  push_devices?: number;
+}
+
+/** The usage line in the admin list; null when the activity wasn't loaded. */
+export function activityText(u: RoleUser): string | null {
+  if (u.devices === undefined || u.push_devices === undefined) return null;
+  const n = (c: number, one: string, many: string) => `${c} ${c === 1 ? one : many}`;
+  const last = u.last_sign_in_at
+    ? `zuletzt ${new Date(u.last_sign_in_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" })}`
+    : "noch nie angemeldet";
+  return [n(u.devices, "Gerät angemeldet", "Geräte angemeldet"), last, `Benachrichtigungen auf ${n(u.push_devices, "Gerät", "Geräten")}`].join(" · ");
 }
 
 /** What the admin list shows for an account: the player's name, else the login name, else the email. */

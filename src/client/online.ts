@@ -4,7 +4,7 @@
  * replaced at build time (see buildOnlineBundle in src/build.ts).
  */
 import { createClient, type Session } from "@supabase/supabase-js";
-import { ASSIGNABLE_ROLES, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, userLabel, type RoleUser } from "../roles.ts";
+import { ASSIGNABLE_ROLES, activityText, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, userLabel, type RoleUser } from "../roles.ts";
 import { displayName as shownName, matchPlayer } from "../names.ts";
 import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
@@ -1006,6 +1006,8 @@ async function openRoles(): Promise<void> {
       text.className = "user-info";
       text.append(Object.assign(document.createElement("b"), { textContent: userLabel(u) }));
       if (u.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
+      const activity = activityText(u);
+      if (activity) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: activity }));
       const buttons = document.createElement("div");
       buttons.className = "user-actions";
       for (const role of ASSIGNABLE_ROLES) {
@@ -1051,11 +1053,12 @@ async function openRoles(): Promise<void> {
   };
   render();
   d.showModal();
-  const [list, players] = await Promise.all([supabase.rpc("list_users_with_roles"), supabase.rpc("list_user_players")]);
+  const [list, players, activity] = await Promise.all([supabase.rpc("list_users_with_roles"), supabase.rpc("list_user_players"), supabase.rpc("list_user_activity")]);
   loading = false;
   failed = !!list.error;
   const names = new Map(((players.data ?? []) as { user_id: string; player_name: string }[]).map((p) => [p.user_id, p.player_name]));
-  users = Array.isArray(list.data) ? (list.data as RoleUser[]).map((u) => ({ ...u, player_name: names.get(u.user_id) ?? null })) : [];
+  const usage = new Map(((activity.data ?? []) as { user_id: string; devices: number; last_sign_in_at: string | null; push_devices: number }[]).map((a) => [a.user_id, a]));
+  users = Array.isArray(list.data) ? (list.data as RoleUser[]).map((u) => ({ ...u, player_name: names.get(u.user_id) ?? null, ...usage.get(u.user_id) })) : [];
   render();
 }
 

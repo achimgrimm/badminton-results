@@ -51,6 +51,47 @@ const me = roster.find((r) => r.person === meId) ?? roster[0];
 // The time of the data, so "next match" and the "Neu" marker are the same on every run
 const now = new Date(JSON.parse(readFileSync(join(ROOT, "data", "meta.json"), "utf8")).checkedAt);
 
+/**
+ * Blurs the names of real people (the club's players from the roster, and the opponents' players, who are links
+ * in the "Gegenseite" lines) so the pictures show the feature, not the persons. Names inside a sentence are
+ * wrapped one by one ("Du spielst: 1.HD mit <blurred>"), so the rest stays readable.
+ */
+async function blurNames(page: import("playwright-core").Page, people: RosterEntry[]): Promise<void> {
+  // "Nachname, Vorname" as in the roster, and "Vorname Nachname" as the lineup shows it
+  const forms = people.flatMap((r) => {
+    const [last, first] = r.name.split(", ");
+    return first ? [r.name, `${first} ${last}`] : [r.name];
+  });
+  await page.evaluate((names) => {
+    const BLUR = "filter: blur(6px); user-select: none;";
+    // No named helper functions in here: tsx adds a __name() call for them, which does not exist in the page
+    const re = new RegExp(names.sort((a, b) => b.length - a.length).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const hits: Text[] = [];
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const parent = (n as Text).parentElement;
+      if (parent && !/^(SCRIPT|STYLE|OPTION|TEXTAREA)$/.test(parent.tagName) && re.test((n as Text).data)) hits.push(n as Text);
+      re.lastIndex = 0;
+    }
+    for (const t of hits) {
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      for (const m of t.data.matchAll(re)) {
+        frag.append(t.data.slice(last, m.index));
+        const span = document.createElement("span");
+        span.setAttribute("style", BLUR);
+        span.textContent = m[0];
+        frag.append(span);
+        last = m.index! + m[0].length;
+      }
+      frag.append(t.data.slice(last));
+      t.replaceWith(frag);
+    }
+    // The opponents are not in the roster
+    document.querySelectorAll<HTMLElement>(".lineup-opp a").forEach((a) => a.setAttribute("style", BLUR));
+  }, forms);
+}
+
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
@@ -72,13 +113,14 @@ for (const shot of SHOTS) {
       await context.addInitScript(() => {
         document.addEventListener("DOMContentLoaded", () => {
           const s = document.createElement("style");
-          s.textContent = "footer { visibility: hidden !important; } .site-header, .tabs { position: static !important; } *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }";
+          s.textContent = "footer { visibility: hidden !important; } .site-header, .tabs, .filter-bar { position: static !important; } *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }";
           document.head.append(s);
         });
       });
       const page = await context.newPage();
       const target = await shot.run({ page, base, team, preview });
       await page.waitForTimeout(300);
+      await blurNames(page, roster);
       if (unmocked.length) throw new Error(`unmocked Supabase calls: ${unmocked.join(", ")}`);
       await (target ?? page).screenshot({ path: join(OUT, `${shot.name}.png`) });
       console.log(`ok   ${shot.name}`);

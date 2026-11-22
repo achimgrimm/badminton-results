@@ -4,7 +4,7 @@
  * replaced at build time (see buildOnlineBundle in src/build.ts).
  */
 import { createClient, type Session } from "@supabase/supabase-js";
-import { ASSIGNABLE_ROLES, activityText, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, userLabel, type RoleUser } from "../roles.ts";
+import { ASSIGNABLE_ROLES, activityLines, ROLE_LABELS, canRevokeRole, roleLabel, sortUsers, userLabel, type RoleUser } from "../roles.ts";
 import { displayName as shownName, matchPlayer } from "../names.ts";
 import { competingClaims, reconcile, type Pick } from "../claims.ts";
 import { createSync } from "./sync.ts";
@@ -1006,8 +1006,7 @@ async function openRoles(): Promise<void> {
       text.className = "user-info";
       text.append(Object.assign(document.createElement("b"), { textContent: userLabel(u) }));
       if (u.email) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: u.email }));
-      const activity = activityText(u);
-      if (activity) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: activity }));
+      for (const line of activityLines(u)) text.append(document.createElement("br"), Object.assign(document.createElement("span"), { className: "small muted", textContent: line }));
       const buttons = document.createElement("div");
       buttons.className = "user-actions";
       for (const role of ASSIGNABLE_ROLES) {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { activityText, canRevokeRole, roleLabel, sortUsers } from "../src/roles.ts";
+import { activityLines, canRevokeRole, roleLabel, sortUsers } from "../src/roles.ts";
 
 test("roleLabel picks the strongest role", () => {
   assert.equal(roleLabel(["member"]), "Mitglied");
@@ -43,23 +43,15 @@ test("sortUsers sorts by first name, then last name, using the player name when 
   assert.deepEqual(sorted.map((x) => x.user_id), ["2", "1", "3"]);
 });
 
-test("activityText sums up devices, last login and notifications", () => {
+test("activityLines lists sign-in, last activity, last login and notifications one per line", () => {
   const u = { user_id: "1", display_name: "A", email: null, roles: [] };
-  assert.equal(activityText(u), null);
-  assert.equal(
-    activityText({ ...u, devices: 2, last_sign_in_at: "2026-11-19T13:03:00Z", push_devices: 1 }),
-    "2 Geräte angemeldet · zuletzt 19.11.26, 14:03 · Benachrichtigungen auf 1 Gerät",
+  assert.deepEqual(activityLines(u), []);
+  assert.deepEqual(
+    activityLines({ ...u, devices: 2, last_sign_in_at: "2026-11-19T13:03:00Z", push_devices: 1, last_seen_at: "2026-11-20T08:00:00Z" }),
+    ["Angemeldet: 2 Geräte", "Zuletzt aktiv: 20.11.26, 09:00", "Letzte Anmeldung: 19.11.26, 14:03", "Benachrichtigungen: 1 Gerät"],
   );
-  assert.equal(
-    activityText({ ...u, devices: 1, last_sign_in_at: null, push_devices: 0 }),
-    "1 Gerät angemeldet · noch nie angemeldet · Benachrichtigungen auf 0 Geräten",
-  );
-  assert.equal(
-    activityText({ ...u, devices: 1, last_sign_in_at: null, push_devices: 1, last_seen_at: "2026-11-20T08:00:00Z" }),
-    "1 Gerät angemeldet · zuletzt aktiv 20.11.26, 09:00 · noch nie angemeldet · Benachrichtigungen auf 1 Gerät",
-  );
-  assert.equal(
-    activityText({ ...u, devices: 0, last_sign_in_at: "2026-11-19T13:03:00Z", push_devices: 0, last_seen_at: null }),
-    "nicht angemeldet · zuletzt 19.11.26, 14:03 · Benachrichtigungen auf 0 Geräten",
+  assert.deepEqual(
+    activityLines({ ...u, devices: 0, last_sign_in_at: null, push_devices: 0, last_seen_at: null }),
+    ["Angemeldet: nein", "Letzte Anmeldung: noch nie", "Benachrichtigungen: aus"],
   );
 });

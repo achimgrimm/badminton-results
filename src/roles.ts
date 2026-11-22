@@ -26,17 +26,17 @@ export interface RoleUser {
   last_seen_at?: string | null;
 }
 
-/** The usage line in the admin list; null when the activity wasn't loaded. */
-export function activityText(u: RoleUser): string | null {
-  if (u.devices === undefined || u.push_devices === undefined) return null;
+/** The usage lines in the admin list, one labelled fact each; empty when the activity wasn't loaded. */
+export function activityLines(u: RoleUser): string[] {
+  if (u.devices === undefined || u.push_devices === undefined) return [];
+  const when = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" });
   const n = (c: number, one: string, many: string) => `${c} ${c === 1 ? one : many}`;
-  const last = u.last_sign_in_at
-    ? `zuletzt ${new Date(u.last_sign_in_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" })}`
-    : "noch nie angemeldet";
-  const seen = u.devices > 0 && u.last_seen_at
-    ? [`zuletzt aktiv ${new Date(u.last_seen_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" })}`]
-    : [];
-  return [u.devices === 0 ? "nicht angemeldet" : n(u.devices, "Gerät angemeldet", "Geräte angemeldet"), ...seen, last, `Benachrichtigungen auf ${n(u.push_devices, "Gerät", "Geräten")}`].join(" · ");
+  return [
+    u.devices === 0 ? "Angemeldet: nein" : `Angemeldet: ${n(u.devices, "Gerät", "Geräte")}`,
+    ...(u.devices > 0 && u.last_seen_at ? [`Zuletzt aktiv: ${when(u.last_seen_at)}`] : []),
+    `Letzte Anmeldung: ${u.last_sign_in_at ? when(u.last_sign_in_at) : "noch nie"}`,
+    `Benachrichtigungen: ${u.push_devices === 0 ? "aus" : n(u.push_devices, "Gerät", "Geräte")}`,
+  ];
 }
 
 /** What the admin list shows for an account: the player's name, else the login name, else the email. */

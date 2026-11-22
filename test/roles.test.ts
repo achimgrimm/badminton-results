@@ -54,4 +54,12 @@ test("activityText sums up devices, last login and notifications", () => {
     activityText({ ...u, devices: 1, last_sign_in_at: null, push_devices: 0 }),
     "1 Gerät angemeldet · noch nie angemeldet · Benachrichtigungen auf 0 Geräten",
   );
+  assert.equal(
+    activityText({ ...u, devices: 1, last_sign_in_at: null, push_devices: 1, last_seen_at: "2026-11-20T08:00:00Z" }),
+    "1 Gerät angemeldet · zuletzt aktiv 20.11.26, 09:00 · noch nie angemeldet · Benachrichtigungen auf 1 Gerät",
+  );
+  assert.equal(
+    activityText({ ...u, devices: 0, last_sign_in_at: "2026-11-19T13:03:00Z", push_devices: 0, last_seen_at: null }),
+    "nicht angemeldet · zuletzt 19.11.26, 14:03 · Benachrichtigungen auf 0 Geräten",
+  );
 });

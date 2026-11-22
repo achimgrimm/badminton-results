@@ -22,6 +22,8 @@ export interface RoleUser {
   devices?: number;
   last_sign_in_at?: string | null;
   push_devices?: number;
+  /** Latest token refresh of a valid session (#69, admins only): when the app was last seen. */
+  last_seen_at?: string | null;
 }
 
 /** The usage line in the admin list; null when the activity wasn't loaded. */
@@ -31,7 +33,10 @@ export function activityText(u: RoleUser): string | null {
   const last = u.last_sign_in_at
     ? `zuletzt ${new Date(u.last_sign_in_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" })}`
     : "noch nie angemeldet";
-  return [n(u.devices, "Gerät angemeldet", "Geräte angemeldet"), last, `Benachrichtigungen auf ${n(u.push_devices, "Gerät", "Geräten")}`].join(" · ");
+  const seen = u.devices > 0 && u.last_seen_at
+    ? [`zuletzt aktiv ${new Date(u.last_seen_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" })}`]
+    : [];
+  return [u.devices === 0 ? "nicht angemeldet" : n(u.devices, "Gerät angemeldet", "Geräte angemeldet"), ...seen, last, `Benachrichtigungen auf ${n(u.push_devices, "Gerät", "Geräten")}`].join(" · ");
 }
 
 /** What the admin list shows for an account: the player's name, else the login name, else the email. */

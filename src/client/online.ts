@@ -1053,12 +1053,13 @@ async function openRoles(): Promise<void> {
   };
   render();
   d.showModal();
-  const [list, players, activity] = await Promise.all([supabase.rpc("list_users_with_roles"), supabase.rpc("list_user_players"), supabase.rpc("list_user_activity")]);
+  const [list, players, activity, seen] = await Promise.all([supabase.rpc("list_users_with_roles"), supabase.rpc("list_user_players"), supabase.rpc("list_user_activity"), supabase.rpc("list_user_last_seen")]);
   loading = false;
   failed = !!list.error;
   const names = new Map(((players.data ?? []) as { user_id: string; player_name: string }[]).map((p) => [p.user_id, p.player_name]));
   const usage = new Map(((activity.data ?? []) as { user_id: string; devices: number; last_sign_in_at: string | null; push_devices: number }[]).map((a) => [a.user_id, a]));
-  users = Array.isArray(list.data) ? (list.data as RoleUser[]).map((u) => ({ ...u, player_name: names.get(u.user_id) ?? null, ...usage.get(u.user_id) })) : [];
+  const lastSeen = new Map(((seen.data ?? []) as { user_id: string; last_seen_at: string }[]).map((a) => [a.user_id, a.last_seen_at]));
+  users = Array.isArray(list.data) ? (list.data as RoleUser[]).map((u) => ({ ...u, player_name: names.get(u.user_id) ?? null, ...usage.get(u.user_id), last_seen_at: lastSeen.get(u.user_id) ?? null })) : [];
   render();
 }
 

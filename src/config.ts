@@ -90,7 +90,7 @@ export const SUPABASE_ANON_KEY: string = "sb_publishable_C1miwWvIufN93GrVHZPPwA_
 export const ONLINE = SUPABASE_URL !== "" && SUPABASE_ANON_KEY !== "";
 /**
  * Public VAPID key for Web Push (lineup notifications). The private key lives only in the Supabase secret
- * VAPID_PRIVATE_KEY (see README). Empty hides the notification switch in the menu.
+ * VAPID_PRIVATE_KEY (see docs/internals.md). Empty hides the notification switch in the menu.
  */
 export const VAPID_PUBLIC_KEY: string = "BAuC9q4kqpZTMYRcyw0_yCzj0dzOLoaQKvT-FaeR5msAVrLWcgIZ-y6jagQjwOY-aGMiXrt2i0M2rjLVXB7ZJ_E";
 

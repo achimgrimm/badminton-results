@@ -5,7 +5,7 @@ description: Write a release note for this project (release-notes/*.md) and tag 
 
 # Write a release note
 
-Notes live in `release-notes/YYYY-MM-DD-<slug>.md` (today's date, lowercase slug with dashes). See README "Release notes" for how they are shown.
+Notes live in `release-notes/YYYY-MM-DD-<slug>.md` (today's date, lowercase slug with dashes). See AGENTS.md "Release notes" for how they are shown.
 
 Write in gender-neutral German ("Spielende", "Mannschaftsführung", "Admin", "Personen").
 
@@ -40,4 +40,4 @@ Run the build/tests (`mise run`) so a bad name, title or role fails early.
 
 ## 5. Update the manual
 
-If the note announces a feature (not a bug fix), add or change it in the chapter of the role it concerns in `manual/<n>-<role>.md` (see README "Manual"). Add new permissions to that chapter's `permissions:` front matter.
+If the note announces a feature (not a bug fix), add or change it in the chapter of the role it concerns in `manual/<n>-<role>.md` (see AGENTS.md "User manual"). Add new permissions to that chapter's `permissions:` front matter.

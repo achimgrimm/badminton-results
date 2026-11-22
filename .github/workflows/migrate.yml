@@ -29,7 +29,7 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       # Edge Functions (push for lineups, #47). Needs the repository secret SUPABASE_ACCESS_TOKEN (a Supabase
-      # personal access token) and the function secrets VAPID_* (see README); skipped with a warning without it.
+      # personal access token) and the function secrets VAPID_* (see docs/internals.md); skipped with a warning without it.
       - name: Deploy Edge Functions
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then echo "::warning::SUPABASE_ACCESS_TOKEN is not set, Edge Functions not deployed"; exit 0; fi

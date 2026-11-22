@@ -62,7 +62,7 @@
 - Open issues: #24 (online backend, partly stale), #49 (notify approvers of a new sign-in), #51 (explain why to log in), #3 (Apple sign-in).
 
 ## Sources
-- README cloud bullets.
+- docs/internals.md cloud bullets.
 - Migrations in `supabase/migrations/`.
 - `src/claims.ts`, `src/client/online.ts`, `src/render/layout.ts`.
 - Tests: `test/claims.test.ts`, `test/me-migrate.test.ts`.

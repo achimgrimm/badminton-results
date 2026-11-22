@@ -42,7 +42,7 @@ Only when the user explicitly asks for a breaking change (e.g. "drop the old col
 - Never edit a migration that was already applied (or merged to `main`). Add a new file instead.
 - New tables: `enable row level security` and add policies in the same file; permission checks use `public.has_permission('<permission>')`, and the feature adds its own `permissions` and `role_permissions` rows (see `20261109000000_rbac.sql`). No client may write role tables.
 - Foreign keys to users go to `auth.users (id) on delete cascade` so `delete_account()` still removes everything.
-- Update the README's online features paragraph when the schema, a permission or a policy changes.
+- Update the online features bullets in docs/internals.md when the schema, a permission or a policy changes.
 
 ## 4. Check before applying
 

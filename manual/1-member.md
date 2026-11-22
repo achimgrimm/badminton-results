@@ -12,7 +12,7 @@ Das kann **jede Person**, auch ohne Anmeldung. Die App funktioniert ohne Konto; 
 - **Tabelle** und **Spielplan** mit allen Ergebnissen. Mit **Meine Spiele** siehst Du nur Deine eigenen.
 - **Spielberichte** mit Sätzen und Punkten.
 - **Spielende**: Profilseiten mit Bilanz, Quote, Disziplinen und Doppelpartnern.
-- **Neue Ergebnisse** zeigt die App mit einem „Neu“-Hinweis und einem Pop-up.
+- **Neue Ergebnisse** zeigt die App mit einem „Neu“-Hinweis. Das Pop-up zeigt nur das neueste Ergebnis und führt zum Spielbericht; hast Du den Spielbericht schon geöffnet, erscheint es nicht.
 
 ## Persönlich einstellen
 

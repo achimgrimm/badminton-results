@@ -62,7 +62,7 @@ export function matchCard(m: Meeting, root: string, opts: MatchCardOptions = {})
   const inner = html`<div class="card-meta"><span>${meta.join(" · ")}</span>${badges || own ? `<span class="badges">${badges}</span>` : ""}</div>${body}${opts.position && own && !played ? `<p class="pub-mine pub-mine--card" data-game="${esc(previewName(m))}" hidden></p>` : ""}`;
   const cls = `card match-card${own ? " is-own" : ""}`;
   const key = (markable
-    ? ` data-result-key="${esc(resultKey(m))}" data-result-text="${esc(`${m.home} ${h}:${g} ${m.guest}`)}" data-result-date="${esc(formatDate(m.date))}"`
+    ? ` data-result-key="${esc(resultKey(m))}" data-result-text="${esc(`${m.home} ${h}:${g} ${m.guest}`)}" data-result-date="${esc(formatDate(m.date))}" data-result-iso="${esc(m.date)}"`
     : "") + (own ? ` data-play-key="${esc(previewName(m))}"` : "") + (own && !played ? shareData(m) : "")
     + (own && played && lineupOf(m.meeting).length ? ` data-players="${lineupOf(m.meeting).join(" ")}"` : "");
   const card = cardElement(m, root, cls, key, inner);

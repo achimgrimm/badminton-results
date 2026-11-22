@@ -49,8 +49,8 @@ const NEW_FOR_MS = 24 * 60 * 60 * 1000;
  * Marks the selected team's results that are new on this device: the first time a result card
  * shows up, its key is stored with the time; for a day after that it gets a "Neu" badge.
  * On the first visit to a team everything is recorded as already seen, so a whole season isn't new.
- * Opening a Spielbericht clears its marker. Results first seen on this page load are also listed
- * in a dialog, once.
+ * Opening a Spielbericht clears its marker. Of the results first seen on this page load, only the
+ * most recent one is shown in a dialog, once, linking to its Spielbericht.
  */
 const NEW_RESULTS = (slug: string) => `(function () {
   var KEY = "${storageKey(`seen-${slug}`)}", seen = null, now = Date.now();
@@ -77,9 +77,11 @@ const NEW_RESULTS = (slug: string) => `(function () {
   try { localStorage.setItem(KEY, JSON.stringify(seen)); } catch (e) {}
   if (fresh.length) popup(fresh);
 
-  function popup(cards) {
+  function popup(all) {
     var dlg = document.getElementById("new-dialog"), list = dlg.querySelector(".team-list");
-    dlg.querySelector("h2").textContent = cards.length === 1 ? "Neues Ergebnis" : cards.length + " neue Ergebnisse";
+    var latest = all.reduce(function (a, b) { return (b.dataset.resultIso || "") >= (a.dataset.resultIso || "") ? b : a; });
+    var cards = [latest];
+    dlg.querySelector("h2").textContent = "Neues Ergebnis";
     cards.forEach(function (card) {
       var item = document.createElement(card.href ? "a" : "div"), text = document.createElement("span");
       if (card.href) item.href = card.href;
@@ -97,7 +99,7 @@ const NEW_RESULTS = (slug: string) => `(function () {
     dlg.querySelectorAll(".dialog-close, .btn-primary").forEach(function (b) { b.addEventListener("click", function () { dlg.close(); }); });
     dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
     dlg.showModal();
-    otTrack("new-results", { count: cards.length });
+    otTrack("new-results", { count: all.length });
   }
 })();`;
 

@@ -74,9 +74,12 @@ jobs:
       # A failure only leaves the pictures out; it must not stop the site update.
       - id: screenshots
         continue-on-error: true
+        # The runner's own Chrome: Playwright cannot install its Chromium on this Ubuntu version.
         run: |
-          npx playwright-core install --with-deps chromium
-          npm run screenshots
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$CHROME_PATH" ]; then echo "::error::no Chrome or Chromium on this runner"; exit 1; fi
+          echo "Using $CHROME_PATH"
+          CHROME_PATH="$CHROME_PATH" npm run screenshots
       - if: ${{ steps.screenshots.outcome == 'success' }}
         run: npm run build
       # Keeps the free Supabase project awake; a failure must not stop the site update.

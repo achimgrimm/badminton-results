@@ -531,10 +531,18 @@ a.stat:hover { text-decoration: none; box-shadow: var(--ot-shadow-hover); }
 .login-dialog .login-google-icon svg { width: 16px; height: 16px; }
 .login-dialog .login-email { color: var(--ot-text-strong); overflow-wrap: anywhere; }
 
-/* Manual (handbuch.html): the chapters for the reader's roles are marked */
+/* Manual: handbuch.html lists the features, each one has its own page (handbuch/<slug>.html) */
+.manual-audience-h { font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ot-text-muted); margin: 24px 0 8px; }
+.manual-index { list-style: none; margin: 0; padding: 0; }
+.manual-index li + li { border-top: 1px solid var(--ot-border); }
+.manual-index a { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; font-weight: 600; }
+.manual-index a::after { content: "›"; color: var(--ot-text-muted); }
+.manual-index a:hover { text-decoration: none; background: var(--ot-bg-alt); }
+.manual-index a.is-locked { color: var(--ot-text-muted); font-weight: 400; }
+.manual-for { margin: -8px 0 12px; }
+.manual-for .manual-locked-hint[hidden] { display: none; }
+.manual-pager { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; }
+.manual-pager .btn { max-width: 48%; }
 .manual-section h2 { margin-top: 0; }
-.manual-section.is-own { box-shadow: var(--ot-shadow), inset 4px 0 0 var(--ot-primary); }
 .manual-section ul { padding-left: 1.25rem; }
-.manual-section .manual-own { margin-left: 6px; font-size: .75rem; }
-.manual-section .manual-own[hidden] { display: none; }
-.manual-section h2 + h2, .manual-section h3 { font-size: 1.125rem; }
+.manual-section h3 { font-size: 1.125rem; }

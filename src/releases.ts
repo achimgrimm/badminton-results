@@ -19,8 +19,15 @@ export interface Release {
 
 const NAME = /^(\d{4}-\d{2}-\d{2})-[a-z0-9-]+\.md$/;
 
-/** Reads all release notes, newest first. Throws on a bad file name or a missing title, so the build fails. */
-export function loadReleases(dir: string): Release[] {
+/** Link target in a note's Markdown that points to a manual section: [Aufstellung](manual:aufstellung). */
+const MANUAL_LINK = /\]\(manual:([^)\s]*)\)/g;
+
+/**
+ * Reads all release notes, newest first. Throws on a bad file name or a missing title, so the build fails.
+ * With manualSlugs (the manual's sections), a "manual:<slug>" link to an unknown section fails too; the
+ * link stays "manual:<slug>" in the HTML and the page rewrites it to its page handbuch/<slug>.html (see manualLinks).
+ */
+export function loadReleases(dir: string, manualSlugs?: string[]): Release[] {
   let files: string[];
   try {
     files = readdirSync(dir).filter((f) => f.endsWith(".md"));
@@ -45,7 +52,17 @@ export function loadReleases(dir: string): Release[] {
       const heading = /^# +(.+)$/m.exec(text);
       if (!heading) throw new Error(`release note ${file}: needs a "# Title" line`);
       const body = text.slice(heading.index + heading[0].length).trim();
+      if (manualSlugs) {
+        for (const m of body.matchAll(MANUAL_LINK)) {
+          if (!manualSlugs.includes(m[1])) throw new Error(`release note ${file}: manual:${m[1]} is not a section of the manual (use ${manualSlugs.join(", ")})`);
+        }
+      }
       return { id: file.slice(0, -3), date: name[1], title: heading[1].trim(), html: marked.parse(body, { async: false }), roles };
     })
     .sort((a, b) => b.id.localeCompare(a.id));
+}
+
+/** Points the "manual:<slug>" links of a note's HTML to the manual page; assets is the path back to the site root. */
+export function manualLinks(html: string, assets: string): string {
+  return html.replace(/href="manual:([a-z0-9-]+)"/g, (_, slug) => `href="${assets}handbuch/${slug}.html"`);
 }

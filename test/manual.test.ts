@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { MANUAL_ROLES, loadManual } from "../src/manual.ts";
-import { renderHandbuch } from "../src/render/handbuch.ts";
+import { renderHandbuch, renderHandbuchSeite } from "../src/render/handbuch.ts";
 import { setTeam } from "../src/render/context.ts";
 
 const MANUAL = new URL("../manual/", import.meta.url).pathname;
@@ -16,15 +16,19 @@ function tmp(files: Record<string, string>): string {
   return dir;
 }
 
-test("the manual has one chapter per role, weakest first", () => {
-  assert.deepEqual(loadManual(MANUAL).map((s) => s.role), MANUAL_ROLES);
+test("the manual has one section per feature in file order, every role is covered", () => {
+  const sections = loadManual(MANUAL);
+  assert.equal(new Set(sections.map((s) => s.slug)).size, sections.length);
+  for (const role of MANUAL_ROLES) assert.ok(sections.some((s) => s.role === role), role);
+  assert.deepEqual(loadManual(tmp({ "10-b.md": "---\nrole: member\n---\n# B\n", "2-a.md": "---\nrole: member\n---\n# A\n" })).map((s) => s.slug), ["a", "b"]);
 });
 
-test("a bad role, missing front matter or missing title fails the build", () => {
+test("a bad name, role, front matter, title or a duplicate slug fails the build", () => {
   assert.throws(() => loadManual(tmp({ "1-x.md": "---\nrole: boss\n---\n# X\n" })), /unknown role/);
-  assert.throws(() => loadManual(tmp({ "1-member.md": "# X\n" })), /front matter/);
-  assert.throws(() => loadManual(tmp({ "1-member.md": "---\nrole: member\n---\ntext\n" })), /Title/);
-  assert.throws(() => loadManual(tmp({ "1-member.md": "---\nrole: member\n---\n# M\n" })), /missing chapter/);
+  assert.throws(() => loadManual(tmp({ "member.md": "---\nrole: member\n---\n# X\n" })), /name must be/);
+  assert.throws(() => loadManual(tmp({ "1-x.md": "# X\n" })), /front matter/);
+  assert.throws(() => loadManual(tmp({ "1-x.md": "---\nrole: member\n---\ntext\n" })), /Title/);
+  assert.throws(() => loadManual(tmp({ "1-x.md": "---\nrole: member\n---\n# X\n", "2-x.md": "---\nrole: member\n---\n# Y\n" })), /two sections/);
 });
 
 test("every permission the app checks is described in a chapter", () => {
@@ -41,9 +45,21 @@ test("every permission the app checks is described in a chapter", () => {
   for (const p of used) assert.ok(documented.has(p), `permission ${p} is used in src/ but not listed under "permissions:" in manual/*.md`);
 });
 
-test("the page renders every chapter and the menu links to it", () => {
+test("links between sections are checked and point to the section's page", () => {
+  const dir = tmp({ "1-a.md": "---\nrole: member\n---\n# A\n\nSiehe [B](manual:b).\n", "2-b.md": "---\nrole: member\n---\n# B\n" });
+  assert.match(loadManual(dir)[0].html, /<a href="b.html">B<\/a>/);
+  assert.throws(() => loadManual(tmp({ "1-a.md": "---\nrole: member\n---\n# A\n\n[x](manual:nix)\n" })), /manual:nix is not a section/);
+});
+
+test("the start page links every feature, each has its own page with neighbours, and the menu links to the manual", () => {
   setTeam(null, []);
-  const page = renderHandbuch(loadManual(MANUAL), null);
-  for (const role of MANUAL_ROLES) assert.ok(page.includes(`data-role="${role}"`), role);
-  assert.ok(page.includes('href="handbuch.html"'));
+  const sections = loadManual(MANUAL);
+  const index = renderHandbuch(sections, null);
+  for (const s of sections) assert.ok(index.includes(`href="handbuch/${s.slug}.html"`), s.slug);
+  const [first, second] = sections;
+  const page = renderHandbuchSeite(sections, second.slug, null);
+  assert.ok(page.includes(`<h1>${second.title}</h1>`) || page.includes(second.title));
+  assert.ok(page.includes(`href="${first.slug}.html"`), "previous");
+  assert.ok(page.includes('href="../handbuch.html"'), "back link");
+  assert.ok(index.includes('href="handbuch.html"'));
 });

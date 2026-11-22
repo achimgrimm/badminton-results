@@ -5,6 +5,7 @@ import { PLAYING_STATE } from "../playing.ts";
 import { APP_SHORT_NAME } from "./pwa.ts";
 import { NET_STATUS } from "./net-status.ts";
 import { buildVersion, clubTeams, currentTeam, onlineHref, releaseNotes, rosterEntries, stylesHref } from "./context.ts";
+import { manualLinks } from "../releases.ts";
 import { esc, formatDate, formatTimestamp, html, todayInBremen } from "./util.ts";
 
 export type NavKey = "index" | "tabelle" | "spielplan" | "spieler" | null;
@@ -367,6 +368,10 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
   function done() { try { if (newest) localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} dlg.close(); }
   dlg.querySelectorAll(".dialog-close, .btn-primary").forEach(function (b) { b.addEventListener("click", done); });
   dlg.addEventListener("click", function (e) { if (e.target === dlg) done(); });
+  // A link in a note (e.g. to the manual) leaves the page: count the notes as seen first, or they would pop up again.
+  dlg.querySelectorAll(".release-body a").forEach(function (a) {
+    a.addEventListener("click", function () { try { if (newest) localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} });
+  });
   dlg.addEventListener("close", function () { try { if (newest) localStorage.setItem("${RELEASE_KEY}", newest); } catch (e) {} });
   document.getElementById("release-link").addEventListener("click", function (e) { e.preventDefault(); show(arts, "menu"); });
   if (!${auto} || !newest) return;
@@ -381,7 +386,7 @@ const RELEASE_NOTES = (auto: boolean) => `(function () {
   }, 0);
 })();`;
 
-function releaseDialog(): string {
+function releaseDialog(assets: string): string {
   const shown = releaseNotes();
   if (!shown.length) return "";
   return html`<dialog class="team-dialog release-dialog" id="release-dialog" aria-labelledby="release-dialog-h">
@@ -394,7 +399,7 @@ function releaseDialog(): string {
     (r) => html`<article data-release="${esc(r.id)}"${r.roles.length ? ` data-roles="${esc(r.roles.join(" "))}"` : ""}>
       <h3>${esc(r.title)}</h3>
       <p class="small muted release-meta">${esc(formatDate(r.date))}${r.roles.map((x) => ` <span class="badge badge--outline">${esc(ROLE_LABELS[x] ?? x)}</span>`).join("")}</p>
-      ${r.html}
+      ${manualLinks(r.html, assets)}
     </article>`,
   )}
   </div>
@@ -792,7 +797,7 @@ ${team ? teamDialog(team, assets) : ""}
 ${team ? NEW_DIALOG : ""}
 ${menuDialog(assets, team ? o.root : null)}
 ${team ? `<script type="application/json" id="me-roster" data-team="${team.slug}">${JSON.stringify(rosterEntries()).replace(/</g, "\\u003c")}</script>` : ""}
-${releaseDialog()}
+${releaseDialog(assets)}
 <dialog class="install-help" id="install-help" aria-labelledby="install-help-h">
   <h2 id="install-help-h">App installieren</h2>
   <p>So legst Du die Seite als App auf Deinen Home-Bildschirm:</p>

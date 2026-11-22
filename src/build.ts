@@ -8,7 +8,7 @@ import { DATA_DIR, loadClubTeams, loadClubs, loadDataset, paths, type Dataset } 
 import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
 import { renderDatenschutz } from "./render/datenschutz.ts";
-import { renderHandbuch } from "./render/handbuch.ts";
+import { renderHandbuch, renderHandbuchSeite } from "./render/handbuch.ts";
 import { loadManual } from "./manual.ts";
 import { renderAuthCallback } from "./render/auth-callback.ts";
 import { renderChooser } from "./render/chooser.ts";
@@ -47,7 +47,9 @@ function gitVersion(): BuildVersion | null {
 }
 setVersion(gitVersion());
 setStylesHref(`styles.css?v=${createHash("sha256").update(readFileSync(join(SRC, "styles.css"))).digest("hex").slice(0, 10)}`);
-setReleases(loadReleases(new URL("../release-notes/", import.meta.url).pathname));
+const MANUAL_DIR = new URL("../manual/", import.meta.url).pathname;
+const manual = loadManual(MANUAL_DIR);
+setReleases(loadReleases(new URL("../release-notes/", import.meta.url).pathname, manual.map((s) => s.slug)));
 
 /** Bundles supabase-js and the sign-in script into one file; returns its hashed URL. */
 function buildOnlineBundle(outDir: string): string {
@@ -161,7 +163,9 @@ setTeam(null, teams);
 writeFileSync(join(DIST, "index.html"), renderChooser(teams, standings, nextMatches, checkedAt));
 
 writeFileSync(join(DIST, "datenschutz.html"), renderDatenschutz(checkedAt));
-writeFileSync(join(DIST, "handbuch.html"), renderHandbuch(loadManual(new URL("../manual/", import.meta.url).pathname), checkedAt));
+writeFileSync(join(DIST, "handbuch.html"), renderHandbuch(manual, checkedAt));
+mkdirSync(join(DIST, "handbuch"), { recursive: true });
+for (const s of manual) writeFileSync(join(DIST, "handbuch", `${s.slug}.html`), renderHandbuchSeite(manual, s.slug, checkedAt));
 if (ONLINE) writeFileSync(join(DIST, "auth-callback.html"), renderAuthCallback());
 
 copyFileSync(join(SRC, "styles.css"), join(DIST, "styles.css"));

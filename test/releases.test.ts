@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadReleases } from "../src/releases.ts";
+import { loadReleases, manualLinks } from "../src/releases.ts";
 
 function withNotes(files: Record<string, string>, fn: (dir: string) => void): void {
   const dir = mkdtempSync(join(tmpdir(), "releases-"));
@@ -62,5 +62,14 @@ test("loadReleases: roles from front matter, none means everyone", () => {
 test("loadReleases: an unknown role fails the build", () => {
   withNotes({ "2026-11-01-a.md": "---\nroles: boss\n---\n# A\n" }, (dir) => {
     assert.throws(() => loadReleases(dir), /unknown role "boss"/);
+  });
+});
+
+test("loadReleases: a manual: link needs an existing section; manualLinks points it at the manual page", () => {
+  withNotes({ "2026-11-01-a.md": "# A\n\nSiehe [Aufstellung](manual:aufstellung).\n" }, (dir) => {
+    assert.throws(() => loadReleases(dir, ["menue"]), /manual:aufstellung is not a section/);
+    const [r] = loadReleases(dir, ["aufstellung"]);
+    assert.match(r.html, /href="manual:aufstellung"/);
+    assert.match(manualLinks(r.html, "../"), /<a href="\.\.\/handbuch\/aufstellung\.html">Aufstellung<\/a>/);
   });
 });

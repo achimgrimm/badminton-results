@@ -1,46 +1,79 @@
 import { storageKey } from "../config.ts";
-import type { ManualSection } from "../manual.ts";
+import { MANUAL_ROLES, type ManualSection } from "../manual.ts";
 import { layout } from "./layout.ts";
 import { esc, html } from "./util.ts";
 
 /** Where the client saves the signed-in account (uid, roles); see SAVED_KEY in client/online.ts. */
 const ACCOUNT_KEY = `${storageKey("auth")}-account`;
 
-/** Marks the chapters that apply to the reader ("Für Dich"): everyone is a member, a signed-in account also "signed_in", plus the account's roles. Runs again after sign-in via otManualRefilter. */
-const MARK_OWN = `(function () {
+/** What each audience is called in the manual, weakest first (same order as MANUAL_ROLES). */
+const AUDIENCE: Record<string, string> = {
+  member: "Alle",
+  signed_in: "Mit Anmeldung",
+  player: "Spielende",
+  team_lead: "Mannschaftsführung",
+  admin: "Admin",
+};
+
+/**
+ * Greys out the features the reader cannot use yet in the list and says so on their page (signed out, no confirmed name, no role). The
+ * roles build on each other, so the reader's rank is the strongest role they have: signed out is 0,
+ * signed in 1, then the account's roles. Runs again after sign-in via otManualRefilter.
+ */
+const MARK_LOCKED = `(function () {
+  var ORDER = ${JSON.stringify(MANUAL_ROLES)};
   function mark() {
-    var mine = ["member"];
+    var rank = 0;
     try {
       var acc = JSON.parse(localStorage.getItem("${ACCOUNT_KEY}") || "null");
-      if (acc && acc.uid) mine = (Array.isArray(acc.roles) ? acc.roles : []).concat("member", "signed_in");
+      if (acc && acc.uid) {
+        rank = 1;
+        (Array.isArray(acc.roles) ? acc.roles : []).forEach(function (r) { rank = Math.max(rank, ORDER.indexOf(r)); });
+      }
     } catch (e) {}
-    document.querySelectorAll("[data-role]").forEach(function (s) {
-      var own = mine.indexOf(s.dataset.role) >= 0;
-      s.classList.toggle("is-own", own);
-      var badge = s.querySelector(".manual-own");
-      if (badge) badge.hidden = !own;
+    document.querySelectorAll("[data-rank]").forEach(function (el) {
+      var locked = Number(el.dataset.rank) > rank;
+      el.classList.toggle("is-locked", locked);
+      var hint = el.querySelector(".manual-locked-hint");
+      if (hint) hint.hidden = !locked;
     });
   }
   mark();
   window.otManualRefilter = mark;
+
 })();`;
 
-/** The manual: one chapter per role, with the roles that apply to the reader marked. */
+const rankOf = (s: ManualSection) => MANUAL_ROLES.indexOf(s.role);
+
+/** The manual's start page: the features grouped by audience; each one opens its own page. */
 export function renderHandbuch(sections: ManualSection[], checkedAt: string | null): string {
-  const toc = sections.map((s) => `<a href="#${esc(s.role)}">${esc(s.title)}</a>`).join(" · ");
-  const chapters = sections
-    .map(
-      (s) => html`<section class="card manual-section" id="${esc(s.role)}" data-role="${esc(s.role)}">
-      <h2>${esc(s.title)} <span class="badge manual-own" hidden>Für Dich</span></h2>
-      ${s.html}
-    </section>`,
-    )
-    .join("\n");
+  const groups = MANUAL_ROLES.map((role) => ({ role, items: sections.filter((s) => s.role === role) })).filter((g) => g.items.length);
   const body = html`
     <h1>Handbuch</h1>
-    <p class="small muted">Was die App kann, je nachdem ob und als wer Du angemeldet bist. Jedes Kapitel baut auf den Kapiteln davor auf. Die Kapitel, die für Dich gelten, sind markiert.</p>
-    <p class="small">${toc}</p>
-    ${chapters}
+    <p class="small muted">Was die App kann, nach Funktionen geordnet. Wähle eine Funktion. Ausgegraute brauchen eine Anmeldung oder eine Rolle.</p>
+    ${groups.map(
+      (g) => html`<h2 class="manual-audience-h">${esc(AUDIENCE[g.role] ?? g.role)}</h2>
+      <ul class="manual-index card">${g.items
+        .map((s) => html`<li><a href="handbuch/${esc(s.slug)}.html" data-rank="${rankOf(s)}">${esc(s.title)}</a></li>`)
+        .join("")}</ul>`,
+    )}
   `;
-  return layout({ title: "Handbuch", root: "", assets: "", nav: null, checkedAt, body, script: MARK_OWN });
+  return layout({ title: "Handbuch", root: "", assets: "", nav: null, checkedAt, body, script: MARK_LOCKED });
+}
+
+/** One feature of the manual on its own page (handbuch/<slug>.html), with a link back and to the neighbours. */
+export function renderHandbuchSeite(sections: ManualSection[], slug: string, checkedAt: string | null): string {
+  const i = sections.findIndex((s) => s.slug === slug);
+  const s = sections[i];
+  const prev = sections[i - 1], next = sections[i + 1];
+  const body = html`
+    <h1>${esc(s.title)}</h1>
+    ${rankOf(s) ? html`<p class="manual-for" data-rank="${rankOf(s)}"><span class="badge badge--outline">${esc(AUDIENCE[s.role] ?? s.role)}</span><span class="small muted manual-locked-hint" hidden> Dafür brauchst Du eine Anmeldung oder diese Rolle.</span></p>` : ""}
+    <section class="card manual-section">${s.html}</section>
+    <nav class="manual-pager" aria-label="Weitere Funktionen">
+      ${prev ? html`<a class="btn" href="${esc(prev.slug)}.html">‹ ${esc(prev.title)}</a>` : "<span></span>"}
+      ${next ? html`<a class="btn" href="${esc(next.slug)}.html">${esc(next.title)} ›</a>` : "<span></span>"}
+    </nav>
+  `;
+  return layout({ title: `${s.title} · Handbuch`, root: "../", assets: "../", nav: null, checkedAt, body, script: MARK_LOCKED, back: { href: "../handbuch.html", label: "Handbuch" } });
 }

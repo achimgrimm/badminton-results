@@ -2,11 +2,7 @@
 role: admin
 permissions: role.manage
 ---
-# Admin
-
-Admins können alles, was die Mannschaftsführung kann, und zusätzlich:
-
-## Rollen verwalten
+# Rollen verwalten
 
 Im Menü unter **Rollen verwalten**:
 

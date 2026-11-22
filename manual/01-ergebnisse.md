@@ -1,11 +1,9 @@
 ---
 role: member
 ---
-# Ohne Anmeldung (Mitglied)
+# Ergebnisse ansehen
 
 Das kann **jede Person**, auch ohne Anmeldung. Die App funktioniert ohne Konto; Einstellungen bleiben dann auf Deinem Gerät.
-
-## Ergebnisse ansehen
 
 - **Mannschaft wählen**: Die Startseite zeigt alle Mannschaften. Die App merkt sich Deine zuletzt gewählte.
 - **Übersicht**: nächstes Spiel, Tabellenplatz und Bilanz Deiner Mannschaft.
@@ -13,10 +11,3 @@ Das kann **jede Person**, auch ohne Anmeldung. Die App funktioniert ohne Konto; 
 - **Spielberichte** mit Sätzen und Punkten.
 - **Spielende**: Profilseiten mit Bilanz, Quote, Disziplinen und Doppelpartnern.
 - **Neue Ergebnisse** zeigt die App mit einem „Neu“-Hinweis. Das Pop-up zeigt nur das neueste Ergebnis und führt zum Spielbericht; hast Du den Spielbericht schon geöffnet, erscheint es nicht.
-
-## Persönlich einstellen
-
-- **Name wählen** („Wer bist Du?“): Dann zeigt die App Deine Spiele, Deine Statistik und hebt Deinen Namen hervor. Wer nicht selbst spielt, wählt **Nicht aktiv**.
-- **Ich spiele**: Markiere Spiele mit „Dabei“, „Vielleicht“ oder „Kann nicht“. Das erscheint in der Übersicht als „Dein nächstes Spiel“.
-- **Vorschau** eines Spiels: Spielende der Gegenseite mit Bilanz, und eine **Aufstellung planen**, die nur auf Deinem Gerät bleibt. Du kannst sie z. B. per WhatsApp teilen.
-- **Menü** (oben rechts): Dunkles Design, App installieren, App teilen, „Was ist neu?“, Datenschutz sowie Feedback per Signal oder E-Mail.

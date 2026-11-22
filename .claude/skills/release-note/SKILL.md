@@ -40,4 +40,4 @@ Run the build/tests (`mise run`) so a bad name, title or role fails early.
 
 ## 5. Update the manual
 
-If the note announces a feature (not a bug fix), add or change it in the chapter of the role it concerns in `manual/<n>-<role>.md` (see AGENTS.md "User manual"). Add new permissions to that chapter's `permissions:` front matter.
+If the note announces a feature (not a bug fix), add or change its section in `manual/<nn>-<slug>.md` (see AGENTS.md "User manual"). Add new permissions to that section's `permissions:` front matter. Link the note to the section with `[text](manual:<slug>)` (deep link to `handbuch.html#<slug>`).

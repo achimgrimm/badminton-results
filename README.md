@@ -42,7 +42,7 @@ Project layout:
 | `src/scrape.ts`, `src/parse/` | nuLiga scraping and parsers (tests in `test/`, fixtures in `test/fixtures/`) |
 | `src/render/`, `src/client/` | HTML pages and browser code |
 | `supabase/` | database migrations and Edge Functions |
-| `manual/` | user manual, one chapter per role |
+| `manual/` | user manual, one section per feature |
 | `release-notes/` | "Was ist neu?" announcements |
 | `.github/workflows/` | update, stage and migration workflows |
 
@@ -59,7 +59,7 @@ Every pushed branch (except Dependabot's) gets its own test stage at `https://ac
 
 ## Manual and release notes
 
-The user manual lives in `manual/` (one chapter per role, shown on the page "Handbuch"); announcements for users live in `release-notes/`. When a feature changes, update the matching manual chapter and add a release note. The file formats are described in [AGENTS.md](AGENTS.md).
+The user manual lives in `manual/` (one section per feature, shown on the page "Handbuch"); announcements for users live in `release-notes/`. When a feature changes, update the matching manual section and add a release note. The file formats are described in [AGENTS.md](AGENTS.md).
 
 ## Live site
 

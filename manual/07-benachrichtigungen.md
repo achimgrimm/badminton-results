@@ -3,6 +3,8 @@ role: signed_in
 ---
 # Benachrichtigungen
 
+![Das Menü mit angemeldetem Konto und dem Punkt für Benachrichtigungen](img/benachrichtigungen.png)
+
 Im Menü einschalten, pro Gerät. Du bekommst:
 
 - **Neue Ergebnisse** gefolgter Mannschaften. Ein Tipp öffnet den Spielbericht.

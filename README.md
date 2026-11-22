@@ -12,6 +12,7 @@ Tools are managed with [mise](https://mise.jdx.dev) (`mise.toml` pins Node 22 an
 mise install       # install Node and gh
 mise run update    # test, scrape, build
 mise run serve     # preview dist/
+mise run screenshots  # build, then the pictures for the manual
 mise tasks         # list all tasks
 ```
 
@@ -22,6 +23,7 @@ npm install
 npm run scrape   # fetch nuLiga pages -> data/*.json
 npm run build    # data/*.json -> dist/ (static HTML)
 npm run serve    # preview dist/ locally
+npm run screenshots  # pictures for the manual, from the built dist/ (needs Chromium)
 npm test         # parser tests against test/fixtures
 ```
 

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildSync } from "esbuild";
 import { ONLINE, STAGE, STORAGE_NAMES, STORAGE_PREFIXES, SUPABASE_ANON_KEY, SUPABASE_URL, VAPID_PUBLIC_KEY, storageKey } from "./config.ts";
@@ -9,7 +9,7 @@ import type { MatchReport, Meeting, Standing } from "./types.ts";
 import { renderBericht } from "./render/bericht.ts";
 import { renderDatenschutz } from "./render/datenschutz.ts";
 import { renderHandbuch, renderHandbuchSeite } from "./render/handbuch.ts";
-import { loadManual } from "./manual.ts";
+import { SCREENSHOTS, loadManual } from "./manual.ts";
 import { renderAuthCallback } from "./render/auth-callback.ts";
 import { renderChooser } from "./render/chooser.ts";
 import { setLineups, setOnlineHref, setRoster, setReleases, setStylesHref, setTeam, setVersion, stylesHref, type BuildVersion } from "./render/context.ts";
@@ -166,6 +166,11 @@ writeFileSync(join(DIST, "datenschutz.html"), renderDatenschutz(checkedAt));
 writeFileSync(join(DIST, "handbuch.html"), renderHandbuch(manual, checkedAt));
 mkdirSync(join(DIST, "handbuch"), { recursive: true });
 for (const s of manual) writeFileSync(join(DIST, "handbuch", `${s.slug}.html`), renderHandbuchSeite(manual, s.slug, checkedAt));
+// Pictures of the manual, made by `npm run screenshots` (not committed; without them the pages just have no pictures)
+if (existsSync(SCREENSHOTS)) {
+  mkdirSync(join(DIST, "handbuch", "img"), { recursive: true });
+  for (const f of readdirSync(SCREENSHOTS).filter((f) => f.endsWith(".png"))) copyFileSync(join(SCREENSHOTS, f), join(DIST, "handbuch", "img", f));
+}
 if (ONLINE) writeFileSync(join(DIST, "auth-callback.html"), renderAuthCallback());
 
 copyFileSync(join(SRC, "styles.css"), join(DIST, "styles.css"));

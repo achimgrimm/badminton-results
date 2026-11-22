@@ -4,6 +4,8 @@ permissions: role.manage
 ---
 # Rollen verwalten
 
+![Das Fenster „Rollen verwalten“ mit Konten, Rollen und Nutzung](img/rollen-verwalten.png)
+
 Im Menü unter **Rollen verwalten**:
 
 - Alle Konten mit Namen und Rolle ansehen.

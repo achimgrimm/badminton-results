@@ -3,6 +3,8 @@ role: member
 ---
 # Menü
 
+![Das Menü ohne Anmeldung](img/menue.png)
+
 Das Menü findest Du oben rechts.
 
 - **Dunkles Design**, **App installieren** und **App teilen**.

@@ -3,6 +3,8 @@ role: signed_in
 ---
 # Anmelden
 
+![Das Fenster „Anmelden“ mit E-Mail-Adresse und Google](img/anmelden.png)
+
 Anmelden ist freiwillig, geht mit Google oder mit einem Code per E-Mail und gibt Dir zusätzlich:
 
 - **Alle Geräte**: Deine „Ich spiele“-Antworten gelten auf allen Deinen Geräten.

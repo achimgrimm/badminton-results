@@ -10,7 +10,8 @@
     "build": "tsx src/build.ts",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "serve": "npx --yes http-server@14 dist -p 3000 -c-1"
+    "serve": "npx --yes http-server@14 dist -p 3000 -c-1",
+    "screenshots": "tsx screenshots/run.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.1",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "esbuild": "^0.28.2",
+    "playwright-core": "1.53.0",
     "supabase": "3.2.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"

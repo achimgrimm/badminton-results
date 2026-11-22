@@ -35,6 +35,11 @@ description = "Preview dist/ locally"
 depends = ["build"]
 run = "npm run serve"
 
+[tasks.screenshots]
+description = "Take the pictures of the manual from the built site (needs Chromium: npx playwright-core install chromium)"
+depends = ["build"]
+run = "npm run screenshots"
+
 [tasks.update]
 description = "Scrape and build, like the hourly CI job"
 depends = ["test"]

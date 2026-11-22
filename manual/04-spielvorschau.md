@@ -3,6 +3,8 @@ role: member
 ---
 # Spielvorschau
 
+![Spielvorschau mit dem Hinweis, wo Du spielst, und der veröffentlichten Aufstellung](img/spielvorschau.png)
+
 - **Vorschau** eines Spiels: Spielende der Gegenseite mit Bilanz.
 - **Aufstellung planen**: Eine Planung, die nur auf Deinem Gerät bleibt. Du kannst sie z. B. per WhatsApp teilen.
 - **Aufstellung lesen** (angemeldet): Die veröffentlichte Aufstellung der Mannschaftsführung steht in der Vorschau.

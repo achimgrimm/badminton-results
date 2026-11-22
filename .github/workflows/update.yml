@@ -70,6 +70,15 @@ jobs:
             data-
       - run: npm run scrape
       - run: npm run build
+      # Pictures for the manual (#70): taken from the build above with a faked sign-in, then built into the pages.
+      # A failure only leaves the pictures out; it must not stop the site update.
+      - id: screenshots
+        continue-on-error: true
+        run: |
+          npx playwright-core install --with-deps chromium
+          npm run screenshots
+      - if: ${{ steps.screenshots.outcome == 'success' }}
+        run: npm run build
       # Keeps the free Supabase project awake; a failure must not stop the site update.
       - if: ${{ matrix.site.stage == '' }}
         continue-on-error: true

@@ -545,4 +545,5 @@ a.stat:hover { text-decoration: none; box-shadow: var(--ot-shadow-hover); }
 .manual-pager .btn { max-width: 48%; }
 .manual-section h2 { margin-top: 0; }
 .manual-section ul { padding-left: 1.25rem; }
+.manual-section img { display: block; max-width: 100%; height: auto; margin: 4px auto 12px; border: 1px solid var(--ot-border); border-radius: var(--ot-radius); }
 .manual-section h3 { font-size: 1.125rem; }

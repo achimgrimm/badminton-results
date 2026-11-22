@@ -6,6 +6,7 @@ import test from "node:test";
 import { MANUAL_ROLES, loadManual } from "../src/manual.ts";
 import { renderHandbuch, renderHandbuchSeite } from "../src/render/handbuch.ts";
 import { setTeam } from "../src/render/context.ts";
+import { SHOT_NAMES } from "../screenshots/shots.ts";
 
 const MANUAL = new URL("../manual/", import.meta.url).pathname;
 const SRC = new URL("../src/", import.meta.url).pathname;
@@ -62,4 +63,29 @@ test("the start page links every feature, each has its own page with neighbours,
   assert.ok(page.includes(`href="${first.slug}.html"`), "previous");
   assert.ok(page.includes('href="../handbuch.html"'), "back link");
   assert.ok(index.includes('href="handbuch.html"'));
+});
+
+test("pictures: the manual and screenshots/shots.ts list the same names, each with alt text", () => {
+  const used: string[] = [];
+  for (const f of readdirSync(MANUAL).filter((f) => f.endsWith(".md"))) {
+    for (const m of readFileSync(join(MANUAL, f), "utf8").matchAll(/!\[([^\]]*)\]\(img\/([^)]*)\)/g)) {
+      assert.ok(m[1].trim(), `${f}: picture ${m[2]} needs alt text`);
+      assert.match(m[2], /^[a-z0-9-]+\.png$/, `${f}: ${m[2]}`);
+      used.push(m[2].slice(0, -4));
+    }
+  }
+  assert.deepEqual([...used].sort(), [...SHOT_NAMES].sort());
+});
+
+test("pictures: one whose file is missing is left out, a present one gets its size at scale 2", () => {
+  const dir = tmp({ "1-a.md": "---\nrole: member\n---\n# A\n\n![Kurz](img/da.png)\n\n![Weg](img/fehlt.png)\n\nText\n" });
+  const png = Buffer.alloc(24);
+  png.writeUInt32BE(780, 16);
+  png.writeUInt32BE(400, 20);
+  const images = mkdtempSync(join(tmpdir(), "manual-img-"));
+  writeFileSync(join(images, "da.png"), png);
+  const [a] = loadManual(dir, images);
+  assert.match(a.html, /<img src="img\/da.png" alt="Kurz" width="390" height="200" loading="lazy">/);
+  assert.doesNotMatch(a.html, /fehlt/);
+  assert.doesNotMatch(a.html, /<p><\/p>/);
 });

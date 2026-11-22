@@ -58,7 +58,7 @@ const failures: string[] = [];
 for (const shot of SHOTS) {
   for (let attempt = 1; attempt <= 2; attempt++) {
     const context = await browser.newContext({
-      viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: "de-DE", timezoneId: "Europe/Berlin",
+      viewport: { width: 360, height: 780 }, deviceScaleFactor: 2, locale: "de-DE", timezoneId: "Europe/Berlin",
       serviceWorkers: "block", colorScheme: "light", reducedMotion: "reduce",
     });
     const unmocked: string[] = [];

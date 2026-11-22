@@ -85,7 +85,7 @@ test("pictures: one whose file is missing is left out, a present one gets its si
   const images = mkdtempSync(join(tmpdir(), "manual-img-"));
   writeFileSync(join(images, "da.png"), png);
   const [a] = loadManual(dir, images);
-  assert.match(a.html, /<img src="img\/da.png" alt="Kurz" width="390" height="200" loading="lazy">/);
+  assert.match(a.html, /<a class="manual-pic" href="img\/da.png"[^>]*><img src="img\/da.png" alt="Kurz" width="390" height="200" loading="lazy"><\/a>/);
   assert.doesNotMatch(a.html, /fehlt/);
   assert.doesNotMatch(a.html, /<p><\/p>/);
 });

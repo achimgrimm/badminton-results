@@ -67,7 +67,7 @@ export const SHOTS: Shot[] = [
     persona: "player",
     async run({ page, base, team, preview }) {
       // Tall enough for the hero ("Du spielst: …") and the published lineup below it
-      await page.setViewportSize({ width: 390, height: 1150 });
+      await page.setViewportSize({ width: 360, height: 1150 });
       await page.goto(`${base}${team}/vorschau/${preview}`);
       await page.locator(".pub-mine").waitFor({ state: "visible" });
       await page.locator("#published-lineup .pub-body .lineup-row").first().waitFor();

@@ -31,13 +31,15 @@ const SCALE = 2;
 /**
  * Pictures are written ![Alt-Text](img/<name>.png) on a line of their own. One whose file the screenshot
  * run has not made (a local build) is left out; the others get their size, so the page does not jump while loading.
+ * On a narrow phone the picture shrinks with the card and its text gets small, so it links to the full-size file
+ * (the browser shows it at its real resolution, where it can be zoomed).
  */
 function pictures(html: string, imageDir: string): string {
   return html.replace(/<p><img src="img\/([a-z0-9-]+)\.png" alt="([^"]*)"[^>]*><\/p>\n?/g, (_, name, alt) => {
     const file = join(imageDir, `${name}.png`);
     if (!existsSync(file)) return "";
     const head = readFileSync(file).subarray(16, 24);
-    return `<p><img src="img/${name}.png" alt="${alt}" width="${head.readUInt32BE(0) / SCALE}" height="${head.readUInt32BE(4) / SCALE}" loading="lazy"></p>\n`;
+    return `<p><a class="manual-pic" href="img/${name}.png" title="In voller Größe öffnen"><img src="img/${name}.png" alt="${alt}" width="${head.readUInt32BE(0) / SCALE}" height="${head.readUInt32BE(4) / SCALE}" loading="lazy"></a></p>\n`;
   });
 }
 

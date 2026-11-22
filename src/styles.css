@@ -329,7 +329,7 @@ body.only-mine.no-playing .mine-empty { display: block; }
 .game-head .badge:last-child:not(:first-child) { margin-left: auto; }
 .game { display: grid; grid-template-columns: 1fr repeat(var(--sets, 2), 2.25em); gap: 4px 4px; align-items: center; font-variant-numeric: tabular-nums; }
 .game .side { overflow-wrap: anywhere; line-height: 1.3; padding: 4px 0; }
-.game .side span, .game .side a { display: block; }
+.game .side > span, .game .side > a { display: block; }
 .game .side.won { font-weight: 700; color: var(--ot-text-strong); }
 .game .pt { text-align: center; color: var(--ot-text-muted); }
 .game .pt.won { font-weight: 700; color: var(--ot-text-strong); }

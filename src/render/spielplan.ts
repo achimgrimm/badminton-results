@@ -13,7 +13,7 @@ const SCRIPT = `
   var KEY = "${storageKey("spielplan-filter")}";
   var buttons = document.querySelectorAll(".filter button");
   function apply(mode) {
-    if (mode !== "own" && mode !== "mine" && mode !== "all") mode = "own";
+    if (mode !== "own" && mode !== "mine") mode = "own";
     document.body.classList.toggle("only-own", mode === "own");
     document.body.classList.toggle("only-mine", mode === "mine");
     buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === mode)); });
@@ -24,7 +24,7 @@ const SCRIPT = `
   try { saved = localStorage.getItem(KEY) || "own"; } catch (e) {}
   apply(saved);
   shareButton();
-  var today = document.querySelector(".day.upcoming" + (saved === "own" ? ".has-own" : saved === "mine" ? ".has-mine" : ""));
+  var today = document.querySelector(".day.upcoming" + (saved === "mine" ? ".has-mine" : ".has-own"));
   if (today && location.hash === "") today.scrollIntoView();
 
   /** Shares the upcoming marked matches as plain text (all in "text": a separate url gets appended by WhatsApp). */
@@ -109,9 +109,8 @@ export function renderSpielplan(d: Dataset, now: Date): string {
   const body = html`
     <h1 class="visually-hidden">Spielplan</h1>
     <div class="filter-bar"><div class="filter" role="group" aria-label="Filter">
-      <button type="button" data-mode="own" aria-pressed="false">Nur ${esc(d.own.label)}</button>
+      <button type="button" data-mode="own" aria-pressed="true">Nur ${esc(d.own.label)}</button>
       <button type="button" data-mode="mine" aria-pressed="false">Meine Spiele</button>
-      <button type="button" data-mode="all" aria-pressed="true">Alle</button>
     </div></div>
     <div><button type="button" class="btn btn-primary share-plan" data-share-title="${esc(`Meine Spiele · ${CLUB_NAME} ${d.own.label}`)}">${SHARE_BTN_ICON}<span>Meine Spiele teilen</span></button></div>
     ${calendar}

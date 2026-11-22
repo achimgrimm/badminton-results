@@ -7,3 +7,5 @@ Wenn Du in der Tabelle einem Team folgst (Glocke), bekommst Du jetzt etwa **24 S
 
 - Spielst Du selbst mit („Ich spiele“), bekommst Du nur die **Spieler-Erinnerung**, keine zweite Nachricht.
 - Teams, denen Du nicht folgst, melden sich nicht.
+
+Mehr dazu im Handbuch: [Benachrichtigungen](manual:benachrichtigungen)

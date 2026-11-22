@@ -8,3 +8,5 @@ Sag der App, wer Du bist:
 - Unter Spielende kannst Du Deine Auswahl jederzeit ändern oder entfernen.
 
 Deine Auswahl wird nur auf Deinem Gerät gespeichert.
+
+Mehr dazu im Handbuch: [Name wählen](manual:name-waehlen)

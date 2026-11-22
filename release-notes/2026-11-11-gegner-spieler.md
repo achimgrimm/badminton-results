@@ -7,3 +7,5 @@ In der **Vorschau** eines Spiels kannst Du jetzt auf jeden Spielende der Gegense
 - **Auch in der Aufstellung der Gegenseite** sind die Namen antippbar.
 
 Die Idee kommt von Patrick – danke dafür!
+
+Mehr dazu im Handbuch: [Spielvorschau](manual:spielvorschau)

@@ -7,3 +7,5 @@ Du kannst jetzt festhalten, bei welchen Spielen Deiner Mannschaft Du dabei bist:
 - Im Spielplan zeigt der Filter **„Meine Spiele“** nur noch Deine Spiele.
 
 Deine Auswahl wird nur auf Deinem Gerät gespeichert.
+
+Mehr dazu im Handbuch: [Ich spiele](manual:ich-spiele)

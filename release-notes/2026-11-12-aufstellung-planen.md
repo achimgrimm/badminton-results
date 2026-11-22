@@ -16,3 +16,5 @@ Die **Aufstellung** in der **Vorschau** kann jetzt mehr.
 - **Auch offline**: Die zuletzt geladene Aufstellung bleibt sichtbar.
 
 Dafür musst Du angemeldet sein; den Status siehst Du nur mit bestätigtem Namen.
+
+Mehr dazu im Handbuch: [Aufstellung planen und veröffentlichen](manual:aufstellung)

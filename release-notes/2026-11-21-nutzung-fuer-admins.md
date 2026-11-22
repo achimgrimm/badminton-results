@@ -10,3 +10,5 @@ Unter jedem Konto siehst Du jetzt, wie es genutzt wird:
 - **Geräte mit Benachrichtigungen**
 
 So erkennst Du Personen, die nicht erreichbar sind, und kannst helfen, wenn jemand fehlende Benachrichtigungen meldet.
+
+Mehr dazu im Handbuch: [Rollen verwalten](manual:rollen-verwalten)

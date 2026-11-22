@@ -7,3 +7,5 @@ Sagt eine aufgestellte Person ab oder wechselt auf „vielleicht“, nachdem Du 
 
 - Die Nachricht kommt erst etwa **90 Sekunden** nach der Antwort, damit durchgeklickte Antworten keine Meldung auslösen.
 - Antworten **vor der Veröffentlichung** und von Personen, die nicht aufgestellt sind, melden sich nicht.
+
+Mehr dazu im Handbuch: [Benachrichtigungen](manual:benachrichtigungen)

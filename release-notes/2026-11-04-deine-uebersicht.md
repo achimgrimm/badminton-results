@@ -6,3 +6,5 @@ Die Übersicht Deiner Mannschaft richtet sich jetzt nach Dir:
 - Solange Du nicht gewählt hast, wer Du bist, erinnert Dich ein Hinweis **„Wer bist Du?“** daran. Ein Tipp auf **„Namen wählen“** öffnet gleich die Namensliste. Mit × blendest Du den Hinweis aus.
 
 Alles wird nur auf Deinem Gerät gespeichert.
+
+Mehr dazu im Handbuch: [Ich spiele](manual:ich-spiele) · [Name wählen](manual:name-waehlen)

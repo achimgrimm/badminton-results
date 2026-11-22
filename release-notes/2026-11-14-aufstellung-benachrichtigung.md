@@ -10,3 +10,5 @@ Du bekommst jetzt eine **Benachrichtigung**, sobald Deine Aufstellung veröffent
 **Mannschaftsführung und Admins**: Wenn Du eine Aufstellung veröffentlichst oder änderst, bekommst Du selbst auch eine Nachricht – als Bestätigung. Bist Du aufgestellt, steht dort Dein Spiel, sonst, wie viele Personen benachrichtigt wurden.
 
 Dafür musst Du angemeldet und als Bestätigt sein. Auf dem iPhone klappt es nur, wenn Du die App zum Home-Bildschirm hinzugefügt hast.
+
+Mehr dazu im Handbuch: [Benachrichtigungen](manual:benachrichtigungen)

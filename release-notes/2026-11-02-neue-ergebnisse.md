@@ -7,3 +7,5 @@ Die App zeigt Dir jetzt, was seit Deinem letzten Besuch passiert ist:
 - Unten auf jeder Seite steht jetzt, welche Version der App Du nutzt.
 
 Alles wird nur auf Deinem Gerät gespeichert.
+
+Mehr dazu im Handbuch: [Ergebnisse ansehen](manual:ergebnisse)

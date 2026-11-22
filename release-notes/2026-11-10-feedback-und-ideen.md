@@ -6,3 +6,5 @@ Du hast einen Fehler gefunden oder eine Idee für die App? Im **Menü** gibt es 
 - **Per E-Mail schreiben**: öffnet Dein Mailprogramm mit einer neuen Nachricht.
 
 Ich antworte Dir direkt und wir können Ideen gemeinsam besprechen.
+
+Mehr dazu im Handbuch: [Menü](manual:menue)

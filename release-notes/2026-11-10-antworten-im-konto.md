@@ -6,3 +6,5 @@ Wenn Du angemeldet bist, werden Deine Antworten zu den Spielen („Ich spiele“
 - Hat Dein Konto schon andere Antworten als das Gerät, fragt die App, welche gelten sollen: die vom Konto oder die von diesem Gerät.
 - **Auch ohne Netz** kannst Du antworten. Die Änderungen werden gesendet, sobald Du wieder online bist; bei einem Konflikt gilt pro Spiel die neuere Antwort.
 - Ohne Anmeldung bleibt alles wie bisher nur auf Deinem Gerät.
+
+Mehr dazu im Handbuch: [Ich spiele](manual:ich-spiele)

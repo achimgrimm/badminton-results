@@ -9,3 +9,5 @@ Hast Du gewählt, wer Du bist, zeigt die Übersicht nur noch Deine Spiele:
 Markieren kannst Du Deine Spiele im **Spielplan** oder in der **Vorschau**. Ohne gewählten Namen bleibt die Übersicht wie bisher.
 
 **„Spiele in Deinen Kalender“** und **„.ics herunterladen“** findest Du jetzt im **Spielplan**.
+
+Mehr dazu im Handbuch: [Ich spiele](manual:ich-spiele)

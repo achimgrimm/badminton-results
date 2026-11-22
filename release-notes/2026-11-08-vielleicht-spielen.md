@@ -7,3 +7,5 @@ Bist Du Dir bei einem Spiel noch nicht sicher? Du kannst jetzt auch **„Viellei
 - Beim Teilen steht hinter einem unsicheren Spiel **„(vielleicht)“**.
 
 Deine bisherigen Markierungen bleiben als „Dabei“ erhalten. Die Auswahl wird nur auf Deinem Gerät gespeichert.
+
+Mehr dazu im Handbuch: [Ich spiele](manual:ich-spiele)

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseNewResults, resultText } from "../supabase/functions/_shared/result-push.ts";
+import { parseNewResults, reportPath, resultText } from "../supabase/functions/_shared/result-push.ts";
 import { newResults } from "../src/new-results.ts";
 import type { Meeting } from "../src/types.ts";
 
@@ -28,4 +28,10 @@ test("newResults lists meetings whose result appeared or changed", () => {
   const before = [m(1, null), m(2, [3, 5]), m(3, [4, 4]), m(null, null)];
   const after = [m(1, [5, 3]), m(2, [3, 5]), m(3, [5, 3]), m(null, [1, 0])];
   assert.deepEqual(newResults(9, before, after).map((x) => x.meeting), [1, 3]);
+});
+
+test("reportPath points the push at the Spielbericht of the meeting", () => {
+  assert.equal(reportPath("ot-1/tabelle.html", 42), "ot-1/bericht/42.html");
+  assert.equal(reportPath("", 42), "");
+  assert.equal(reportPath("ot-1/spielplan.html", 42), "ot-1/spielplan.html");
 });

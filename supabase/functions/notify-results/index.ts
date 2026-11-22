@@ -3,7 +3,7 @@
 // Each meeting+score is announced once (notified_results). Secrets: NOTIFY_SECRET and as for notify-lineup.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
-import { parseNewResults, resultText } from "../_shared/result-push.ts";
+import { parseNewResults, reportPath, resultText } from "../_shared/result-push.ts";
 
 const reply = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       await Promise.all((subs ?? []).map(async (s) => {
         try {
           await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-            JSON.stringify({ title, body, path: pathOf.get(s.user_id) || "" }), { TTL: 60 * 60 * 24 });
+            JSON.stringify({ title, body, path: reportPath(pathOf.get(s.user_id) || "", r.meeting) }), { TTL: 60 * 60 * 24 });
           sent++;
         } catch (e) {
           const code = (e as { statusCode?: number }).statusCode;

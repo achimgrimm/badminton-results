@@ -28,3 +28,8 @@ export function followStartText(m: UpcomingMeeting, team: string): { title: stri
   const at = new Date(m.start).toLocaleString("de-DE", { timeZone: "Europe/Berlin", weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   return { title: `Spiel von ${team}`, body: `${m.home} – ${m.guest}, ${at} Uhr` };
 }
+
+/** The page the push opens (#67): the Vorschau when an own team plays, else the stored Tabelle path. */
+export function followStartPath(mine: { team_slug: string; game_key: string } | undefined, followPath: string): string {
+  return mine ? `${mine.team_slug}/vorschau/${mine.game_key}.html` : followPath;
+}

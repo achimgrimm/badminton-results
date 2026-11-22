@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { followStartText, ownMatchFor, parseMeetings } from "../supabase/functions/_shared/follow-push.ts";
+import { followStartPath, followStartText, ownMatchFor, parseMeetings } from "../supabase/functions/_shared/follow-push.ts";
 import { upcomingMeetings } from "../src/reminders.ts";
 import type { Meeting } from "../src/types.ts";
 
@@ -30,4 +30,9 @@ test("followStartText names the team, the match and the Berlin time", () => {
   const t = followStartText({ group: 3, home: "A", guest: "B", start: "2026-11-15T14:00:00.000Z" }, "A");
   assert.equal(t.title, "Spiel von A");
   assert.match(t.body, /A – B, .*15:00 Uhr/);
+});
+
+test("followStartPath opens the Vorschau of an own match, else the stored path", () => {
+  assert.equal(followStartPath({ team_slug: "ot-1", game_key: "heim-gast" }, "x/tabelle.html"), "ot-1/vorschau/heim-gast.html");
+  assert.equal(followStartPath(undefined, "x/tabelle.html"), "x/tabelle.html");
 });

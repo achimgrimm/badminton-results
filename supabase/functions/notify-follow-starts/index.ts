@@ -4,7 +4,7 @@
 // player reminder (notify-reminders). Each user is notified once per meeting and kick-off (sent_follow_starts).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
-import { followStartText, ownMatchFor } from "../_shared/follow-push.ts";
+import { followStartPath, followStartText, ownMatchFor } from "../_shared/follow-push.ts";
 
 const reply = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       const { title, body } = followStartText(m, f.team);
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          JSON.stringify({ title, body, path: f.path }), { TTL: 60 * 60 * 12 });
+          JSON.stringify({ title, body, path: followStartPath(mine, f.path) }), { TTL: 60 * 60 * 12 });
         sent++;
       } catch (e) {
         const code = (e as { statusCode?: number }).statusCode;

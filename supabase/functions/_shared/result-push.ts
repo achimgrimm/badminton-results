@@ -24,3 +24,9 @@ export function resultText(r: NewResult, team: string): { title: string; body: s
   const verdict = own > other ? "Sieg" : own < other ? "Niederlage" : "Unentschieden";
   return { title: `${team}: ${verdict}`, body: `${team} – ${opponent} ${own}:${other}` };
 }
+
+/** The page the push opens (#67): the Spielbericht of the meeting in the followed team's folder, derived from the stored Tabelle path ("<slug>/tabelle.html"). Other paths stay as they are. */
+export function reportPath(followPath: string, meeting: number): string {
+  const m = followPath.match(/^([\w-]+)\/tabelle\.html$/);
+  return m ? `${m[1]}/bericht/${meeting}.html` : followPath;
+}
